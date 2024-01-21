@@ -21,6 +21,12 @@ pub const EXECUTE_IX_TAG_LE: [u8; 8] = [105, 37, 101, 197, 75, 251, 102, 26];
 enum SnapshotHookError {
     #[msg("No snapshot found")]
     NoSnapshotFound,
+    #[msg("Already initialized")]
+    AlreadyInitialized,
+    #[msg("Not initialized")]
+    NotInitialized,
+    #[msg("Invalid timestamp")]
+    InvalidTimestamp,
 }
 
 fn check_token_account_is_transferring(account_data: &[u8]) -> Result<()> {
@@ -33,20 +39,6 @@ fn check_token_account_is_transferring(account_data: &[u8]) -> Result<()> {
             TransferHookError::ProgramCalledOutsideOfTransfer,
         ))?
     }
-}
-
-fn update_snapshot_balance<'info>(
-    account_info: &'info AccountInfo<'info>,
-    amount_change: i64,
-) -> Result<()> {
-    let mut data = account_info.try_borrow_mut_data()?;
-    let mut snapshot_account =
-        Account::<'info, SnapshotTokenAccountBalance>::try_from(&account_info)?;
-    assert!(snapshot_account.balance >= amount_change.abs() as u64);
-    snapshot_account.balance =
-        u64::try_from(snapshot_account.balance as i64 + amount_change).unwrap();
-    snapshot_account.try_serialize(&mut *data)?;
-    Ok(())
 }
 
 #[program]
@@ -62,11 +54,43 @@ pub mod transfer_snapshot_hook {
 
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, num_snapshots: u8) -> Result<()> {
+    pub fn initialize(ctx: Context<Initialize>, snapshots: Vec<UnixTimestamp>) -> Result<()> {
         let snapshot_config = &mut ctx.accounts.snapshot_config;
+        require!(
+            !snapshot_config.initialized,
+            SnapshotHookError::AlreadyInitialized
+        );
+        let now = Clock::get()?.unix_timestamp;
+        require!(
+            snapshots.iter().find(|&&snapshot| snapshot < now).is_none(),
+            SnapshotHookError::InvalidTimestamp
+        );
+
+        let correct_snapshots = &mut snapshots.clone();
+        correct_snapshots.sort_unstable();
+        correct_snapshots.dedup();
+
+        // make immutable
+        require!(
+            correct_snapshots.to_vec().eq(&snapshots),
+            SnapshotHookError::InvalidTimestamp
+        );
+
         snapshot_config.authority = *ctx.accounts.authority.key;
-        snapshot_config.snapshots = vec![0; num_snapshots as usize];
-        snapshot_config.initialized = false;
+        snapshot_config.snapshots = snapshots;
+        snapshot_config.initialized = true;
+        Ok(())
+    }
+
+    pub fn init_snapshot_balances_account(ctx: Context<InitSnapshotBalancesAccount>) -> Result<()> {
+        let snapshot_config = &mut ctx.accounts.snapshot_config;
+        require!(
+            snapshot_config.initialized,
+            SnapshotHookError::NotInitialized
+        );
+        let num_snapshots = snapshot_config.snapshots.len();
+        let snapshot_balances = &mut ctx.accounts.snapshot_balances;
+        snapshot_balances.snapshot_balances = vec![None; num_snapshots];
         Ok(())
     }
 
@@ -107,23 +131,33 @@ pub mod transfer_snapshot_hook {
 
         let (current_snapshot_index, _) = current_snapshot.unwrap();
 
-        let [source_snapshot_account_info, destination_snapshot_account_info] = [
-            &ctx.remaining_accounts[current_snapshot_index], // source snapshot account
-            &ctx.remaining_accounts[snapshot_config.snapshots.len() / 2 + current_snapshot_index],
-        ];
+        let source_snapshot_balances = &mut ctx.accounts.source_snapshot_balances;
+        let destination_snapshot_balances = &mut ctx.accounts.destination_snapshot_balances;
 
-        update_snapshot_balance(source_snapshot_account_info, -(amount as i64))?;
-        update_snapshot_balance(destination_snapshot_account_info, amount as i64)?;
+        assert!(
+            source_snapshot_balances.snapshot_balances[current_snapshot_index].is_some()
+                && source_snapshot_balances.snapshot_balances[current_snapshot_index].unwrap()
+                    >= amount,
+            "PANIC: Incorrect transfer with insufficient funds"
+        );
+
+        source_snapshot_balances.snapshot_balances[current_snapshot_index] = Some(
+            source_snapshot_balances.snapshot_balances[current_snapshot_index].unwrap() - amount,
+        );
+
+        destination_snapshot_balances.snapshot_balances[current_snapshot_index] = Some(
+            destination_snapshot_balances.snapshot_balances[current_snapshot_index].unwrap_or(0)
+                + amount,
+        );
 
         Ok(())
     }
 
     pub fn initialize_extra_account_meta_list(
         ctx: Context<InitializeExtraAccountMetaList>,
-        num_snapshots: u8,
         bump_seed: u8,
     ) -> Result<()> {
-        let mut account_metas = vec![
+        let account_metas = vec![
             ExtraAccountMeta {
                 discriminator: 0,
                 address_config: ctx.accounts.snapshot_config.key().to_bytes(),
@@ -131,34 +165,9 @@ pub mod transfer_snapshot_hook {
                 is_writable: PodBool::from(true),
             },
             ExtraAccountMeta::new_with_seeds(&[Seed::AccountKey { index: 1 }], false, false)?,
+            ExtraAccountMeta::new_with_seeds(&[Seed::AccountKey { index: 0 }], false, false)?,
+            ExtraAccountMeta::new_with_seeds(&[Seed::AccountKey { index: 2 }], false, false)?,
         ];
-
-        for i in 0..num_snapshots {
-            account_metas.push(ExtraAccountMeta::new_with_seeds(
-                &[
-                    Seed::AccountKey { index: 0 },
-                    Seed::Literal {
-                        bytes: i.to_string().into_bytes(),
-                    },
-                ],
-                false,
-                true,
-            )?);
-        }
-
-        for i in 0..num_snapshots {
-            account_metas.push(ExtraAccountMeta::new_with_seeds(
-                &[
-                    Seed::AccountKey { index: 2 },
-                    Seed::Literal {
-                        bytes: i.to_string().into_bytes(),
-                    },
-                ],
-                false,
-                true,
-            )?);
-        }
-
         // Allocate extra account PDA account.
         let mint_key = ctx.accounts.mint.key();
         let bump_seed = [bump_seed];
@@ -208,12 +217,25 @@ pub mod transfer_snapshot_hook {
 #[derive(Accounts)]
 #[instruction(num_snapshots: u8)]
 pub struct Initialize<'info> {
-    #[account(init, seeds=[mint.key().as_ref()], bump, payer = authority, space = SnapshotConfig::space(num_snapshots))]
+    #[account(zero, seeds=[mint.key().as_ref()], bump)]
     pub snapshot_config: Account<'info, SnapshotConfig>,
-    pub system_program: Program<'info, System>,
+    pub mint: InterfaceAccount<'info, Mint>,
     #[account(mut)]
     pub authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(num_snapshots: u8)]
+pub struct InitSnapshotBalancesAccount<'info> {
+    #[account()]
+    pub snapshot_config: Account<'info, SnapshotConfig>,
+    #[account(zero, seeds=[mint.key().as_ref(), token_account.key().as_ref()], bump)]
+    pub snapshot_balances: Account<'info, SnapshotTokenAccountBalances>,
     pub mint: InterfaceAccount<'info, Mint>,
+    #[account(token::mint = mint)]
+    pub token_account: InterfaceAccount<'info, TokenAccount>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
 }
 
 #[derive(Accounts)]
@@ -230,11 +252,15 @@ pub struct TransferHook<'info> {
     /// CHECK: must be the extra account PDA
     #[account(
         seeds = [b"extra-account-metas", mint.key().as_ref()], 
-        bump)
-    ]
+        bump
+    )]
     pub extra_account_meta_list: AccountInfo<'info>,
     /// CHECK:
     pub snapshot_config: Account<'info, SnapshotConfig>,
+    #[account(mut, seeds = [mint.key().as_ref(),source.key().as_ref()], bump)]
+    pub source_snapshot_balances: Account<'info, SnapshotTokenAccountBalances>,
+    #[account(mut, seeds = [mint.key().as_ref(), destination.key().as_ref()], bump)]
+    pub destination_snapshot_balances: Account<'info, SnapshotTokenAccountBalances>,
 }
 
 #[derive(Accounts)]
@@ -278,6 +304,6 @@ impl SnapshotConfig {
 }
 
 #[account]
-pub struct SnapshotTokenAccountBalance {
-    pub balance: u64,
+pub struct SnapshotTokenAccountBalances {
+    pub snapshot_balances: Vec<Option<u64>>,
 }
