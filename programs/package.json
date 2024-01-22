@@ -1,4 +1,11 @@
 {
+  "name": "@fqx/programs",
+  "description": "",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "author": "",
+  "license": "UNLICENSED",
+  "private": true,
   "scripts": {
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
