@@ -2,11 +2,13 @@
   "name": "encode-solana-hackathon",
   "version": "1.0.0",
   "description": "",
-  "workspaces": ["app", "worker"],
-  "main": "index.js",
+  "author": "Obligate AG",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "programs"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "Obligate AG",
-  "license": "ISC"
+  }
 }
