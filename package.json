@@ -1,9 +1,8 @@
 {
   "name": "encode-solana-hackathon",
+  "private": true,
   "version": "1.0.0",
-  "description": "",
-  "workspaces": ["app", "worker"],
-  "main": "index.js",
+  "workspaces": ["frontend"],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
