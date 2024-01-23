@@ -39,7 +39,6 @@ pub mod treasury_wallet {
         );
 
         let treasury_wallet_key = ctx.accounts.treasury_wallet.key();
-        let authority_key = ctx.accounts.authority.key();
 
         let authorization_signer_seeds = &[
             treasury_wallet_key.as_ref(),

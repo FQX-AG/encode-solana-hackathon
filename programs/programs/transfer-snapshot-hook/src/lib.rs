@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount};
-use solana_program::clock::UnixTimestamp;
 
 use {
     anchor_spl::token_2022::spl_token_2022::{
@@ -54,7 +53,7 @@ pub mod transfer_snapshot_hook {
 
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, snapshots: Vec<UnixTimestamp>) -> Result<()> {
+    pub fn initialize(ctx: Context<Initialize>, snapshots: Vec<i64>) -> Result<()> {
         let snapshot_config = &mut ctx.accounts.snapshot_config;
         require!(
             !snapshot_config.initialized,
@@ -283,15 +282,15 @@ pub struct InitializeExtraAccountMetaList<'info> {
 pub struct SnapshotConfig {
     pub authority: Pubkey,
     pub initialized: bool,
-    pub snapshots: Vec<UnixTimestamp>,
+    pub snapshots: Vec<i64>,
 }
 
 impl SnapshotConfig {
     pub fn space<T: Into<usize>>(num_snapshots: T) -> usize {
-        std::mem::size_of::<Pubkey>() + num_snapshots.into() * std::mem::size_of::<UnixTimestamp>()
+        std::mem::size_of::<Pubkey>() + num_snapshots.into() * std::mem::size_of::<i64>()
     }
 
-    pub fn get_current_snapshot(&self, timestamp: UnixTimestamp) -> Option<(usize, UnixTimestamp)> {
+    pub fn get_current_snapshot(&self, timestamp: i64) -> Option<(usize, i64)> {
         let index = self
             .snapshots
             .iter()

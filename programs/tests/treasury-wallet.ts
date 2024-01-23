@@ -20,11 +20,9 @@ import {
   getMinimumBalanceForRentExemptMint,
   getOrCreateAssociatedTokenAccount,
   MINT_SIZE,
-  mintTo,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import BN from "bn.js";
-import { simulateTransaction } from "@coral-xyz/anchor/dist/cjs/utils/rpc";
 import { expect } from "chai";
 
 describe("treasury-wallet", () => {
@@ -43,7 +41,7 @@ describe("treasury-wallet", () => {
 
   const provider = anchor.getProvider();
 
-  before(async () => {
+  beforeEach(async () => {
     owner = await newAccountWithLamports(provider.connection);
     withdrawAuthority = await newAccountWithLamports(provider.connection);
     mint = anchor.web3.Keypair.generate();

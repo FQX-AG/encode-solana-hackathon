@@ -5,6 +5,19 @@ export type PDA = {
   publicKey: PublicKey;
   bump: number;
 };
+
+export async function getPdaWithSeeds(
+  seeds: Buffer[],
+  programId: PublicKey
+): Promise<PDA> {
+  const [publicKey, bump] = PublicKey.findProgramAddressSync(seeds, programId);
+
+  return {
+    publicKey,
+    bump,
+  };
+}
+
 export async function newAccountWithLamports(
   connection: Connection,
   lamports = 100000000000
