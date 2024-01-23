@@ -3,11 +3,6 @@
   "version": "1.0.0",
   "author": "Obligate AG",
   "private": true,
-  "workspaces": [
-    "programs",
-    "frontend",
-    "backend"
-  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   }
