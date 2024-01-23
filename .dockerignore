@@ -1,0 +1,8 @@
+**/node_modules
+**/dist
+**/.next
+**/npm-debug.log
+**/Dockerfile
+**/.dockerignore
+**/.git
+**/.gitignore
