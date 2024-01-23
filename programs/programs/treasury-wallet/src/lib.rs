@@ -70,8 +70,8 @@ pub mod treasury_wallet {
 pub struct Initialize<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
-    #[account(init, payer = owner, space =1000)] // TODO: calc proper space
-    pub treasury_wallet: Account<'info, TreasuryWallet>,
+    #[account(init, payer = owner, space =100)] // TODO: calc proper space
+    pub treasury_wallet: Account<'info, TreasuryWalletAccount>,
     /// CHECK: account will never be validated, it's just used to sign transactions as the treasury wallet
     #[account(seeds = [treasury_wallet.key().as_ref()], bump)]
     pub treasury_authority: AccountInfo<'info>,
@@ -86,7 +86,7 @@ pub struct AddWithdrawAuthorization<'info> {
     /// CHECK: account can invoke withdrawals
     pub authority: AccountInfo<'info>,
     #[account()]
-    pub treasury_wallet: Account<'info, TreasuryWallet>,
+    pub treasury_wallet: Account<'info, TreasuryWalletAccount>,
     #[account(init,
     seeds = [treasury_wallet.key().as_ref(), authority.key().as_ref()],
     bump, payer = owner, space = 48)]
@@ -98,7 +98,7 @@ pub struct AddWithdrawAuthorization<'info> {
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
     #[account(mut)]
-    pub treasury_wallet: Account<'info, TreasuryWallet>,
+    pub treasury_wallet: Account<'info, TreasuryWalletAccount>,
     #[account(mut)] // Validate that the treasury wallet is the owner
     pub treasury_wallet_token_account: InterfaceAccount<'info, TokenAccount>,
     pub mint: Account<'info, Mint>,
@@ -115,7 +115,7 @@ pub struct Withdraw<'info> {
 }
 
 #[account]
-pub struct TreasuryWallet {
+pub struct TreasuryWalletAccount {
     pub owner: Pubkey,
 }
 
