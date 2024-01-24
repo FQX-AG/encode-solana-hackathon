@@ -61,25 +61,21 @@ const font = localFont({
 declare module "@mui/material/styles" {
   interface Theme {
     customColors: {
-      oxfordBlue: {
-        500: string;
-        600: string;
-        700: string;
-        800: string;
-        900: string;
-      };
+      oxfordBlue500: string;
+      oxfordBlue600: string;
+      oxfordBlue700: string;
+      oxfordBlue800: string;
+      oxfordBlue900: string;
     };
   }
   // allow configuration using `createTheme`
   interface ThemeOptions {
     customColors?: {
-      oxfordBlue?: {
-        500?: string;
-        600?: string;
-        700?: string;
-        800?: string;
-        900?: string;
-      };
+      oxfordBlue500?: string;
+      oxfordBlue600?: string;
+      oxfordBlue700?: string;
+      oxfordBlue800?: string;
+      oxfordBlue900?: string;
     };
   }
 }
@@ -139,7 +135,7 @@ export const theme = createTheme({
           fontSize: "13px",
           fontWeight: 500,
           lineHeight: "17px",
-          color: theme.customColors.oxfordBlue[500],
+          color: theme.customColors.oxfordBlue500,
           minWidth: "auto",
           minHeight: "24px",
           boxSizing: "content-box",
@@ -156,7 +152,7 @@ export const theme = createTheme({
           minHeight: "24px",
         },
         indicator: ({ theme }) => ({
-          backgroundColor: theme.customColors.oxfordBlue[700],
+          backgroundColor: theme.customColors.oxfordBlue700,
         }),
       },
     },
@@ -212,13 +208,13 @@ export const theme = createTheme({
         },
         head: ({ theme }) => ({
           verticalAlign: "top",
-          borderBottom: `1px solid ${theme.customColors.oxfordBlue[700]}`,
+          borderBottom: `1px solid ${theme.customColors.oxfordBlue700}`,
           position: "relative",
           padding: "0 8px 12px",
         }),
         body: ({ theme }) => ({
           padding: "16px 8px",
-          borderBottom: `1px solid ${theme.customColors.oxfordBlue[800]}`,
+          borderBottom: `1px solid ${theme.customColors.oxfordBlue800}`,
         }),
       },
     },
@@ -293,7 +289,7 @@ export const theme = createTheme({
           },
         },
         textSecondary: ({ theme }) => ({
-          color: theme.customColors.oxfordBlue[600],
+          color: theme.customColors.oxfordBlue600,
         }),
         outlined: ({ theme, ownerState }) => ({
           borderColor: "currentColor",
@@ -310,8 +306,8 @@ export const theme = createTheme({
             "&:focus,&:active": { background: "rgba(0, 178, 255, 0.3)" },
           },
           "&.MuiButton-outlinedSecondary": {
-            borderColor: theme.customColors.oxfordBlue[600],
-            color: theme.customColors.oxfordBlue[600],
+            borderColor: theme.customColors.oxfordBlue600,
+            color: theme.customColors.oxfordBlue600,
             "&:hover:not(:focus)": { color: "#FFF" },
             "&:focus,&:active": {
               color: "#FFF",
@@ -403,7 +399,7 @@ export const theme = createTheme({
         input: ({ theme }) => ({
           fontSize: "16px",
           "::placeholder": {
-            color: theme.customColors.oxfordBlue[600],
+            color: theme.customColors.oxfordBlue600,
           },
         }),
       },
@@ -425,7 +421,7 @@ export const theme = createTheme({
         root: ({ theme }) => ({
           fontSize: "16px",
           "&.Mui-disabled": {
-            color: theme.customColors.oxfordBlue[700],
+            color: theme.customColors.oxfordBlue700,
           },
         }),
         input: ({ theme }) => ({
@@ -539,8 +535,13 @@ export const theme = createTheme({
       styleOverrides: {
         root: ({ theme }) => ({
           whiteSpace: "pre-line",
-          color: theme.customColors.oxfordBlue[600],
+          color: theme.customColors.oxfordBlue600,
         }),
+      },
+    },
+    MuiStack: {
+      defaultProps: {
+        useFlexGap: true,
       },
     },
   },
@@ -583,12 +584,10 @@ export const theme = createTheme({
   },
   typography: font.style,
   customColors: {
-    oxfordBlue: {
-      "500": "#A2A2DC",
-      "600": "#7C7CBA",
-      "700": "#5B5B98",
-      "800": "#3F3F76",
-      "900": "#272754",
-    },
+    oxfordBlue500: "#A2A2DC",
+    oxfordBlue600: "#7C7CBA",
+    oxfordBlue700: "#5B5B98",
+    oxfordBlue800: "#3F3F76",
+    oxfordBlue900: "#272754",
   },
 });

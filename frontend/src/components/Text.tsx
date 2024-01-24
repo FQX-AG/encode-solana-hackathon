@@ -1,7 +1,7 @@
 import { Box, styled, SxProps, Theme } from "@mui/material";
 import { createElement, ElementType, forwardRef, ReactNode } from "react";
 
-const variants = ["600|64px|83px"] as const;
+const variants = ["400|14px|18px", "500|14px|18px", "500|22px|29px"] as const;
 
 type Variant = (typeof variants)[number];
 
@@ -14,14 +14,18 @@ const components = variants.reduce((acc, key) => {
 type TextProps = {
   variant: Variant;
   children: ReactNode;
+  color?: keyof Theme["customColors"];
   component?: ElementType;
   sx?: SxProps<Theme>;
 };
 
-const Text = forwardRef<HTMLElement, TextProps>(({ variant, children, ...rest }, ref) => {
-  const component = components[variant] ?? Box;
+export const Text = forwardRef<HTMLElement, TextProps>((props, ref) => {
+  const Component = components[props.variant] ?? Box;
+  const { color } = props;
+  const sx: SxProps<Theme> | undefined = color
+    ? { ...props.sx, color: (theme) => theme.customColors[color] }
+    : props.sx;
 
-  return createElement(component, { ref, ...rest }, children);
+  return createElement(Component, { ref, component: props.component, sx }, props.children);
 });
-
-export default Text;
+Text.displayName = "Text";
