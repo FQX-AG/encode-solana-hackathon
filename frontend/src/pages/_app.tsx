@@ -1,8 +1,12 @@
+import "@/web3/styles.css";
+
 import { AppCacheProvider } from "@mui/material-nextjs/v14-pagesRouter";
 import type { AppProps } from "next/app";
 import Head from "next/head";
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import { theme } from "@/theme";
+import { Web3Provider } from "@/web3/Web3Provider";
+import { Layout } from "@/components/layout/Layout";
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
@@ -16,7 +20,11 @@ export default function App({ Component, pageProps }: AppProps) {
       <AppCacheProvider>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <Component {...pageProps} />
+          <Web3Provider>
+            <Layout>
+              <Component {...pageProps} />
+            </Layout>
+          </Web3Provider>
         </ThemeProvider>
       </AppCacheProvider>
     </>
