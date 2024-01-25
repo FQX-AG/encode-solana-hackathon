@@ -73,13 +73,14 @@ describe("structured-product", () => {
   });
 
   it("should create a structured product", async () => {
-    const mint = anchor.web3.Keypair.generate();
-    const tx = await sdk.initialize(1000000, mint, {
+    const tx = await sdk.initialize(1000000, {
       investor: investor.publicKey,
       issuer: issuer.publicKey,
       issuerTreasuryWallet: treasuryWallet.publicKey,
     });
 
-    await sdk.provider.sendAndConfirm(tx, [mint]);
+    console.log("INVESTOR", investor.publicKey.toBase58());
+
+    await sdk.provider.sendAndConfirm(tx);
   });
 });
