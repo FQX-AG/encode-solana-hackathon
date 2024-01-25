@@ -15,6 +15,12 @@ import {
   TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
 import { getPdaWithSeeds } from "./utils";
+import {
+  SingleConnectionBroadcaster,
+  SolanaProvider,
+  TransactionEnvelope,
+  Wallet,
+} from "@saberhq/solana-contrib";
 
 export type InitializeAccounts = {
   investor: PublicKey;
@@ -23,12 +29,17 @@ export type InitializeAccounts = {
 };
 
 export class StructuredNotesSdk {
-  readonly provider: AnchorProvider;
+  readonly provider: SolanaProvider;
   constructor(
     provider: AnchorProvider,
+    wallet: Wallet,
     public readonly program: Program<StructuredProduct>
   ) {
-    this.provider = provider;
+    this.provider = new SolanaProvider(
+      provider.connection,
+      new SingleConnectionBroadcaster(provider.connection),
+      provider.wallet
+    );
   }
 
   async initialize(supply: number, accounts: InitializeAccounts) {
@@ -73,15 +84,8 @@ export class StructuredNotesSdk {
       .signers([mint])
       .instruction();
 
-    const recentBlockhash = (
-      await this.provider.connection.getLatestBlockhash()
-    ).blockhash;
-
-    const tx = new Transaction().add(initIx);
-
-    tx.recentBlockhash = recentBlockhash;
-    tx.feePayer = accounts.investor;
-    tx.partialSign(mint);
+    const tx = new TransactionEnvelope(this.provider, [initIx]);
+    tx.addSigners(mint);
 
     return tx;
   }

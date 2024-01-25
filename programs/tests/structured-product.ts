@@ -44,7 +44,11 @@ describe("structured-product", () => {
   beforeEach(async () => {
     investor = provider.publicKey;
     issuer = await newAccountWithLamports(provider.connection);
-    sdk = new StructuredNotesSdk(provider, structuredProductProgram);
+    sdk = new StructuredNotesSdk(
+      provider,
+      provider.wallet,
+      structuredProductProgram
+    );
     mint = anchor.web3.Keypair.generate();
     treasuryWallet = anchor.web3.Keypair.generate();
     treasuryWalletAuthorityPda = await getPdaWithSeeds(
@@ -78,6 +82,6 @@ describe("structured-product", () => {
       issuerTreasuryWallet: treasuryWallet.publicKey,
     });
 
-    await sdk.provider.sendAndConfirm(tx);
+    await tx.send();
   });
 });
