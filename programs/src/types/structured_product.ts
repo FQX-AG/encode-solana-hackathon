@@ -13,7 +13,7 @@ export type StructuredProduct = {
         {
           "name": "issuer",
           "isMut": false,
-          "isSigner": false
+          "isSigner": true
         },
         {
           "name": "structuredProduct",
@@ -37,6 +37,16 @@ export type StructuredProduct = {
         },
         {
           "name": "issuerTreasuryWallet",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "issuerTreasuryWalletWithdrawAuthorization",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "treasuryWalletProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -108,7 +118,7 @@ export const IDL: StructuredProduct = {
         {
           "name": "issuer",
           "isMut": false,
-          "isSigner": false
+          "isSigner": true
         },
         {
           "name": "structuredProduct",
@@ -132,6 +142,16 @@ export const IDL: StructuredProduct = {
         },
         {
           "name": "issuerTreasuryWallet",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "issuerTreasuryWalletWithdrawAuthorization",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "treasuryWalletProgram",
           "isMut": false,
           "isSigner": false
         },

@@ -1,5 +1,5 @@
 import * as anchor from "@coral-xyz/anchor";
-import { AnchorProvider, Program } from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
 import {
   Connection,
   Keypair,
@@ -27,6 +27,7 @@ import {
 } from "@saberhq/solana-contrib";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import * as console from "console";
+import { TreasuryWallet } from "./types/treasury_wallet";
 
 export type InitializeAccounts = {
   investor: PublicKey;
@@ -36,6 +37,9 @@ export type InitializeAccounts = {
 
 export class StructuredNotesSdk {
   readonly provider: SolanaAugmentedProvider;
+  readonly treasuryWalletProgram = anchor.workspace
+    .TreasuryWallet as Program<TreasuryWallet>;
+
   constructor(
     connection: Connection,
     wallet: Wallet,
@@ -109,6 +113,14 @@ export class StructuredNotesSdk {
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
+    const issuerTreasuryWalletWithdrawAuthorization = getPdaWithSeeds(
+      [
+        accounts.issuerTreasuryWallet.toBuffer(),
+        structuredProductPDA.publicKey.toBuffer(),
+      ],
+      this.treasuryWalletProgram.programId
+    );
+
     return await this.program.methods
       .initialize(new BN(supply))
       .accounts({
@@ -117,7 +129,10 @@ export class StructuredNotesSdk {
         structuredProduct: structuredProductPDA.publicKey,
         investorTokenAccount: investorATA,
         programTokenAccount: programATA,
-        // treasuryWalletProgram: treasuryWalletProgram.programId,
+        issuerTreasuryWallet: accounts.issuerTreasuryWallet,
+        issuerTreasuryWalletWithdrawAuthorization:
+          issuerTreasuryWalletWithdrawAuthorization.publicKey,
+        treasuryWalletProgram: this.treasuryWalletProgram.programId,
         // snapshotTransferHookProgram: transferSnapshotHookProgram.programId,
         tokenProgram: TOKEN_2022_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -181,6 +196,14 @@ export class StructuredNotesSdk {
         publicKey: s.publicKey.toBase58(),
       }))
     );
+
+    const txEnv = new TransactionEnvelope(this.provider, [
+      ...finalTx.instructions,
+    ]);
+
+    const simulation = await txEnv.simulate();
+    console.log("Simulation: ", simulation);
+    console.log(simulation.value.err);
     const pendingTx = await this.provider.broadcaster.broadcast(finalTx);
     await pendingTx.wait();
   }
