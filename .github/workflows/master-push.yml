@@ -1,0 +1,49 @@
+name: Master - Push
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "21.1.0"
+      - name: Install pnpm
+        run: npm install -g pnpm
+      - name: Install dependencies
+        run: pnpm install  --frozen-lockfile
+      - name: Build frontend
+        run: pnpm run --filter ./frontend build
+      - name: Build backend
+        run: pnpm run --filter backend build
+  build-anchor:
+    runs-on: ubuntu-latest
+    container: backpackapp/build:v0.29.0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Create config directory
+        run: mkdir -p ~/.config/solana
+      - name: Set rust version
+        run: rustup default stable
+      - name: Set solana key from secret
+        run: echo ${{ secrets.SOLANA_PRIVATE_KEY }} > ~/.config/solana/id.json
+      - name: Install pnpm
+        run: npm install -g pnpm
+      - name: Install pnpm dependencies
+        run: pnpm install
+      - name: Build
+        run: pnpm run --filter programs build
+      # - name: Test
+      #   run: pnpm run --filter programs test
+      - name: Upgrade structured product program
+        run: pnpm run --filter programs upgrade:structured-product:devnet
+      - name: Upgrade treasury wallet program
+        run: pnpm run --filter programs upgrade:treasury-wallet:devnet
+      - name: Upgrade transfer hook program
+        run: pnpm run --filter programs upgrade:transferhook:devnet

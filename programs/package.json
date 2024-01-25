@@ -11,7 +11,11 @@
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
     "build": "anchor build",
     "test": "anchor test",
-    "test-debug": "DEBUG=true BLUEBIRD_LONG_STACK_TRACES=1 anchor test"
+    "test-debug": "DEBUG=true BLUEBIRD_LONG_STACK_TRACES=1 anchor test",
+    "deploy:devnet": "anchor deploy --provider.cluster devnet",
+    "upgrade:structured-product:devnet": "anchor upgrade --provider.cluster devnet --program-id=6wY4z82JNzufboHA3Gd2cwUVrijoTjFuYf3nG4LsnbHL ./target/deploy/structured_product.so",
+    "upgrade:treasury-wallet:devnet": "anchor upgrade --provider.cluster devnet --program-id=4eruY9bV8NRs5t1Q4s3jpUgk94R5woLU8hBn2GvXSzjG ./target/deploy/treasury_wallet.so",
+    "upgrade:transferhook:devnet": "anchor upgrade --provider.cluster devnet --program-id=92wm1a2viQkts2yXQF9hAQFZJ4bXRRof5zKCsuN4zWg3 ./target/deploy/transfer_snapshot_hook.so"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.29.0",
