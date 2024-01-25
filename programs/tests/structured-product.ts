@@ -29,7 +29,7 @@ describe("structured-product", () => {
 
   let issuer: Keypair;
   let issuerATA: PublicKey;
-  let investor: Keypair;
+  let investor: PublicKey;
   let investorATA: PublicKey;
   let mint: Keypair;
   let structuredProduct: PDA;
@@ -42,9 +42,8 @@ describe("structured-product", () => {
   let sdk: StructuredNotesSdk;
 
   beforeEach(async () => {
-    investor = await newAccountWithLamports(provider.connection);
+    investor = provider.publicKey;
     issuer = await newAccountWithLamports(provider.connection);
-    wallet = new NodeWallet(investor);
     sdk = new StructuredNotesSdk(provider, structuredProductProgram);
     mint = anchor.web3.Keypair.generate();
     treasuryWallet = anchor.web3.Keypair.generate();
@@ -74,12 +73,10 @@ describe("structured-product", () => {
 
   it("should create a structured product", async () => {
     const tx = await sdk.initialize(1000000, {
-      investor: investor.publicKey,
+      investor: investor,
       issuer: issuer.publicKey,
       issuerTreasuryWallet: treasuryWallet.publicKey,
     });
-
-    console.log("INVESTOR", investor.publicKey.toBase58());
 
     await sdk.provider.sendAndConfirm(tx);
   });

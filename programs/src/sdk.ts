@@ -33,8 +33,6 @@ export class StructuredNotesSdk {
 
   async initialize(supply: number, accounts: InitializeAccounts) {
     const mint = Keypair.generate();
-    console.log("mint", mint.publicKey.toBase58());
-    console.log("investor", accounts.investor.toBase58());
 
     const structuredProductPDA = getPdaWithSeeds(
       [mint.publicKey.toBuffer()],
@@ -82,13 +80,8 @@ export class StructuredNotesSdk {
     const tx = new Transaction().add(initIx);
 
     tx.recentBlockhash = recentBlockhash;
-    tx.feePayer = accounts.issuer;
+    tx.feePayer = accounts.investor;
     tx.partialSign(mint);
-
-    console.log(
-      "signers",
-      tx.signatures.map((s) => s.publicKey.toBase58())
-    );
 
     return tx;
   }
