@@ -8,6 +8,7 @@ import {
   NonceAccount,
   PublicKey,
   SystemProgram,
+  SYSVAR_RENT_PUBKEY,
   Transaction,
 } from "@solana/web3.js";
 import { StructuredProduct } from "./types/structured_product";
@@ -162,6 +163,33 @@ export class StructuredNotesSdk {
     const initIx = await this.getInitializeInstruction(supply, mint, accounts);
     tx.add(advanceIx);
     tx.add(initIx);
+
+    const structuredProductPDA = getPdaWithSeeds(
+      [mint.publicKey.toBuffer()],
+      this.program.programId
+    );
+
+    const withdrawAuthorizationPDA = getPdaWithSeeds(
+      [
+        accounts.issuerTreasuryWallet.toBuffer(),
+        structuredProductPDA.publicKey.toBuffer(),
+      ],
+      this.treasuryWalletProgram.programId
+    );
+
+    tx.add(
+      await this.treasuryWalletProgram.methods
+        .addWithdrawAuthorization()
+        .accounts({
+          owner: accounts.issuer,
+          treasuryWallet: accounts.issuerTreasuryWallet,
+          authority: structuredProductPDA.publicKey,
+          withdrawAuthorization: withdrawAuthorizationPDA.publicKey,
+          rent: SYSVAR_RENT_PUBKEY,
+          systemProgram: SystemProgram.programId,
+        })
+        .instruction()
+    );
     tx.recentBlockhash = nonceAccount.nonce;
     tx.feePayer = accounts.investor;
     tx.partialSign(mint);

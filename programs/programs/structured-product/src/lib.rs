@@ -1,21 +1,22 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token_2022::spl_token_2022::extension;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
-use transfer_snapshot_hook::program::TransferSnapshotHook;
+
 use treasury_wallet::program::TreasuryWallet;
-use treasury_wallet::{TreasuryWalletAccount, WithdrawAuthorization};
+use treasury_wallet::TreasuryWalletAccount;
 
 declare_id!("GYFmKqbpYHUrML3BstU9VUnVdEE6ho9tzVJzs1DAR5iz");
 
 #[program]
 pub mod structured_product {
-    use super::*;
     use anchor_spl::token;
     use anchor_spl::token_2022;
     use solana_program::program::invoke_signed;
+
     use treasury_wallet::cpi::accounts::AddWithdrawAuthorization;
+
+    use super::*;
 
     pub fn initialize(ctx: Context<Initialize>, amount: u64) -> Result<()> {
         let structured_product = &mut ctx.accounts.structured_product;
@@ -27,26 +28,6 @@ pub mod structured_product {
 
         let mint_key = ctx.accounts.mint.key();
         let signer_seeds = &[mint_key.as_ref(), &[ctx.bumps.structured_product]];
-
-        msg!("Adding authorization");
-        let cpi_accounts = AddWithdrawAuthorization {
-            owner: ctx.accounts.issuer.to_account_info(),
-            treasury_wallet: ctx.accounts.issuer_treasury_wallet.to_account_info(),
-            authority: ctx.accounts.structured_product.to_account_info(),
-            withdraw_authorization: ctx
-                .accounts
-                .issuer_treasury_wallet_withdraw_authorization
-                .to_account_info(),
-            rent: ctx.accounts.rent.to_account_info(),
-            system_program: ctx.accounts.system_program.to_account_info(),
-        };
-
-        treasury_wallet::cpi::add_withdraw_authorization(CpiContext::new(
-            cpi_program,
-            cpi_accounts,
-        ))?;
-
-        msg!("Added authorization");
 
         // Initialize snapshot transfer-hook here
         // let transfer_hook_instruction = extension::transfer_hook::instruction::initialize(
@@ -122,9 +103,6 @@ pub struct Initialize<'info> {
     pub investor_token_account: InterfaceAccount<'info, TokenAccount>,
     /// CHECK: Add account validation back
     pub issuer_treasury_wallet: Account<'info, TreasuryWalletAccount>,
-    /// CHECK: Account for cpi and initialized by the treasury wallet program
-    #[account(mut)]
-    pub issuer_treasury_wallet_withdraw_authorization: AccountInfo<'info>,
     pub treasury_wallet_program: Program<'info, TreasuryWallet>,
     // pub snapshot_transfer_hook_program: Program<'info, TransferSnapshotHook>,
     pub associated_token_program: Program<'info, AssociatedToken>,
