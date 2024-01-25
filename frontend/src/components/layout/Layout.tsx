@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Box, Container } from "@mui/material";
+import { Box, Container, Stack } from "@mui/material";
 import Navbar from "@/components/layout/Navbar";
 
 type LayoutProps = {
@@ -8,19 +8,17 @@ type LayoutProps = {
 
 export function Layout(props: LayoutProps) {
   return (
-    <>
+    <Stack height="100vh">
       <Navbar />
       <Box
         sx={{
+          overflow: "auto",
+          flex: "1 1 auto",
           py: 6,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "stretch",
-          justifyContent: "center",
         }}
       >
         <Container>{props.children}</Container>
       </Box>
-    </>
+    </Stack>
   );
 }

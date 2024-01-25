@@ -6,6 +6,7 @@ import Head from "next/head";
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import { theme } from "@/theme";
 import { Web3Provider } from "@/web3/Web3Provider";
+import { SnackbarProvider } from "notistack";
 import { Layout } from "@/components/layout/Layout";
 
 export default function App({ Component, pageProps }: AppProps) {
@@ -20,11 +21,13 @@ export default function App({ Component, pageProps }: AppProps) {
       <AppCacheProvider>
         <ThemeProvider theme={theme}>
           <CssBaseline />
-          <Web3Provider>
-            <Layout>
-              <Component {...pageProps} />
-            </Layout>
-          </Web3Provider>
+          <SnackbarProvider>
+            <Web3Provider>
+              <Layout>
+                <Component {...pageProps} />
+              </Layout>
+            </Web3Provider>
+          </SnackbarProvider>
         </ThemeProvider>
       </AppCacheProvider>
     </>

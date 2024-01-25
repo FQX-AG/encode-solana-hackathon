@@ -1,7 +1,7 @@
 import { Box, styled, SxProps, Theme } from "@mui/material";
 import { createElement, ElementType, forwardRef, ReactNode } from "react";
 
-const variants = ["400|14px|18px", "500|14px|18px", "500|22px|29px"] as const;
+const variants = ["400|14px|18px", "400|16px|21px", "500|14px|18px", "500|18px|23px", "500|22px|29px"] as const;
 
 type Variant = (typeof variants)[number];
 

@@ -1,5 +1,3 @@
-import { formatDecimal } from "@/formatters";
-
 export enum StructuredProductType {
   CPN = "CPN",
   RC = "RC",
@@ -14,43 +12,53 @@ export enum StructuredProductUnderlyingAsset {
   PYPL = "PYPL",
   CLA = "CLA",
 }
-export enum BarrierType {
+export enum BRCType {
   European = "European",
   American = "American",
   DailyOnClose = "DailyOnClose",
 }
-export enum Currencies {
+export enum Currency {
   USDC = "USDC",
+  "USDC.e" = "USDC.e",
+  EUROe = "EUROe",
 }
 export enum CouponFrequency {
   DemoMode = "DemoMode",
+  Annual = "Annual",
+  SemiAnnual = "SemiAnnual",
+  Quarterly = "Quarterly",
+  BiMonthly = "BiMonthly",
+  Monthly = "Monthly",
+  AtMaturity = "AtMaturity",
 }
 
 export const MONEY_DECIMAL_PLACES = 2;
 export const ISSUANCE_AMOUNT_MAX = 100_000_000_000;
 export const STRUCTURED_PRODUCT_TYPE_NAMES: Record<StructuredProductType, string> = {
-  CPN: "Capital Protection Note",
-  RC: "Reverse Convertible",
-  BRC: "Barrier Reverse Convertible",
-  OC: "Outperformance Certificate",
+  CPN: "Capital Protection Note (CPN)",
+  RC: "Reverse Convertible (RC)",
+  BRC: "Barrier Reverse Convertible (BRC)",
+  OC: "Outperformance Certificate (OC)",
 };
 export const STRUCTURED_PRODUCT_ASSET_NAMES: Record<StructuredProductUnderlyingAsset, string> = {
-  BTC: "Bitcoin",
-  ETH: "Ethereum",
-  COIN: "Coinbase Global Inc",
-  NVDA: "Nvidia Corp",
-  PYPL: "Paypal Holdings Inc",
-  CLA: "WTI Crude Oil",
+  BTC: "Bitcoin (BTC)",
+  ETH: "Ethereum (ETH)",
+  COIN: "Coinbase Global Inc (COIN)",
+  NVDA: "Nvidia Corp (NVDA)",
+  PYPL: "Paypal Holdings Inc (PYPL)",
+  CLA: "WTI Crude Oil (CLA)",
 };
-export const STRUCTURED_PRODUCT_BARRIER_TYPE_NAMES: Record<BarrierType, string> = {
+export const STRUCTURED_PRODUCT_BARRIER_TYPE_NAMES: Record<BRCType, string> = {
   DailyOnClose: "Daily on close",
   American: "American",
   European: "European",
 };
-export const COUPON_FREQUENCY_OPTIONS: Record<CouponFrequency, string> = {
+export const COUPON_FREQUENCY_NAMES: Record<CouponFrequency, string> = {
   DemoMode: "Demo mode",
+  Annual: "Annual",
+  SemiAnnual: "Semi-annual",
+  Quarterly: "Quarterly",
+  BiMonthly: "Bi-monthly",
+  Monthly: "Monthly",
+  AtMaturity: "At maturity",
 };
-export const PRINCIPAL_OPTIONS: [number, string][] = [1_000, 10_000, 100_000, 1_000_000].map((key) => [
-  key,
-  formatDecimal(key),
-]);

@@ -1,60 +1,33 @@
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
-import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import { SxProps } from "@mui/material/styles";
 import { DateTimePicker } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import addMinutes from "date-fns/addMinutes";
-import subMinutes from "date-fns/subMinutes";
 import { useField } from "formik";
 import * as React from "react";
 import { ReactNode, useCallback, useRef, useState } from "react";
 
 import { Tooltip } from "@/components/Tooltip";
-import { formatDateUTC, DATE_AND_TIME_FORMAT, formatDate, formatUtcOffset } from "@/formatters";
-import { isValidDate } from "@/utils";
-import { InfoAdornment } from "@/components/form/InfoAdornment";
+import { DATE_AND_TIME_FORMAT } from "@/formatters";
 
 export type DateTimeFieldProps = {
   name: string;
   label: ReactNode;
   id: string;
   sx?: SxProps;
-  mode?: "input" | "icon";
-  isDisabled?: boolean;
-  isUTC?: boolean;
-  size?: "medium" | "small";
+  disabled?: boolean;
 };
 
-export const DateTimeField = ({ mode = "input", isUTC, ...props }: DateTimeFieldProps) => {
+export const DateTimeField = (props: DateTimeFieldProps) => {
   const [, meta, { setValue }] = useField<Date | null | undefined>(props.name);
   const pickerRef = useRef(null);
   const iconRef = useRef(null);
   const [opened, setOpened] = useState<boolean>(false);
 
-  let value = meta.value;
-  if (isUTC && value && isValidDate(value)) value = addMinutes(value, value.getTimezoneOffset());
-  const suffix = isUTC ? "UTC" : "Select local time";
-  const tooltip =
-    meta.value && isValidDate(meta.value) && !opened
-      ? isUTC
-        ? `${formatDate(meta.value, true)} (${formatUtcOffset(meta.value)})`
-        : formatDateUTC(meta.value, true)
-      : "";
-
   const handleClose = useCallback(() => setOpened(false), []);
   const handleOpen = useCallback(() => setOpened(true), []);
-  const handleChange = useCallback(
-    (value: Date | null) => {
-      if (isUTC && value && isValidDate(value)) {
-        setValue(subMinutes(value, value.getTimezoneOffset()));
-      } else {
-        setValue(value);
-      }
-    },
-    [isUTC, setValue]
-  );
+  const handleChange = useCallback((value: Date | null) => setValue(value), [setValue]);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -68,8 +41,8 @@ export const DateTimeField = ({ mode = "input", isUTC, ...props }: DateTimeField
         onClose={handleClose}
         ampm={false}
         label={props.label}
-        value={value ?? null}
-        disabled={props.isDisabled}
+        value={meta.value}
+        disabled={props.disabled}
         onChange={handleChange}
         OpenPickerButtonProps={{
           tabIndex: -1,
@@ -77,43 +50,18 @@ export const DateTimeField = ({ mode = "input", isUTC, ...props }: DateTimeField
         components={{
           OpenPickerIcon: CalendarTodayOutlinedIcon,
         }}
-        renderInput={({ InputProps, ...params }) =>
-          mode === "input" ? (
-            <Tooltip title={tooltip} error={meta.error}>
-              <TextField
-                data-error={!!meta.error}
-                size={props.size}
-                id={props.id}
-                sx={props.sx}
-                {...params}
-                InputLabelProps={{
-                  error: !!meta.error,
-                }}
-                InputProps={{
-                  ...InputProps,
-                  endAdornment: (
-                    <>
-                      {InputProps?.endAdornment}
-                      <InfoAdornment sx={{ ml: 2 }}>({suffix})</InfoAdornment>
-                    </>
-                  ),
-                }}
-              />
-            </Tooltip>
-          ) : mode === "icon" ? (
-            <IconButton
-              ref={iconRef}
-              color="primary"
-              onClick={() => setOpened(true)}
+        renderInput={({ InputProps, ...params }) => (
+          <Tooltip title="" error={meta.error}>
+            <TextField
+              data-error={!!meta.error}
               id={props.id}
-              disabled={props.isDisabled}
-            >
-              <CalendarTodayOutlinedIcon />
-            </IconButton>
-          ) : (
-            <></>
-          )
-        }
+              sx={{ ".MuiInputBase-root": { paddingRight: "24px" }, ...props.sx }}
+              {...params}
+              InputLabelProps={{ error: !!meta.error }}
+              InputProps={InputProps}
+            />
+          </Tooltip>
+        )}
         disablePast
         PopperProps={{
           anchorEl: pickerRef.current ?? iconRef.current,

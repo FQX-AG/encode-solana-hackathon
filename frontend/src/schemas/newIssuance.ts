@@ -1,8 +1,9 @@
 import * as Yup from "yup";
+import { addMinutes, isFuture } from "date-fns";
 
 import {
-  BarrierType,
-  Currencies,
+  BRCType,
+  Currency,
   StructuredProductType,
   StructuredProductUnderlyingAsset,
   CouponFrequency,
@@ -43,13 +44,13 @@ export type FormValues = {
   };
 };
 
-export const initialValues: FormValues = {
-  type: "",
+export const getInitialValues = (): FormValues => ({
+  type: StructuredProductType.BRC,
   underlyingAsset: StructuredProductUnderlyingAsset.BTC,
-  totalIssuanceAmount: (100_000).toString(),
-  currency: Currencies.USDC,
-  principal: (100_000).toString(),
-  maturityDate: null,
+  totalIssuanceAmount: (8_000_000_000).toString(),
+  currency: Currency.USDC,
+  principal: (1_000_000_000).toString(),
+  maturityDate: addMinutes(new Date(), 5),
   couponFrequency: CouponFrequency.DemoMode,
   cpnDetails: {
     level: "100",
@@ -58,10 +59,10 @@ export const initialValues: FormValues = {
     strike: "100",
   },
   brcDetails: {
-    level: "100",
-    type: BarrierType.European,
+    level: "80",
+    type: BRCType.European,
   },
-};
+});
 
 type GenericValues<Type extends StructuredProductType, Params extends object> = {
   type: Type;
@@ -77,7 +78,7 @@ export type Values =
   | GenericValues<StructuredProductType.OC, {}>
   | GenericValues<StructuredProductType.CPN, { cpnDetails: { level: number } }>
   | GenericValues<StructuredProductType.RC, { rcDetails: { strike: number } }>
-  | GenericValues<StructuredProductType.BRC, { brcDetails: { level: number; type: BarrierType } }>;
+  | GenericValues<StructuredProductType.BRC, { brcDetails: { level: number; type: BRCType } }>;
 
 export const validationSchema = Yup.object<Values>({
   type: Yup.string().label("Type").oneOf(Object.values(StructuredProductType)).required(),
@@ -92,9 +93,12 @@ export const validationSchema = Yup.object<Values>({
     .test(maxDecimalPlaces)
     .test(divisibleByPrincipal)
     .required(),
-  currency: Yup.string().label("Currency").oneOf(Object.values(Currencies)).required(),
+  currency: Yup.string().label("Currency").oneOf(Object.values(Currency)).required(),
   principal: Yup.number().label("Denomination").moreThan(0).test(maxDecimalPlaces).required(),
-  maturityDate: Yup.date().label("Maturity date").required(),
+  maturityDate: Yup.date()
+    .label("Maturity date")
+    .test("is-in-future", "Date must be in the future", (value) => value && isFuture(value))
+    .required(),
   couponFrequency: Yup.string().label("Coupon frequency").oneOf(Object.values(CouponFrequency)).required(),
   cpnDetails: Yup.object({
     level: Yup.number().label("Capital protection level").min(0).lessThan(10000).required(),
@@ -108,7 +112,7 @@ export const validationSchema = Yup.object<Values>({
     .when("type", { is: StructuredProductType.RC, otherwise: () => Yup.mixed().nullable().strip() }),
   brcDetails: Yup.object({
     level: Yup.number().label("Barrier level").min(0).lessThan(10000).required(),
-    type: Yup.string().label("Barrier type").oneOf(Object.values(BarrierType)).required(),
+    type: Yup.string().label("Barrier type").oneOf(Object.values(BRCType)).required(),
   })
     .required()
     .when("type", { is: StructuredProductType.BRC, otherwise: () => Yup.mixed().nullable().strip() }),

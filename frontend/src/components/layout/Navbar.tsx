@@ -2,12 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { Container, Stack, styled } from "@mui/material";
 import React from "react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+
+import { WalletMultiButton } from "./WalletMultiButton";
 
 const Root = styled("div")(({ theme }) => ({
-  position: "sticky",
-  inset: "0 0 auto",
-  py: 2,
+  flex: "0 0 auto",
   borderBottom: `1px solid ${theme.customColors.oxfordBlue600}`,
   backgroundColor: theme.palette.background.default,
   zIndex: 2,
