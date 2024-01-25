@@ -84,7 +84,7 @@ pub struct Initialize<'info> {
     #[account(mut)]
     pub investor: Signer<'info>,
     /// CHECK: just to be set as issuer should verify their signature later
-    pub issuer: AccountInfo<'info>,
+    pub issuer: Signer<'info>,
     // TODO: space calculation
     #[account(init, seeds=[mint.key().as_ref()], bump, payer=investor, space=200)]
     pub structured_product: Account<'info, StructuredProduct>,

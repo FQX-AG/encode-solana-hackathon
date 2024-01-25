@@ -12,6 +12,7 @@ import { TransferSnapshotHook } from "../target/types/transfer_snapshot_hook";
 import { TreasuryWallet } from "../target/types/treasury_wallet";
 import { StructuredNotesSdk } from "../src";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
+import { SignerWallet } from "@saberhq/solana-contrib";
 
 describe("structured-product", () => {
   const structuredProductProgram = anchor.workspace
@@ -38,14 +39,14 @@ describe("structured-product", () => {
   let treasuryWallet: Keypair;
   let treasuryWalletAuthorityPda: PDA;
 
-  let wallet: NodeWallet;
   let sdk: StructuredNotesSdk;
 
   beforeEach(async () => {
     investor = provider.publicKey;
     issuer = await newAccountWithLamports(provider.connection);
+
     sdk = new StructuredNotesSdk(
-      provider,
+      provider.connection,
       provider.wallet,
       structuredProductProgram
     );
@@ -76,12 +77,29 @@ describe("structured-product", () => {
   });
 
   it("should create a structured product", async () => {
-    const tx = await sdk.initialize(1000000, {
-      investor: investor,
-      issuer: issuer.publicKey,
-      issuerTreasuryWallet: treasuryWallet.publicKey,
-    });
+    const issuerSdk = new StructuredNotesSdk(
+      provider.connection,
+      new SignerWallet(issuer),
+      structuredProductProgram
+    );
 
-    await tx.send();
+    console.log("Investor: ", sdk.provider.walletKey.toBase58());
+    console.log("Issuer: ", issuerSdk.provider.walletKey.toBase58());
+
+    const { nonceAccount, noncePubkey } =
+      await issuerSdk.createDurableNonceAccount();
+
+    const issuerSignedInit = await issuerSdk.signInitializeOffline(
+      1000000,
+      {
+        investor: investor,
+        issuer: issuer.publicKey,
+        issuerTreasuryWallet: treasuryWallet.publicKey,
+      },
+      nonceAccount,
+      noncePubkey
+    );
+
+    await sdk.signAndBroadcastInitialize(issuerSignedInit);
   });
 });
