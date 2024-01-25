@@ -155,15 +155,6 @@ export class StructuredNotesSdk {
     console.log("Mint: ", mint.publicKey.toBase58());
     const tx = new Transaction();
 
-    const advanceIx = SystemProgram.nonceAdvance({
-      noncePubkey,
-      authorizedPubkey: this.provider.walletKey,
-    });
-
-    const initIx = await this.getInitializeInstruction(supply, mint, accounts);
-    tx.add(advanceIx);
-    tx.add(initIx);
-
     const structuredProductPDA = getPdaWithSeeds(
       [mint.publicKey.toBuffer()],
       this.program.programId
@@ -177,19 +168,26 @@ export class StructuredNotesSdk {
       this.treasuryWalletProgram.programId
     );
 
-    tx.add(
-      await this.treasuryWalletProgram.methods
-        .addWithdrawAuthorization()
-        .accounts({
-          owner: accounts.issuer,
-          treasuryWallet: accounts.issuerTreasuryWallet,
-          authority: structuredProductPDA.publicKey,
-          withdrawAuthorization: withdrawAuthorizationPDA.publicKey,
-          rent: SYSVAR_RENT_PUBKEY,
-          systemProgram: SystemProgram.programId,
-        })
-        .instruction()
-    );
+    const advanceIx = SystemProgram.nonceAdvance({
+      noncePubkey,
+      authorizedPubkey: this.provider.walletKey,
+    });
+    const initIx = await this.getInitializeInstruction(supply, mint, accounts);
+    const addAuthorizationIx = await this.treasuryWalletProgram.methods
+      .addWithdrawAuthorization()
+      .accounts({
+        owner: accounts.issuer,
+        treasuryWallet: accounts.issuerTreasuryWallet,
+        authority: structuredProductPDA.publicKey,
+        withdrawAuthorization: withdrawAuthorizationPDA.publicKey,
+        rent: SYSVAR_RENT_PUBKEY,
+        systemProgram: SystemProgram.programId,
+      })
+      .instruction();
+
+    tx.add(advanceIx);
+    tx.add(initIx);
+    tx.add(addAuthorizationIx);
     tx.recentBlockhash = nonceAccount.nonce;
     tx.feePayer = accounts.investor;
     tx.partialSign(mint);
