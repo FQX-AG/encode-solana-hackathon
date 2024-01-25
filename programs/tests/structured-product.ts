@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { AnchorProvider, Program } from "@coral-xyz/anchor";
-import { StructuredProduct } from "../target/types/structured_product";
+import { StructuredProduct } from "../src/types/structured_product";
 import {
   Keypair,
   PublicKey,
