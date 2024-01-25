@@ -17,6 +17,7 @@ type TextProps = {
   color?: keyof Theme["customColors"];
   component?: ElementType;
   sx?: SxProps<Theme>;
+  className?: string;
 };
 
 export const Text = forwardRef<HTMLElement, TextProps>((props, ref) => {
@@ -26,6 +27,6 @@ export const Text = forwardRef<HTMLElement, TextProps>((props, ref) => {
     ? { ...props.sx, color: (theme) => theme.customColors[color] }
     : props.sx;
 
-  return createElement(Component, { ref, component: props.component, sx }, props.children);
+  return createElement(Component, { ref, component: props.component, sx, className: props.className }, props.children);
 });
 Text.displayName = "Text";
