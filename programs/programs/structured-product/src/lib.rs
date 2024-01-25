@@ -88,11 +88,11 @@ pub struct Initialize<'info> {
     // TODO: space calculation
     #[account(init, seeds=[mint.key().as_ref()], bump, payer=investor, space=200)]
     pub structured_product: Account<'info, StructuredProduct>,
-    #[account(mut, mint::authority=structured_product)]
+    #[account(init, mint::authority=structured_product, mint::decimals=0, payer=investor)]
     pub mint: InterfaceAccount<'info, Mint>,
-    #[account(mut)] //TODO: validate that the program is the owner
+    #[account(init, associated_token::authority=structured_product, associated_token::mint=mint, payer=investor)]
     pub program_token_account: InterfaceAccount<'info, TokenAccount>,
-    #[account(mut)] // TODO: validate that the investor is the owner
+    #[account(init, associated_token::authority=investor, associated_token::mint=mint, payer=investor)]
     pub investor_token_account: InterfaceAccount<'info, TokenAccount>,
     /// CHECK: Add account validation back
     pub issuer_treasury_wallet: AccountInfo<'info>,

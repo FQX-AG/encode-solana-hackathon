@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "dist/esm/",
+    "isolatedModules": true,
+  },
+  "rootDir": "./src",
+  "include": ["src/"]
+}

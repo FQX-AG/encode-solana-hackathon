@@ -1,4 +1,4 @@
-import { Connection, PublicKey, Signer } from "@solana/web3.js";
+import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
 
 export type PDA = {
@@ -21,7 +21,7 @@ export async function getPdaWithSeeds(
 export async function newAccountWithLamports(
   connection: Connection,
   lamports = 100000000000
-): Promise<Signer> {
+): Promise<Keypair> {
   const account = anchor.web3.Keypair.generate();
   const signature = await connection.requestAirdrop(
     account.publicKey,
