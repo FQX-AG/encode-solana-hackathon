@@ -9,12 +9,17 @@ structured-product = "GYFmKqbpYHUrML3BstU9VUnVdEE6ho9tzVJzs1DAR5iz"
 transferhook = "7aeu4HRHR4UwQndRDyh5f7nMwgxgH3rrtLgRntxdivZw"
 treasury-wallet = "3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3"
 
+[programs.devnet]
+structured-product = "6wY4z82JNzufboHA3Gd2cwUVrijoTjFuYf3nG4LsnbHL"
+treasury-wallet = "4eruY9bV8NRs5t1Q4s3jpUgk94R5woLU8hBn2GvXSzjG"
+transferhook = "92wm1a2viQkts2yXQF9hAQFZJ4bXRRof5zKCsuN4zWg3"
+
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
 cluster = "Localnet"
-wallet = "/Users/daniel/.config/solana/id.json"
+wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "pnpm ts-mocha -p ./tsconfig.json -t 1000000 tests/structured-product.ts"
