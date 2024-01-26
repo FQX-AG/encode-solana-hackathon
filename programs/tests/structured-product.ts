@@ -21,6 +21,7 @@ import {
   createAssociatedTokenAccountInstruction,
   createInitializeMint2Instruction,
   createMintToCheckedInstruction,
+  getAccount,
   getAssociatedTokenAddressSync,
   TOKEN_2022_PROGRAM_ID,
 } from "@solana/spl-token";
@@ -163,6 +164,24 @@ describe("structured-product", () => {
     });
 
     await sdk.signAndBroadcastIssueTransaction(signedTx);
+
+    const investorATA = getAssociatedTokenAddressSync(
+      mint,
+      investor,
+      false,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const investorTokenAccount = await getAccount(
+      provider.connection,
+      investorATA,
+      "confirmed",
+      TOKEN_2022_PROGRAM_ID
+    );
+
+    expect(investorTokenAccount.amount).to.equal(1000n);
+
     await sleep(2000);
 
     console.log("Mint: ", mint.toBase58());
