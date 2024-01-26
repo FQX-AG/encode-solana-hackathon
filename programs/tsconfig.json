@@ -4,8 +4,19 @@
     "typeRoots": ["./node_modules/@types"],
     "lib": ["es2020"],
     "module": "commonjs",
+    "moduleResolution": "node",
     "target": "es2020",
-    "esModuleInterop": true
-  }
+    "noUnusedLocals": false,
+    "noEmit": true,
+    "isolatedModules": false,
+    "esModuleInterop": true,
+    "preserveSymlinks": false,
+    "skipLibCheck": true,
+    // sources
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "inlineSources": true
+  },
+  "include": ["src/", "tests/"]
 }
-          
