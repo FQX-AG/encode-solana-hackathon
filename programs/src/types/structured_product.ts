@@ -222,7 +222,7 @@ export type StructuredProduct = {
         },
         {
           "name": "snapshotConfig",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -753,7 +753,7 @@ export const IDL: StructuredProduct = {
         },
         {
           "name": "snapshotConfig",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {

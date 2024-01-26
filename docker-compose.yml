@@ -13,11 +13,15 @@ services:
           path: ./backend/
           target: /usr/src/app/backend/
         - action: rebuild
+          path: ./programs/
+        - action: rebuild
           path: ./package.json
         - action: rebuild
           path: ./backend/package.json
     environment:
       - NODE_ENV=development
+    env_file:
+      - ./backend/.env
     command: pnpm --filter backend start:dev
     networks:
       - default
@@ -39,6 +43,8 @@ services:
           path: ./frontend/package.json
     environment:
       - NODE_ENV=development
+    env_file:
+      - ./frontend/.env
     command: pnpm --filter ./frontend dev
     networks:
       - default
