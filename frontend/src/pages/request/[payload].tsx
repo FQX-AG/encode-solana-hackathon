@@ -1,7 +1,7 @@
 import { Box, Button, Divider, Stack, Theme } from "@mui/material";
 import { Panel } from "@/components/Panel";
 import { Section } from "@/components/Section";
-import List, { Column } from "@/components/list/List";
+import { List, Column } from "@/components/list/List";
 import { Flag } from "@/components/Flag";
 import { formatDate, formatDateUTC, formatDecimal, formatPercentage } from "@/formatters";
 import { Chip } from "@/components/Chip";
@@ -18,6 +18,7 @@ import { Text } from "@/components/Text";
 import { ArrowForward, ChevronRight } from "@mui/icons-material";
 import { differenceInMonths } from "date-fns";
 import { useReport } from "@/hooks/useReport";
+import { BRC } from "@/components/graphs/BRC";
 
 type Tag = "bestOffer";
 
@@ -205,7 +206,12 @@ export default function Page() {
             >
               Accept
             </Button>
-            <Divider />
+            {values.type === StructuredProductType.BRC && (
+              <>
+                <Divider />
+                <BRC type={values.brcDetails.type} barrier={values.brcDetails.level} coupon={quote.yield} />
+              </>
+            )}
           </GlowingPanel>
         )}
       </Box>

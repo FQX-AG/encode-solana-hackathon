@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Box, Container, Stack } from "@mui/material";
-import Navbar from "@/components/layout/Navbar";
+import { Navbar } from "@/components/layout/Navbar";
 
 type LayoutProps = {
   children: ReactNode;

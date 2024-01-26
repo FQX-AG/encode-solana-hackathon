@@ -12,7 +12,7 @@ const Root = styled("div")(({ theme }) => ({
   zIndex: 2,
 }));
 
-const Navbar = () => {
+export const Navbar = () => {
   return (
     <Root>
       <Container maxWidth="xl">
@@ -33,5 +33,3 @@ const Navbar = () => {
     </Root>
   );
 };
-
-export default Navbar;

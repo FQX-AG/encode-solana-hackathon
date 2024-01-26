@@ -40,7 +40,7 @@ export type ListProps<Item extends object> = {
   selectedKey?: string;
 };
 
-function List<Item extends object>(props: ListProps<Item>) {
+export function List<Item extends object>(props: ListProps<Item>) {
   return (
     <TableContainer>
       <Table>
@@ -79,5 +79,3 @@ function List<Item extends object>(props: ListProps<Item>) {
     </TableContainer>
   );
 }
-
-export default List;
