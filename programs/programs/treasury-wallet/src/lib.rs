@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token};
-use anchor_spl::token_interface::TokenAccount;
+use anchor_spl::token_interface::{Mint, Token2022, TokenAccount};
 
 declare_id!("3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3");
 #[error_code]
@@ -14,7 +13,7 @@ pub enum TreasuryWalletError {
 #[program]
 pub mod treasury_wallet {
     use super::*;
-    use anchor_spl::token;
+    use anchor_spl::{token, token_2022};
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         let treasury_wallet = &mut ctx.accounts.treasury_wallet;
@@ -45,21 +44,23 @@ pub mod treasury_wallet {
             &[ctx.bumps.treasury_authority],
         ];
 
-        let cpi_accounts = token::Transfer {
+        let cpi_accounts = token_2022::TransferChecked {
             from: ctx.accounts.treasury_wallet_token_account.to_account_info(),
             to: ctx.accounts.destination.to_account_info(),
+            mint: ctx.accounts.mint.to_account_info(),
             authority: ctx.accounts.treasury_authority.to_account_info(),
         };
 
         let cpi_program = ctx.accounts.token_program.to_account_info();
 
-        token::transfer(
+        token_2022::transfer_checked(
             CpiContext::new_with_signer(
                 cpi_program,
                 cpi_accounts,
                 &[&authorization_signer_seeds[..]],
             ),
             amount,
+            ctx.accounts.mint.decimals,
         )?;
 
         Ok(())
@@ -97,11 +98,13 @@ pub struct AddWithdrawAuthorization<'info> {
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
-    #[account(mut)]
+    #[account()]
+    pub authority: Signer<'info>,
+    #[account()]
     pub treasury_wallet: Account<'info, TreasuryWalletAccount>,
     #[account(mut)] // Validate that the treasury wallet is the owner
     pub treasury_wallet_token_account: InterfaceAccount<'info, TokenAccount>,
-    pub mint: Account<'info, Mint>,
+    pub mint: InterfaceAccount<'info, Mint>,
     #[account(seeds = [treasury_wallet.key().as_ref(), authority.key().as_ref()], bump)]
     pub withdraw_authorization: Account<'info, WithdrawAuthorization>,
     /// CHECK: account will never be validated, it's just used to sign transactions as the treasury wallet
@@ -109,9 +112,7 @@ pub struct Withdraw<'info> {
     pub treasury_authority: AccountInfo<'info>,
     #[account(mut)]
     pub destination: InterfaceAccount<'info, TokenAccount>,
-    #[account()]
-    pub authority: Signer<'info>,
-    pub token_program: Program<'info, Token>,
+    pub token_program: Program<'info, Token2022>,
 }
 
 #[account]

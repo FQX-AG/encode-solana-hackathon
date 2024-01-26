@@ -216,6 +216,9 @@ importers:
       '@saberhq/solana-contrib':
         specifier: ^1.15.0
         version: 1.15.0(@solana/web3.js@1.89.1)(bn.js@5.2.1)
+      '@saberhq/token-utils':
+        specifier: ^1.15.0
+        version: 1.15.0(@solana/web3.js@1.89.1)(bn.js@5.2.1)(jsbi@3.2.5)
       '@solana/spl-token':
         specifier: 0.3.11
         version: 0.3.11(@solana/web3.js@1.89.1)(fastestsmallesttextencoderdecoder@1.0.22)
@@ -3833,6 +3836,28 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /@saberhq/token-utils@1.15.0(@solana/web3.js@1.89.1)(bn.js@5.2.1)(jsbi@3.2.5):
+    resolution: {integrity: sha512-XydjtT08Qq6hdJXnfk1NtIZeyOhNyb0YXrVtM6K3OoaH88HjF36niIRv6kMMcWAGm+Hkp1111NyYFhk55PNfOA==}
+    peerDependencies:
+      '@solana/web3.js': ^1.42
+      bn.js: ^4 || ^5
+      jsbi: ^3 || ^4
+    dependencies:
+      '@saberhq/solana-contrib': 1.15.0(@solana/web3.js@1.89.1)(bn.js@5.2.1)
+      '@solana/buffer-layout': 4.0.1
+      '@solana/spl-token': 0.1.8
+      '@solana/web3.js': 1.89.1
+      '@ubeswap/token-math': 5.2.1(jsbi@3.2.5)
+      bn.js: 5.2.1
+      jsbi: 3.2.5
+      tiny-invariant: 1.3.1
+      tslib: 2.6.2
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - utf-8-validate
+    dev: false
+
   /@scure/base@1.1.5:
     resolution: {integrity: sha512-Brj9FiG2W1MRQSTB212YVPRrcbjkv48FoZi/u4l/zds/ieRrqsh7aUf6CLwkAq61oKXr/ZlTzlY66gLIj3TFTQ==}
     dev: false
@@ -4007,6 +4032,22 @@ packages:
       '@solana/web3.js': 1.89.1
     transitivePeerDependencies:
       - fastestsmallesttextencoderdecoder
+    dev: false
+
+  /@solana/spl-token@0.1.8:
+    resolution: {integrity: sha512-LZmYCKcPQDtJgecvWOgT/cnoIQPWjdH+QVyzPcFvyDUiT0DiRjZaam4aqNUyvchLFhzgunv3d9xOoyE34ofdoQ==}
+    engines: {node: '>= 10'}
+    dependencies:
+      '@babel/runtime': 7.23.8
+      '@solana/web3.js': 1.89.1
+      bn.js: 5.2.1
+      buffer: 6.0.3
+      buffer-layout: 1.2.2
+      dotenv: 10.0.0
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - utf-8-validate
     dev: false
 
   /@solana/spl-token@0.3.11(@solana/web3.js@1.89.1)(fastestsmallesttextencoderdecoder@1.0.22):
@@ -5355,6 +5396,10 @@ packages:
       '@babel/types': 7.23.6
     dev: true
 
+  /@types/big.js@6.2.2:
+    resolution: {integrity: sha512-e2cOW9YlVzFY2iScnGBBkplKsrn2CsObHQ2Hiw4V1sSyiGbgWL8IyqE3zFi1Pt5o1pdAtYkDAIsF3KKUPjdzaA==}
+    dev: false
+
   /@types/bn.js@5.1.5:
     resolution: {integrity: sha512-V46N0zwKRF5Q00AZ6hWtN0T8gGmDUaUzLWQvHFo5yThtVwK/VCenFY3wXVbOvNfajEpsTfQM4IN9k/d6gUVX3A==}
     dependencies:
@@ -5885,6 +5930,20 @@ packages:
       '@typescript-eslint/types': 6.19.1
       eslint-visitor-keys: 3.4.3
     dev: true
+
+  /@ubeswap/token-math@5.2.1(jsbi@3.2.5):
+    resolution: {integrity: sha512-wkIKDKIl6rml4CVK3fvjjLVk55Z8qEYTgjxZx7MnrTwECazyhiDuekb9WAaDPXcW5QNffCu8uv4Ba8wE96CJsg==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      jsbi: ^3 || ^4
+    dependencies:
+      '@types/big.js': 6.2.2
+      big.js: 6.2.1
+      decimal.js-light: 2.5.1
+      jsbi: 3.2.5
+      tiny-invariant: 1.3.1
+      tslib: 2.6.2
+    dev: false
 
   /@ungap/promise-all-settled@1.1.2:
     resolution: {integrity: sha512-sL/cEvJWAnClXw0wHk85/2L0G6Sj8UB0Ctc1TEMbKSsmpRosqhwj9gWgFRZSrBr2f9tiXISwNhCPmlfqUqyb9Q==}
@@ -6893,6 +6952,10 @@ packages:
     engines: {node: '>=0.6'}
     dev: false
 
+  /big.js@6.2.1:
+    resolution: {integrity: sha512-bCtHMwL9LeDIozFn+oNhhFoq+yQ3BNdnsLSASUxLciOb1vgvpHsIO1dsENiGMgbb4SkP5TrzWzRiLddn8ahVOQ==}
+    dev: false
+
   /bigint-buffer@1.1.5:
     resolution: {integrity: sha512-trfYco6AoZ+rKhKnxA0hgX0HAbVP/s808/EuDSe2JDzUnCp/xAsli35Orvk67UrTEcwuxZqYZDmfA2RXJgxVvA==}
     engines: {node: '>= 10.0.0'}
@@ -7875,6 +7938,10 @@ packages:
     engines: {node: '>=10'}
     dev: true
 
+  /decimal.js-light@2.5.1:
+    resolution: {integrity: sha512-qIMFpTMZmny+MMIitAB6D7iVPEorVw6YQRWkvarTkT4tBeSLLiHzcwj6q0MmYSFCiVpiqPJTJEYIrpcPzVEIvg==}
+    dev: false
+
   /decimal.js@10.4.3:
     resolution: {integrity: sha512-VBBaLc1MgL5XpzgIP7ny5Z6Nx3UrRkIViUkPUdtl9aya5amy3De1gsUUSB1g3+3sExYNjCAsAznmukyxCb1GRA==}
     dev: false
@@ -8081,6 +8148,11 @@ packages:
     dependencies:
       no-case: 3.0.4
       tslib: 2.6.2
+    dev: false
+
+  /dotenv@10.0.0:
+    resolution: {integrity: sha512-rlBi9d8jpv9Sf1klPjNfFAuWDjKLwTIJJ/VxtoTwIR6hnZxcEOQCZg2oIL3MWBYw5GpUDKOEnND7LXTbIpQ03Q==}
+    engines: {node: '>=10'}
     dev: false
 
   /draggabilly@3.0.0:

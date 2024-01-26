@@ -4,15 +4,28 @@ import { StructuredProduct } from "../src/types/structured_product";
 import {
   Keypair,
   PublicKey,
-  sendAndConfirmTransaction,
+  SystemProgram,
   Transaction,
 } from "@solana/web3.js";
 import { getPdaWithSeeds, newAccountWithLamports, PDA } from "./utils";
-import { TransferSnapshotHook } from "../target/types/transfer_snapshot_hook";
-import { TreasuryWallet } from "../target/types/treasury_wallet";
+import { TransferSnapshotHook } from "../src/types/transfer_snapshot_hook";
+import { TreasuryWallet } from "../src/types/treasury_wallet";
 import { StructuredNotesSdk } from "../src";
-import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
-import { SignerWallet } from "@saberhq/solana-contrib";
+import {
+  SignerWallet,
+  sleep,
+  TransactionEnvelope,
+} from "@saberhq/solana-contrib";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccountInstruction,
+  createInitializeMint2Instruction,
+  createMintToCheckedInstruction,
+  getAssociatedTokenAddressSync,
+  TOKEN_2022_PROGRAM_ID,
+} from "@solana/spl-token";
+import BN from "bn.js";
+import { expect } from "chai";
 
 describe("structured-product", () => {
   const structuredProductProgram = anchor.workspace
@@ -36,7 +49,10 @@ describe("structured-product", () => {
   let structuredProduct: PDA;
   let programATA: PublicKey;
 
+  let paymentMint: Keypair;
+
   let treasuryWallet: Keypair;
+  let treasuryWalletPaymentATA: PublicKey;
   let treasuryWalletAuthorityPda: PDA;
 
   let sdk: StructuredNotesSdk;
@@ -51,33 +67,80 @@ describe("structured-product", () => {
       structuredProductProgram,
       treasuryWalletProgram
     );
-    mint = anchor.web3.Keypair.generate();
     treasuryWallet = anchor.web3.Keypair.generate();
     treasuryWalletAuthorityPda = await getPdaWithSeeds(
       [treasuryWallet.publicKey.toBuffer()],
       treasuryWalletProgram.programId
     );
 
-    const tx = new Transaction().add(
-      await treasuryWalletProgram.methods
-        .initialize()
-        .accounts({
-          owner: issuer.publicKey,
-          treasuryWallet: treasuryWallet.publicKey,
-          treasuryAuthority: treasuryWalletAuthorityPda.publicKey,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .instruction()
+    const initTreasuryWalletIx = await treasuryWalletProgram.methods
+      .initialize()
+      .accounts({
+        owner: issuer.publicKey,
+        treasuryWallet: treasuryWallet.publicKey,
+        treasuryAuthority: treasuryWalletAuthorityPda.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .instruction();
+
+    paymentMint = Keypair.generate();
+
+    // create payment mint account using system program
+    const createPaymentMintAccountIx = SystemProgram.createAccount({
+      fromPubkey: provider.publicKey,
+      newAccountPubkey: paymentMint.publicKey,
+      space: 82,
+      lamports: await provider.connection.getMinimumBalanceForRentExemption(82),
+      programId: TOKEN_2022_PROGRAM_ID,
+    });
+
+    const initPaymentMintIx = createInitializeMint2Instruction(
+      paymentMint.publicKey,
+      6,
+      provider.publicKey,
+      null,
+      TOKEN_2022_PROGRAM_ID
     );
 
-    await sendAndConfirmTransaction(provider.connection, tx, [
-      issuer,
-      treasuryWallet,
-    ]);
+    treasuryWalletPaymentATA = getAssociatedTokenAddressSync(
+      paymentMint.publicKey,
+      treasuryWalletAuthorityPda.publicKey,
+      true,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const treasuryWalletATAInitIx = createAssociatedTokenAccountInstruction(
+      provider.publicKey,
+      treasuryWalletPaymentATA,
+      treasuryWalletAuthorityPda.publicKey,
+      paymentMint.publicKey,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const mintToTreasuryWalletIx = createMintToCheckedInstruction(
+      paymentMint.publicKey,
+      treasuryWalletPaymentATA,
+      provider.publicKey,
+      1000000000000,
+      6,
+      [],
+      TOKEN_2022_PROGRAM_ID
+    );
+
+    const tx = new Transaction()
+      .add(initTreasuryWalletIx)
+      .add(createPaymentMintAccountIx)
+      .add(initPaymentMintIx)
+      .add(treasuryWalletATAInitIx)
+      .add(mintToTreasuryWalletIx);
+
+    await provider.sendAndConfirm(tx, [issuer, treasuryWallet, paymentMint]);
   });
 
-  it("should create a structured product", async () => {
+  it("structured product happy flow!", async () => {
     const issuerSdk = new StructuredNotesSdk(
       provider.connection,
       new SignerWallet(issuer),
@@ -88,20 +151,57 @@ describe("structured-product", () => {
     console.log("Investor: ", sdk.provider.walletKey.toBase58());
     console.log("Issuer: ", issuerSdk.provider.walletKey.toBase58());
 
-    const { nonceAccount, noncePubkey } =
-      await issuerSdk.createDurableNonceAccount();
+    const paymentDate = new BN(Date.now()).divn(1000).addn(1);
+    const { signedTx, mint } = await issuerSdk.signIssuanceOffline({
+      investor: investor,
+      issuer: issuer.publicKey,
+      issuerTreasuryWallet: treasuryWallet.publicKey,
+      paymentDate: paymentDate,
+      paymentMint: paymentMint.publicKey,
+      supply: new BN(1000),
+      priceAuthority: provider.publicKey,
+    });
 
-    const issuerSignedInit = await issuerSdk.signInitializeOffline(
-      1000000,
-      {
-        investor: investor,
-        issuer: issuer.publicKey,
-        issuerTreasuryWallet: treasuryWallet.publicKey,
-      },
-      nonceAccount,
-      noncePubkey
+    await sdk.signAndBroadcastIssueTransaction(signedTx);
+    await sleep(2000);
+
+    console.log("Mint: ", mint.toBase58());
+
+    const setPaymentIx = await sdk.createSetPaymentPriceInstruction(
+      { mint: mint },
+      new BN(100),
+      paymentDate
     );
 
-    await sdk.signAndBroadcastInitialize(issuerSignedInit);
+    const pullPaymentIx = await sdk.createPullPaymentInstruction(
+      {
+        paymentMint: paymentMint.publicKey,
+        structuredProductMint: mint,
+        treasuryWallet: treasuryWallet.publicKey,
+      },
+      paymentDate
+    );
+
+    const pullPaymentTx = new TransactionEnvelope(sdk.provider, [
+      setPaymentIx,
+      pullPaymentIx,
+    ]);
+
+    const simulationResult = await pullPaymentTx.simulate();
+
+    console.log("Simulation result: ", simulationResult);
+    console.log("Simulation error: ", simulationResult.value.err);
+
+    const pendingTx = await pullPaymentTx.send();
+
+    await pendingTx.wait();
+
+    const paymentTokenAccount = await sdk.getPaymentTokenAccount(
+      mint,
+      paymentMint.publicKey,
+      paymentDate
+    );
+
+    expect(paymentTokenAccount.amount).to.equal(100000n);
   });
 });
