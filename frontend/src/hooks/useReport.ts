@@ -9,9 +9,9 @@ export function useReport() {
       success: (message: string) => {
         enqueueSnackbar(message, { variant: "success" });
       },
-      error: (err: unknown) => {
-        console.error(err);
-        enqueueSnackbar(err instanceof Error ? err.message : String(err), { variant: "error" });
+      error: (e: unknown) => {
+        console.error(e);
+        enqueueSnackbar(e instanceof Error ? e.message : String(e), { variant: "error" });
       },
     }),
     [enqueueSnackbar]

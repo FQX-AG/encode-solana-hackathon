@@ -15,7 +15,7 @@ const Root = styled("div")(({ theme }) => ({
 const Navbar = () => {
   return (
     <Root>
-      <Container>
+      <Container maxWidth="xl">
         <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" minHeight={80}>
           <Link href="/">
             <Image

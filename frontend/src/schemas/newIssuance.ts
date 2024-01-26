@@ -47,9 +47,9 @@ export type FormValues = {
 export const getInitialValues = (): FormValues => ({
   type: StructuredProductType.BRC,
   underlyingAsset: StructuredProductUnderlyingAsset.BTC,
-  totalIssuanceAmount: (8_000_000_000).toString(),
+  totalIssuanceAmount: (8_000_000).toString(),
   currency: Currency.USDC,
-  principal: (1_000_000_000).toString(),
+  principal: (1_000_000).toString(),
   maturityDate: addMinutes(new Date(), 5),
   couponFrequency: CouponFrequency.DemoMode,
   cpnDetails: {
@@ -80,7 +80,7 @@ export type Values =
   | GenericValues<StructuredProductType.RC, { rcDetails: { strike: number } }>
   | GenericValues<StructuredProductType.BRC, { brcDetails: { level: number; type: BRCType } }>;
 
-export const validationSchema = Yup.object<Values>({
+export const validationSchema: Yup.Schema<Values> = Yup.object({
   type: Yup.string().label("Type").oneOf(Object.values(StructuredProductType)).required(),
   underlyingAsset: Yup.string()
     .label("Underlying asset")
@@ -116,4 +116,4 @@ export const validationSchema = Yup.object<Values>({
   })
     .required()
     .when("type", { is: StructuredProductType.BRC, otherwise: () => Yup.mixed().nullable().strip() }),
-});
+}).required();

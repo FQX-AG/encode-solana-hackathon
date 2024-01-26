@@ -1,7 +1,7 @@
 import { Section } from "@/components/Section";
 import { Panel } from "@/components/Panel";
 import { WithSideContent } from "@/components/WithSideContent";
-import { Box, InputAdornment, Stack } from "@mui/material";
+import { Box, Stack } from "@mui/material";
 import { SelectField } from "@/components/form/SelectField";
 import {
   BRCType,
@@ -40,10 +40,10 @@ const currencyOptions: [string, string, boolean][] = Object.entries(Currency).ma
   key === Currency.USDC,
 ]);
 
-const principalOptions: [number, string, boolean][] = [1_000_000, 10_000_000, 100_000_000, 1_000_000_000].map((key) => [
+const principalOptions: [number, string, boolean][] = [1_000, 10_000, 100_000, 1_000_000].map((key) => [
   key,
   formatDecimal(key),
-  key === 1_000_000_000,
+  key === 1_000_000,
 ]);
 
 const couponFrequencyOptions: [string, string, boolean][] = Object.entries(COUPON_FREQUENCY_NAMES).map(
@@ -77,15 +77,7 @@ export function NewIssuance1() {
                 label="Barrier level"
                 sx={{ width: "307px" }}
                 hasFixedDecimalScale={true}
-                endAdornment={
-                  <InputAdornment
-                    position="end"
-                    disableTypography
-                    sx={{ color: (theme) => theme.customColors.oxfordBlue500 }}
-                  >
-                    %
-                  </InputAdornment>
-                }
+                endAdornment={<Box sx={{ color: (theme) => theme.customColors.oxfordBlue500 }}>%</Box>}
               />
               <SelectField
                 name="brcDetails.type"

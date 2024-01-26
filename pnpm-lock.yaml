@@ -140,6 +140,9 @@ importers:
       '@solana/web3.js':
         specifier: 1.89.1
         version: 1.89.1
+      country-flag-icons:
+        specifier: ^1.5.9
+        version: 1.5.9
       date-fns:
         specifier: ^2.30.0
         version: 2.30.0
@@ -7688,6 +7691,10 @@ packages:
       parse-json: 5.2.0
       path-type: 4.0.0
       yaml: 1.10.2
+
+  /country-flag-icons@1.5.9:
+    resolution: {integrity: sha512-9jrjv2w7kRbqNtdtMdK2j3gmDIZzd5l9L2pZiQjF9J0mUcB+NKIGDNADTDHBEp8EQtjOkCOcciJGGSOpERdXPQ==}
+    dev: false
 
   /crc-32@1.2.2:
     resolution: {integrity: sha512-ROmzCKrTnOwybPcJApAA6WBWij23HVfGVNKqqrZpuyZOHqK2CwHSvpGuyt/UNNvaIjEd8X5IFGp4Mh+Ie1IHJQ==}

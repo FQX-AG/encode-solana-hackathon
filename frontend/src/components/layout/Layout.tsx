@@ -11,13 +11,18 @@ export function Layout(props: LayoutProps) {
     <Stack height="100vh">
       <Navbar />
       <Box
+        component="main"
         sx={{
           overflow: "auto",
           flex: "1 1 auto",
           py: 6,
+          display: "flex",
+          flexDirection: "column",
         }}
       >
-        <Container>{props.children}</Container>
+        <Container maxWidth="xl" sx={{ flex: "1 1 auto", display: "flex", flexDirection: "column" }}>
+          {props.children}
+        </Container>
       </Box>
     </Stack>
   );

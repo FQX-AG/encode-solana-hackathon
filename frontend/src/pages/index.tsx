@@ -7,8 +7,10 @@ import { useMemo } from "react";
 import { NewIssuance1 } from "@/sections/NewIssuance1";
 import { NewIssuance2 } from "@/sections/NewIssuance2";
 import { ArrowForward } from "@mui/icons-material";
+import { useRouter } from "next/router";
 
-export default function Home() {
+export default function Page() {
+  const router = useRouter();
   const report = useReport();
   const initialValues = useMemo(() => getInitialValues(), []);
   const formik = useFormikWithLazyValidation<FormValues>({
@@ -17,11 +19,11 @@ export default function Home() {
     onSubmit: async (formValues) => {
       try {
         const values = await validationSchema.validate(formValues, { stripUnknown: true });
-        console.log(values);
-
+        const payload = btoa(JSON.stringify(values));
+        await router.push(`/request/${payload}`);
         report.success("Success!");
-      } catch (err: unknown) {
-        report.error(err);
+      } catch (e) {
+        report.error(e);
       }
     },
   });

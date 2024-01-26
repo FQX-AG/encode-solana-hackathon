@@ -74,12 +74,8 @@ export function formatDateChunksUTC(date: Date | string) {
   }
 }
 
-export const formatPercentage = (
-  value: number | string,
-  minimumFractionDigits: number = 2,
-  maximumFractionDigits: number = 2
-) =>
-  (Number(value) / 100).toLocaleString("en-US", {
+export const formatPercentage = (units: number, minimumFractionDigits: number = 2, maximumFractionDigits: number = 2) =>
+  units.toLocaleString("en-US", {
     style: "percent",
     minimumFractionDigits,
     maximumFractionDigits,

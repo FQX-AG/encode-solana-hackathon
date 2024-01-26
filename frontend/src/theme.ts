@@ -185,10 +185,7 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           "tbody.clickable-rows &": {
-            "&:hover": {
-              cursor: "pointer",
-              backgroundColor: "#15163A",
-            },
+            cursor: "pointer",
           },
         },
       },
