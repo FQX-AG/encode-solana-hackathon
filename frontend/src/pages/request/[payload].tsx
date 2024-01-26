@@ -169,7 +169,7 @@ export default function Page() {
       </Stack>
       <Box gridColumn={{ xs: "span 12", xl: "span 4" }}>
         {quote && (
-          <GlowingPanel spacing={3}>
+          <GlowingPanel spacing={3} sx={{ position: "sticky", top: 0 }}>
             <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3 }}>
               <Property k="Total coupon payment" v={`${values.currency} ${formatDecimal(quote.totalCouponPayment)}`} />
               <Property
@@ -209,7 +209,7 @@ export default function Page() {
             {values.type === StructuredProductType.BRC && (
               <>
                 <Divider />
-                <BRC type={values.brcDetails.type} barrier={values.brcDetails.level} coupon={quote.yield} />
+                <BRC type={values.brcDetails.type} barrier={values.brcDetails.level} coupon={quote.yield * 100} />
               </>
             )}
           </GlowingPanel>
