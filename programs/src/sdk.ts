@@ -114,14 +114,6 @@ export class StructuredNotesSdk {
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-    const issuerTreasuryWalletWithdrawAuthorization = getPdaWithSeeds(
-      [
-        accounts.issuerTreasuryWallet.toBuffer(),
-        structuredProductPDA.publicKey.toBuffer(),
-      ],
-      this.treasuryWalletProgram.programId
-    );
-
     return await this.program.methods
       .initialize(new BN(supply))
       .accounts({
@@ -131,8 +123,6 @@ export class StructuredNotesSdk {
         investorTokenAccount: investorATA,
         programTokenAccount: programATA,
         issuerTreasuryWallet: accounts.issuerTreasuryWallet,
-        issuerTreasuryWalletWithdrawAuthorization:
-          issuerTreasuryWalletWithdrawAuthorization.publicKey,
         treasuryWalletProgram: this.treasuryWalletProgram.programId,
         // snapshotTransferHookProgram: transferSnapshotHookProgram.programId,
         tokenProgram: TOKEN_2022_PROGRAM_ID,
