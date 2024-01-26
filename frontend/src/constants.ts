@@ -1,3 +1,6 @@
+import { PublicKey } from "@solana/web3.js";
+import { ensure } from "@/utils";
+
 export enum StructuredProductType {
   CPN = "CPN",
   RC = "RC",
@@ -62,3 +65,12 @@ export const COUPON_FREQUENCY_NAMES: Record<CouponFrequency, string> = {
   Monthly: "Monthly",
   AtMaturity: "At maturity",
 };
+export const STRUCTURED_PRODUCT_PROGRAM_ID = new PublicKey(
+  ensure(
+    process.env.NEXT_PUBLIC_STRUCTURED_PRODUCT_PROGRAM_ID,
+    "NEXT_PUBLIC_STRUCTURED_PRODUCT_PROGRAM_ID is undefined"
+  )
+);
+export const TREASURY_WALLET_PROGRAM_ID = new PublicKey(
+  ensure(process.env.NEXT_PUBLIC_TREASURY_WALLET_PROGRAM_ID, "NEXT_PUBLIC_TREASURY_WALLET_PROGRAM_ID is undefined")
+);

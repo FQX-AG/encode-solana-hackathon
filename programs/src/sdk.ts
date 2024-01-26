@@ -27,7 +27,6 @@ import {
   Wallet,
 } from "@saberhq/solana-contrib";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
-import * as console from "console";
 import { TreasuryWallet } from "./types/treasury_wallet";
 
 export type InitializeAccounts = {
@@ -38,13 +37,12 @@ export type InitializeAccounts = {
 
 export class StructuredNotesSdk {
   readonly provider: SolanaAugmentedProvider;
-  readonly treasuryWalletProgram = anchor.workspace
-    .TreasuryWallet as Program<TreasuryWallet>;
 
   constructor(
     connection: Connection,
     wallet: Wallet,
-    public readonly program: Program<StructuredProduct>
+    readonly program: Program<StructuredProduct>,
+    readonly treasuryWalletProgram: Program<TreasuryWallet>
   ) {
     this.provider = new SolanaAugmentedProvider(
       new SolanaProvider(

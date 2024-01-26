@@ -245,7 +245,9 @@ export const theme = createTheme({
     },
     MuiButton: {
       defaultProps: {
-        size: "large",
+        size: "medium",
+        color: "primary",
+        variant: "contained",
       },
       styleOverrides: {
         root: {

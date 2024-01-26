@@ -14,10 +14,10 @@ const Table = styled(TableBase)`
     background: #0b0d29;
     padding-top: 24px;
   }
-  thead > tr:first-child > th:first-child {
+  thead > tr:first-of-type > th:first-of-type {
     border-top-left-radius: 10px;
   }
-  thead > tr:first-child > th:last-child {
+  thead > tr:first-of-type > th:last-of-type {
     border-top-right-radius: 10px;
   }
   tbody > tr.selected > td {

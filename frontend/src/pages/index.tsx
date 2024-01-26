@@ -34,7 +34,7 @@ export default function Page() {
         <NewIssuance1 />
         <NewIssuance2 />
         <Stack direction="row" justifyContent="end">
-          <Button type="submit" size="medium" color="primary" variant="contained" endIcon={<ArrowForward />}>
+          <Button type="submit" endIcon={<ArrowForward />}>
             Request for quote
           </Button>
         </Stack>

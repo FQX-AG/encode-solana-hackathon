@@ -48,7 +48,8 @@ describe("structured-product", () => {
     sdk = new StructuredNotesSdk(
       provider.connection,
       provider.wallet,
-      structuredProductProgram
+      structuredProductProgram,
+      treasuryWalletProgram
     );
     mint = anchor.web3.Keypair.generate();
     treasuryWallet = anchor.web3.Keypair.generate();
@@ -80,7 +81,8 @@ describe("structured-product", () => {
     const issuerSdk = new StructuredNotesSdk(
       provider.connection,
       new SignerWallet(issuer),
-      structuredProductProgram
+      structuredProductProgram,
+      treasuryWalletProgram
     );
 
     console.log("Investor: ", sdk.provider.walletKey.toBase58());

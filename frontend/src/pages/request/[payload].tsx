@@ -10,7 +10,12 @@ import { validationSchema } from "@/schemas/newIssuance";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { Property } from "@/components/Property";
-import { COUPON_FREQUENCY_NAMES, StructuredProductType } from "@/constants";
+import {
+  COUPON_FREQUENCY_NAMES,
+  STRUCTURED_PRODUCT_PROGRAM_ID,
+  StructuredProductType,
+  TREASURY_WALLET_PROGRAM_ID,
+} from "@/constants";
 import { Info } from "@/components/Info";
 import { GlowingPanel } from "@/components/GlowingPanel";
 import { Decimal } from "decimal.js";
@@ -19,6 +24,13 @@ import { ArrowForward, ChevronRight } from "@mui/icons-material";
 import { differenceInMonths } from "date-fns";
 import { useReport } from "@/hooks/useReport";
 import { BRC } from "@/components/graphs/BRC";
+import { StructuredNotesSdk, StructuredProductIDL, TreasuryWalletIDL } from "@fqx/programs";
+import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
+import * as anchor from "@coral-xyz/anchor";
+import { ensure } from "@/utils";
+import { PublicKey, sendAndConfirmTransaction } from "@solana/web3.js";
+import { getPdaWithSeeds, newAccountWithLamports } from "@fqx/programs/tests/utils";
+import { Wallet } from "@coral-xyz/anchor";
 
 type Tag = "bestOffer";
 
@@ -88,6 +100,8 @@ const columns: Column<QuoteInternal>[] = [
 const itemKey = (item: QuoteInternal) => item.id;
 
 export default function Page() {
+  const anchorWallet = useAnchorWallet();
+  const { connection } = useConnection();
   const report = useReport();
   const issuanceDate = useMemo(() => new Date(), []);
   const [selection, setSelection] = useState<string>(data[0].id);
@@ -116,9 +130,14 @@ export default function Page() {
 
   if (values === undefined) return null;
 
-  const handleAcceptance = (quote: QuoteInternal) => {
+  const handleAcceptance = async (quote: QuoteInternal) => {
     try {
-      console.log(quote);
+      const wallet = ensure(anchorWallet, "Wallet is unavailable. Is it connected?");
+      const provider = new anchor.AnchorProvider(connection, wallet, { commitment: "confirmed" });
+      const program = new anchor.Program(StructuredProductIDL, STRUCTURED_PRODUCT_PROGRAM_ID, provider);
+      const treasuryWalletProgram = new anchor.Program(TreasuryWalletIDL, TREASURY_WALLET_PROGRAM_ID, provider);
+      const sdk = new StructuredNotesSdk(provider.connection, provider.wallet, program, treasuryWalletProgram);
+      // await sdk.signAndBroadcastInitialize(issuerSignedInit);
       report.success("Success!");
     } catch (e) {
       report.error(e);
@@ -196,14 +215,7 @@ export default function Page() {
               />
               <Property k="Total repayment" v={`${values.currency} ${formatDecimal(quote.totalRepayment)}`} />
             </Box>
-            <Button
-              type="button"
-              size="medium"
-              color="primary"
-              variant="contained"
-              endIcon={<ArrowForward />}
-              onClick={() => handleAcceptance(quote)}
-            >
+            <Button type="button" endIcon={<ArrowForward />} onClick={() => handleAcceptance(quote)}>
               Accept
             </Button>
             {values.type === StructuredProductType.BRC && (

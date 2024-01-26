@@ -107,6 +107,9 @@ importers:
       '@emotion/styled':
         specifier: ^11.11.0
         version: 11.11.0(@emotion/react@11.11.3)(@types/react@18.2.48)(react@18.2.0)
+      '@fqx/programs':
+        specifier: workspace:*
+        version: link:../programs
       '@mui/icons-material':
         specifier: ^5.15.6
         version: 5.15.6(@mui/material@5.15.6)(@types/react@18.2.48)(react@18.2.0)
