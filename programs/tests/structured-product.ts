@@ -7,16 +7,12 @@ import {
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
-import { getPdaWithSeeds, newAccountWithLamports, PDA } from "./utils";
+import { getPdaWithSeeds, newAccountWithLamports, PDA, sleep } from "./utils";
 import { TransferSnapshotHook } from "../src/types/transfer_snapshot_hook";
 import { TreasuryWallet } from "../src/types/treasury_wallet";
 import { StructuredNotesSdk } from "../src";
 import {
-  SignerWallet,
-  sleep,
-  TransactionEnvelope,
-} from "@saberhq/solana-contrib";
-import {
+  AccountState,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountInstruction,
   createInitializeMint2Instruction,
@@ -24,9 +20,12 @@ import {
   getAccount,
   getAssociatedTokenAddressSync,
   TOKEN_2022_PROGRAM_ID,
+  unpackAccount,
 } from "@solana/spl-token";
 import BN from "bn.js";
 import { expect } from "chai";
+import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
+import { Account } from "@solana/spl-token/src/state/account";
 
 describe("structured-product", () => {
   const structuredProductProgram = anchor.workspace
@@ -63,10 +62,10 @@ describe("structured-product", () => {
     issuer = await newAccountWithLamports(provider.connection);
 
     sdk = new StructuredNotesSdk(
-      provider.connection,
-      provider.wallet,
+      provider,
       structuredProductProgram,
-      treasuryWalletProgram
+      treasuryWalletProgram,
+      transferSnapshotHookProgram
     );
     treasuryWallet = anchor.web3.Keypair.generate();
     treasuryWalletAuthorityPda = await getPdaWithSeeds(
@@ -143,81 +142,149 @@ describe("structured-product", () => {
 
   it("structured product happy flow!", async () => {
     const issuerSdk = new StructuredNotesSdk(
-      provider.connection,
-      new SignerWallet(issuer),
+      new AnchorProvider(provider.connection, new NodeWallet(issuer), {
+        commitment: "confirmed",
+      }),
       structuredProductProgram,
-      treasuryWalletProgram
+      treasuryWalletProgram,
+      transferSnapshotHookProgram
     );
 
-    console.log("Investor: ", sdk.provider.walletKey.toBase58());
-    console.log("Issuer: ", issuerSdk.provider.walletKey.toBase58());
+    console.log("Investor: ", sdk.provider.publicKey.toBase58());
+    console.log("Issuer: ", issuerSdk.provider.publicKey.toBase58());
 
     const paymentDate = new BN(Date.now()).divn(1000).addn(1);
-    const { signedTx, mint } = await issuerSdk.signIssuanceOffline({
-      investor: investor,
-      issuer: issuer.publicKey,
-      issuerTreasuryWallet: treasuryWallet.publicKey,
-      paymentDate: paymentDate,
-      paymentMint: paymentMint.publicKey,
-      supply: new BN(1000),
-      priceAuthority: provider.publicKey,
-    });
+    const mint = Keypair.generate();
+    const encodedInitSPTx = await issuerSdk.signStructuredProductInitOffline(
+      {
+        investor: investor,
+        issuer: issuer.publicKey,
+        issuerTreasuryWallet: treasuryWallet.publicKey,
+        paymentDate: paymentDate,
+        paymentMint: paymentMint.publicKey,
+        priceAuthority: provider.publicKey,
+      },
+      mint
+    );
 
-    await sdk.signAndBroadcastIssueTransaction(signedTx);
+    const encodedIssueSPTx = await issuerSdk.signStructuredProductIssueOffline(
+      {
+        investor: investor,
+        issuer: issuer.publicKey,
+        issuerTreasuryWallet: treasuryWallet.publicKey,
+        mint: mint.publicKey,
+      },
+      new BN(1000)
+    );
+
+    const [issuerSignedInitSPtx, issuerSignedIssueSPTx] = [
+      sdk.decodeV0Tx(encodedInitSPTx),
+      sdk.decodeV0Tx(encodedIssueSPTx),
+    ];
+
+    const [finalInitTx, finalIssueTx] =
+      await provider.wallet.signAllTransactions([
+        issuerSignedInitSPtx,
+        issuerSignedIssueSPTx,
+      ]);
+
+    console.log("Sending final init tx... ");
+    const finalInitTxId = await provider.connection.sendTransaction(
+      finalInitTx
+    );
+
+    await sdk.confirmTx(finalInitTxId);
+    console.log("Confirmed!");
+    console.log("Sending final issue tx...");
+    console.log(
+      "Simulation: ",
+      await sdk.provider.connection.simulateTransaction(finalIssueTx, {
+        sigVerify: false,
+        replaceRecentBlockhash: true,
+      })
+    );
+    const issueTxid = await provider.connection.sendTransaction(finalIssueTx);
+    await sdk.confirmTx(issueTxid);
+    console.log("Confirmed issue tx!", issueTxid);
 
     const investorATA = getAssociatedTokenAddressSync(
-      mint,
+      mint.publicKey,
       investor,
       false,
       TOKEN_2022_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-    const investorTokenAccount = await getAccount(
-      provider.connection,
-      investorATA,
-      "confirmed",
-      TOKEN_2022_PROGRAM_ID
+    console.log("Getting investor token account...");
+
+    const investorTokenAccountInfo = await provider.connection.getAccountInfo(
+      investorATA
     );
 
+    const investorTokenAccount = unpackAccount(
+      investorATA,
+      investorTokenAccountInfo,
+      TOKEN_2022_PROGRAM_ID
+    );
+    console.log("Investor token account: ", investorTokenAccount);
     expect(investorTokenAccount.amount).to.equal(1000n);
 
-    await sleep(2000);
+    const investorTokenSnapshotBalancesPDA = await getPdaWithSeeds(
+      [mint.publicKey.toBuffer(), investorATA.toBuffer()],
+      sdk.transferSnapshotHookProgram.programId
+    );
 
-    console.log("Mint: ", mint.toBase58());
+    const investorTokenSnapshotBalancesAccount =
+      await sdk.transferSnapshotHookProgram.account.snapshotTokenAccountBalances.fetch(
+        investorTokenSnapshotBalancesPDA.publicKey
+      );
 
+    console.log(
+      "Investor token snapshot balances: ",
+      investorTokenSnapshotBalancesAccount
+    );
+
+    // expect(investorTokenSnapshotBalancesAccount.snapshotBalances[0]).to.equal(
+    //   1000n
+    // );
+
+    console.log("Sleeping for 1 second...");
+    await sleep(1001);
+
+    console.log("Creating set payment price instruction...");
     const setPaymentIx = await sdk.createSetPaymentPriceInstruction(
-      { mint: mint },
+      { mint: mint.publicKey },
+      true,
       new BN(100),
       paymentDate
     );
 
+    console.log("Creating pull payment instruction...");
     const pullPaymentIx = await sdk.createPullPaymentInstruction(
       {
         paymentMint: paymentMint.publicKey,
-        structuredProductMint: mint,
+        structuredProductMint: mint.publicKey,
         treasuryWallet: treasuryWallet.publicKey,
       },
+      true,
       paymentDate
     );
 
-    const pullPaymentTx = new TransactionEnvelope(sdk.provider, [
-      setPaymentIx,
-      pullPaymentIx,
-    ]);
+    console.log("Creating pull payment tx...");
+    const pullPaymentTx = await sdk.createV0Tx([setPaymentIx, pullPaymentIx]);
 
-    const simulationResult = await pullPaymentTx.simulate();
+    const simulationResult = await provider.connection.simulateTransaction(
+      pullPaymentTx
+    );
 
     console.log("Simulation result: ", simulationResult);
-    console.log("Simulation error: ", simulationResult.value.err);
 
-    const pendingTx = await pullPaymentTx.send();
-
-    await pendingTx.wait();
+    await provider.sendAndConfirm(pullPaymentTx);
 
     const paymentTokenAccount = await sdk.getPaymentTokenAccount(
-      mint,
+      mint.publicKey,
       paymentMint.publicKey,
+      true,
       paymentDate
     );
 

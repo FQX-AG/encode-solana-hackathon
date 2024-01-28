@@ -41,6 +41,11 @@ export type StructuredProduct = {
           "isSigner": false
         },
         {
+          "name": "snapshotTransferHookProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -59,7 +64,7 @@ export type StructuredProduct = {
       "args": []
     },
     {
-      "name": "addVariablePayment",
+      "name": "addStaticPayment",
       "accounts": [
         {
           "name": "authority",
@@ -67,7 +72,17 @@ export type StructuredProduct = {
           "isSigner": true
         },
         {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "structuredProduct",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "snapshotConfig",
           "isMut": true,
           "isSigner": false
         },
@@ -82,12 +97,7 @@ export type StructuredProduct = {
           "isSigner": false
         },
         {
-          "name": "paymentRedemptionMint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "priceAuthority",
+          "name": "snapshotTransferHookProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -99,7 +109,75 @@ export type StructuredProduct = {
       ],
       "args": [
         {
-          "name": "paymentDate",
+          "name": "principal",
+          "type": "bool"
+        },
+        {
+          "name": "paymentDateOffset",
+          "type": "i64"
+        },
+        {
+          "name": "pricePerUnit",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "addVariablePayment",
+      "accounts": [
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "structuredProduct",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "snapshotConfig",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payment",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "paymentMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "priceAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "snapshotTransferHookProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "principal",
+          "type": "bool"
+        },
+        {
+          "name": "paymentDateOffset",
           "type": "i64"
         }
       ]
@@ -128,13 +206,8 @@ export type StructuredProduct = {
           "isSigner": false
         },
         {
-          "name": "programTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "investorTokenAccount",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -186,7 +259,7 @@ export type StructuredProduct = {
       ],
       "args": [
         {
-          "name": "paymentDate",
+          "name": "paymentDateOffset",
           "type": "i64"
         },
         {
@@ -271,7 +344,7 @@ export type StructuredProduct = {
       ],
       "args": [
         {
-          "name": "paymentDate",
+          "name": "paymentDateOffset",
           "type": "i64"
         }
       ]
@@ -300,8 +373,22 @@ export type StructuredProduct = {
             "type": "publicKey"
           },
           {
-            "name": "issued",
+            "name": "numPayments",
+            "type": "u8"
+          },
+          {
+            "name": "principalDefined",
             "type": "bool"
+          },
+          {
+            "name": "issuanceDate",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }
@@ -311,10 +398,6 @@ export type StructuredProduct = {
       "type": {
         "kind": "struct",
         "fields": [
-          {
-            "name": "paymentRedemptionMint",
-            "type": "publicKey"
-          },
           {
             "name": "paymentMint",
             "type": "publicKey"
@@ -332,8 +415,16 @@ export type StructuredProduct = {
             }
           },
           {
+            "name": "principal",
+            "type": "bool"
+          },
+          {
             "name": "paid",
             "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }
@@ -369,6 +460,26 @@ export type StructuredProduct = {
       "code": 6005,
       "name": "AlreadyIssued",
       "msg": "Already issued"
+    },
+    {
+      "code": 6006,
+      "name": "DateNotInPast",
+      "msg": "Date not in past"
+    },
+    {
+      "code": 6007,
+      "name": "DateNotInFuture",
+      "msg": "Date not in future"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidPrincipalPaymentDate",
+      "msg": "Principal payment must be same date as last payment"
+    },
+    {
+      "code": 6009,
+      "name": "PrincipalUndefined",
+      "msg": "Principal undefined"
     }
   ]
 };
@@ -416,6 +527,11 @@ export const IDL: StructuredProduct = {
           "isSigner": false
         },
         {
+          "name": "snapshotTransferHookProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -434,7 +550,7 @@ export const IDL: StructuredProduct = {
       "args": []
     },
     {
-      "name": "addVariablePayment",
+      "name": "addStaticPayment",
       "accounts": [
         {
           "name": "authority",
@@ -442,7 +558,17 @@ export const IDL: StructuredProduct = {
           "isSigner": true
         },
         {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "structuredProduct",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "snapshotConfig",
           "isMut": true,
           "isSigner": false
         },
@@ -457,12 +583,7 @@ export const IDL: StructuredProduct = {
           "isSigner": false
         },
         {
-          "name": "paymentRedemptionMint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "priceAuthority",
+          "name": "snapshotTransferHookProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -474,7 +595,75 @@ export const IDL: StructuredProduct = {
       ],
       "args": [
         {
-          "name": "paymentDate",
+          "name": "principal",
+          "type": "bool"
+        },
+        {
+          "name": "paymentDateOffset",
+          "type": "i64"
+        },
+        {
+          "name": "pricePerUnit",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "addVariablePayment",
+      "accounts": [
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "structuredProduct",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "snapshotConfig",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payment",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "paymentMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "priceAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "snapshotTransferHookProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "principal",
+          "type": "bool"
+        },
+        {
+          "name": "paymentDateOffset",
           "type": "i64"
         }
       ]
@@ -503,13 +692,8 @@ export const IDL: StructuredProduct = {
           "isSigner": false
         },
         {
-          "name": "programTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "investorTokenAccount",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -561,7 +745,7 @@ export const IDL: StructuredProduct = {
       ],
       "args": [
         {
-          "name": "paymentDate",
+          "name": "paymentDateOffset",
           "type": "i64"
         },
         {
@@ -646,7 +830,7 @@ export const IDL: StructuredProduct = {
       ],
       "args": [
         {
-          "name": "paymentDate",
+          "name": "paymentDateOffset",
           "type": "i64"
         }
       ]
@@ -675,8 +859,22 @@ export const IDL: StructuredProduct = {
             "type": "publicKey"
           },
           {
-            "name": "issued",
+            "name": "numPayments",
+            "type": "u8"
+          },
+          {
+            "name": "principalDefined",
             "type": "bool"
+          },
+          {
+            "name": "issuanceDate",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }
@@ -686,10 +884,6 @@ export const IDL: StructuredProduct = {
       "type": {
         "kind": "struct",
         "fields": [
-          {
-            "name": "paymentRedemptionMint",
-            "type": "publicKey"
-          },
           {
             "name": "paymentMint",
             "type": "publicKey"
@@ -707,8 +901,16 @@ export const IDL: StructuredProduct = {
             }
           },
           {
+            "name": "principal",
+            "type": "bool"
+          },
+          {
             "name": "paid",
             "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }
@@ -744,6 +946,26 @@ export const IDL: StructuredProduct = {
       "code": 6005,
       "name": "AlreadyIssued",
       "msg": "Already issued"
+    },
+    {
+      "code": 6006,
+      "name": "DateNotInPast",
+      "msg": "Date not in past"
+    },
+    {
+      "code": 6007,
+      "name": "DateNotInFuture",
+      "msg": "Date not in future"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidPrincipalPaymentDate",
+      "msg": "Principal payment must be same date as last payment"
+    },
+    {
+      "code": 6009,
+      "name": "PrincipalUndefined",
+      "msg": "Principal undefined"
     }
   ]
 };
