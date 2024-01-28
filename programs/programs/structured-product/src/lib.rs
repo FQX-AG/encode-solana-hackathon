@@ -259,6 +259,7 @@ pub mod structured_product {
             authority: ctx.accounts.structured_product.to_account_info(),
         };
 
+        // TODO: Have to mint to program account first
         token_2022::mint_to(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -270,6 +271,7 @@ pub mod structured_product {
 
         msg!("Minted tokens");
 
+        // TODO: self transfer won't trigger the hook have to transfer between program account and investor
         let cpi_accounts = token_2022::TransferChecked {
             from: ctx.accounts.investor_token_account.to_account_info(),
             to: ctx.accounts.investor_token_account.to_account_info(),
