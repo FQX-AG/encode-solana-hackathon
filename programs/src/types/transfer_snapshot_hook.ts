@@ -23,7 +23,7 @@ export type TransferSnapshotHook = {
         {
           "name": "authority",
           "isMut": false,
-          "isSigner": false
+          "isSigner": true
         },
         {
           "name": "systemProgram",
@@ -171,6 +171,11 @@ export type TransferSnapshotHook = {
       "name": "initializeExtraAccountMetaList",
       "accounts": [
         {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
           "name": "extraAccount",
           "isMut": true,
           "isSigner": false
@@ -186,22 +191,12 @@ export type TransferSnapshotHook = {
           "isSigner": false
         },
         {
-          "name": "authority",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "bumpSeed",
-          "type": "u8"
-        }
-      ]
+      "args": []
     }
   ],
   "accounts": [
@@ -304,7 +299,7 @@ export const IDL: TransferSnapshotHook = {
         {
           "name": "authority",
           "isMut": false,
-          "isSigner": false
+          "isSigner": true
         },
         {
           "name": "systemProgram",
@@ -452,6 +447,11 @@ export const IDL: TransferSnapshotHook = {
       "name": "initializeExtraAccountMetaList",
       "accounts": [
         {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
           "name": "extraAccount",
           "isMut": true,
           "isSigner": false
@@ -467,22 +467,12 @@ export const IDL: TransferSnapshotHook = {
           "isSigner": false
         },
         {
-          "name": "authority",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "bumpSeed",
-          "type": "u8"
-        }
-      ]
+      "args": []
     }
   ],
   "accounts": [

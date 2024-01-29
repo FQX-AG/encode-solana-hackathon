@@ -21,7 +21,6 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountInstruction,
   ExtensionType,
-  getAccount,
   getAssociatedTokenAddressSync,
   getMintLen,
   TOKEN_2022_PROGRAM_ID,
@@ -31,6 +30,7 @@ import { getPdaWithSeeds } from "./utils";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import { TreasuryWallet } from "./types/treasury_wallet";
 import { TransferSnapshotHook } from "./types/transfer_snapshot_hook";
+import { config } from "chai";
 
 export type InitializeStructuredProductInstructionAccounts = {
   investor: PublicKey;
@@ -247,7 +247,8 @@ export class StructuredNotesSdk {
 
   async createInitializeStructuredProductInstruction(
     accounts: InitializeStructuredProductInstructionAccounts,
-    mint: Keypair
+    mint: Keypair,
+    maxSnapshots: number
   ) {
     const structuredProductPDA = getPdaWithSeeds(
       [mint.publicKey.toBuffer()],
@@ -264,39 +265,37 @@ export class StructuredNotesSdk {
       await this.provider.connection.getBalance(accounts.investor)
     );
 
+    const extraAccountPDA = getPdaWithSeeds(
+      [Buffer.from("extra-account-metas"), mint.publicKey.toBuffer()],
+      this.transferSnapshotHookProgram.programId
+    );
+
+    const snapshotConfigPda = getPdaWithSeeds(
+      [Buffer.from("snapshots"), mint.publicKey.toBuffer()],
+      this.transferSnapshotHookProgram.programId
+    );
+
+    const allAccounts = {
+      ...accounts,
+      authority: this.provider.publicKey,
+      mint: mint.publicKey,
+      structuredProduct: structuredProductPDA.publicKey,
+      issuerTreasuryWallet: accounts.issuerTreasuryWallet,
+      treasuryWalletProgram: this.treasuryWalletProgram.programId,
+      snapshotConfig: snapshotConfigPda.publicKey,
+      extraAccount: extraAccountPDA.publicKey,
+      snapshotTransferHookProgram: this.transferSnapshotHookProgram.programId,
+      tokenProgram: TOKEN_2022_PROGRAM_ID,
+      rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    };
+    console.log({ allAccounts });
     return await this.program.methods
-      .initialize()
-      .accounts({
-        ...accounts,
-        authority: this.provider.publicKey,
-        mint: mint.publicKey,
-        structuredProduct: structuredProductPDA.publicKey,
-        issuerTreasuryWallet: accounts.issuerTreasuryWallet,
-        treasuryWalletProgram: this.treasuryWalletProgram.programId,
-        snapshotTransferHookProgram: this.transferSnapshotHookProgram.programId,
-        tokenProgram: TOKEN_2022_PROGRAM_ID,
-        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
+      .initialize(maxSnapshots)
+      .accounts(allAccounts)
       .signers([mint])
       .instruction();
   }
-  async createIntializeSnapshotTransferHookInstruction(
-    accounts: InitializeSnapshotTransferHookInstructionAccounts,
-    maxSnapshots: number
-  ) {
-    return this.transferSnapshotHookProgram.methods
-      .initialize(maxSnapshots)
-      .accounts({
-        payer: this.provider.publicKey,
-        mint: accounts.mint,
-        authority: accounts.authority,
-        snapshotConfig: accounts.snapshotConfig,
-        systemProgram: SystemProgram.programId,
-      })
-      .instruction();
-  }
-
   async getAddPaymentInstruction(
     accounts: AddPaymentInstructionAccount,
     paymentTimestamp: BN,
@@ -350,6 +349,21 @@ export class StructuredNotesSdk {
       .instruction();
   }
 
+  async getSnapshotBalancesAccountPDA(mint: PublicKey, owner: PublicKey) {
+    const ownerATA = getAssociatedTokenAddressSync(
+      mint,
+      owner,
+      true,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    return getPdaWithSeeds(
+      [mint.toBuffer(), ownerATA.toBuffer()],
+      this.transferSnapshotHookProgram.programId
+    );
+  }
+
   async createInitSnapshotBalancesAccountInstruction({
     mint,
     owner,
@@ -370,9 +384,9 @@ export class StructuredNotesSdk {
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-    const snapshotBalancesPDA = getPdaWithSeeds(
-      [mint.toBuffer(), ownerATA.toBuffer()],
-      this.transferSnapshotHookProgram.programId
+    const snapshotBalancesPDA = await this.getSnapshotBalancesAccountPDA(
+      mint,
+      owner
     );
 
     return await this.transferSnapshotHookProgram.methods
@@ -389,7 +403,7 @@ export class StructuredNotesSdk {
       .instruction();
   }
 
-  async getIssueInstruction(accounts: IssueInstructionAccounts, supply: BN) {
+  async createIssueInstruction(accounts: IssueInstructionAccounts, supply: BN) {
     const structuredProductPDA = getPdaWithSeeds(
       [accounts.mint.toBuffer()],
       this.program.programId
@@ -403,6 +417,36 @@ export class StructuredNotesSdk {
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
+    const investorSnapshotTokenBalancesAcountPDA =
+      await this.getSnapshotBalancesAccountPDA(
+        accounts.mint,
+        accounts.investor
+      );
+
+    const programATA = getAssociatedTokenAddressSync(
+      accounts.mint,
+      structuredProductPDA.publicKey,
+      true,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const programSnapshotTokenBalancesAcountPDA =
+      await this.getSnapshotBalancesAccountPDA(
+        accounts.mint,
+        structuredProductPDA.publicKey
+      );
+
+    const snapshotConfigPDA = getPdaWithSeeds(
+      [Buffer.from("snapshots"), accounts.mint.toBuffer()],
+      this.transferSnapshotHookProgram.programId
+    );
+
+    const extraAccountMetasPDA = getPdaWithSeeds(
+      [Buffer.from("extra-account-metas"), accounts.mint.toBuffer()],
+      this.transferSnapshotHookProgram.programId
+    );
+
     return await this.program.methods
       .issue(supply)
       .accounts({
@@ -410,7 +454,15 @@ export class StructuredNotesSdk {
         issuer: accounts.issuer,
         investor: accounts.investor,
         structuredProduct: structuredProductPDA.publicKey,
+        snapshotConfig: snapshotConfigPDA.publicKey,
         investorTokenAccount: investorATA,
+        investorTokenSnapshotBalancesAccount:
+          investorSnapshotTokenBalancesAcountPDA.publicKey,
+        programTokenAccount: programATA,
+        programTokenSnapshotBalancesAccount:
+          programSnapshotTokenBalancesAcountPDA.publicKey,
+        extraAccountMetaList: extraAccountMetasPDA.publicKey,
+        snapshotTransferHookProgram: this.transferSnapshotHookProgram.programId,
         tokenProgram: TOKEN_2022_PROGRAM_ID,
         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
@@ -608,23 +660,9 @@ export class StructuredNotesSdk {
         issuer: config.issuer,
         issuerTreasuryWallet: config.issuerTreasuryWallet,
       },
-      mint
+      mint,
+      config.payments.length - 1 // principal uses same snapshot as last coupon
     );
-
-    const snapshotConfigPDA = getPdaWithSeeds(
-      [Buffer.from("snapshots"), mint.publicKey.toBuffer()],
-      this.transferSnapshotHookProgram.programId
-    );
-
-    const initSnapshotConfigIx =
-      await this.createIntializeSnapshotTransferHookInstruction(
-        {
-          snapshotConfig: snapshotConfigPDA.publicKey,
-          mint: mint.publicKey,
-          authority: structuredProductPDA.publicKey,
-        },
-        config.payments.length - 1 // no snapshot for principal
-      );
 
     const paymentIxs = await Promise.all(
       config.payments.map((p) =>
@@ -679,7 +717,6 @@ export class StructuredNotesSdk {
         advanceIx,
         createMintAccountIx,
         initIx,
-        initSnapshotConfigIx,
         ...paymentIxs,
         addAuthorizationIx,
       ],
@@ -710,30 +747,7 @@ export class StructuredNotesSdk {
       authorizedPubkey: this.provider.publicKey,
     });
 
-    const investorATA = getAssociatedTokenAddressSync(
-      accounts.mint,
-      accounts.investor,
-      false,
-      TOKEN_2022_PROGRAM_ID,
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    );
-
-    const createInvestorATAIx = createAssociatedTokenAccountInstruction(
-      accounts.investor,
-      investorATA,
-      accounts.investor,
-      accounts.mint,
-      TOKEN_2022_PROGRAM_ID,
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    );
-
-    const initSnapshotBalancesAccountIx =
-      await this.createInitSnapshotBalancesAccountInstruction({
-        mint: accounts.mint,
-        owner: accounts.investor,
-      });
-
-    const issueIx = await this.getIssueInstruction(
+    const issueIx = await this.createIssueInstruction(
       {
         investor: accounts.investor,
         issuer: accounts.issuer,
@@ -744,7 +758,7 @@ export class StructuredNotesSdk {
     );
 
     const signedIssueTx = await this.createAndSignV0Tx(
-      [advanceIx, createInvestorATAIx, initSnapshotBalancesAccountIx, issueIx],
+      [advanceIx, issueIx],
       [],
       nonceAccount.nonce
     );

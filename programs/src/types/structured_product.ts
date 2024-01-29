@@ -31,6 +31,11 @@ export type StructuredProduct = {
           "isSigner": false
         },
         {
+          "name": "snapshotConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "issuerTreasuryWallet",
           "isMut": false,
           "isSigner": false
@@ -38,6 +43,11 @@ export type StructuredProduct = {
         {
           "name": "treasuryWalletProgram",
           "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "extraAccount",
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -61,7 +71,12 @@ export type StructuredProduct = {
           "isSigner": false
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "maxSnapshots",
+          "type": "u8"
+        }
+      ]
     },
     {
       "name": "addStaticPayment",
@@ -206,7 +221,37 @@ export type StructuredProduct = {
           "isSigner": false
         },
         {
+          "name": "snapshotConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "extraAccountMetaList",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "programTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "programTokenSnapshotBalancesAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "investorTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "investorTokenSnapshotBalancesAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "snapshotTransferHookProgram",
           "isMut": false,
           "isSigner": false
         },
@@ -517,6 +562,11 @@ export const IDL: StructuredProduct = {
           "isSigner": false
         },
         {
+          "name": "snapshotConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "issuerTreasuryWallet",
           "isMut": false,
           "isSigner": false
@@ -524,6 +574,11 @@ export const IDL: StructuredProduct = {
         {
           "name": "treasuryWalletProgram",
           "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "extraAccount",
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -547,7 +602,12 @@ export const IDL: StructuredProduct = {
           "isSigner": false
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "maxSnapshots",
+          "type": "u8"
+        }
+      ]
     },
     {
       "name": "addStaticPayment",
@@ -692,7 +752,37 @@ export const IDL: StructuredProduct = {
           "isSigner": false
         },
         {
+          "name": "snapshotConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "extraAccountMetaList",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "programTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "programTokenSnapshotBalancesAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "investorTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "investorTokenSnapshotBalancesAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "snapshotTransferHookProgram",
           "isMut": false,
           "isSigner": false
         },

@@ -2,11 +2,12 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
+use spl_token_2022::instruction::TokenInstruction;
+
 use transfer_snapshot_hook::program::TransferSnapshotHook;
 use transfer_snapshot_hook::SnapshotConfig;
-
 use treasury_wallet::program::TreasuryWallet;
-use treasury_wallet::{TreasuryWalletAccount, WithdrawAuthorization};
+use treasury_wallet::TreasuryWalletAccount;
 
 declare_id!("GYFmKqbpYHUrML3BstU9VUnVdEE6ho9tzVJzs1DAR5iz");
 
@@ -37,12 +38,14 @@ pub enum StructuredProductError {
 #[program]
 pub mod structured_product {
     use anchor_spl::token_2022;
+    use solana_program::instruction::Instruction;
+    use spl_token_2022::check_spl_token_program_account;
 
     use treasury_wallet::cpi::accounts::Withdraw;
 
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
+    pub fn initialize(ctx: Context<Initialize>, max_snapshots: u8) -> Result<()> {
         let init_transfer_hook_instruction =
             token_2022::spl_token_2022::extension::transfer_hook::instruction::initialize(
                 &ctx.accounts.token_program.key(),
@@ -55,7 +58,7 @@ pub mod structured_product {
 
         let signer_seeds = &[mint_key.as_ref(), &[ctx.bumps.structured_product]];
 
-        msg!("Init transfer hook");
+        msg!("Init transfer hook on mint");
         solana_program::program::invoke_signed(
             &init_transfer_hook_instruction,
             &[
@@ -65,6 +68,22 @@ pub mod structured_product {
             ],
             &[&signer_seeds[..]],
         )?;
+
+        msg!("Init extra account meta list");
+        let cpi_accounts = transfer_snapshot_hook::cpi::accounts::InitializeExtraAccountMetaList {
+            extra_account: ctx.accounts.extra_account.clone(),
+            snapshot_config: ctx.accounts.snapshot_config.to_account_info(),
+            mint: ctx.accounts.mint.to_account_info(),
+            payer: ctx.accounts.issuer.to_account_info(),
+            system_program: ctx.accounts.system_program.to_account_info(),
+        };
+
+        transfer_snapshot_hook::cpi::initialize_extra_account_meta_list(CpiContext::new(
+            ctx.accounts
+                .snapshot_transfer_hook_program
+                .to_account_info(),
+            cpi_accounts,
+        ))?;
 
         msg!("Init mint");
         let intialize_mint_accounts = token_2022::InitializeMint2 {
@@ -80,6 +99,26 @@ pub mod structured_product {
             0,
             &ctx.accounts.structured_product.key(),
             None,
+        )?;
+
+        msg!("Init snapshot config");
+        let cpi_accounts = transfer_snapshot_hook::cpi::accounts::Initialize {
+            mint: ctx.accounts.mint.to_account_info(),
+            payer: ctx.accounts.issuer.to_account_info(),
+            snapshot_config: ctx.accounts.snapshot_config.to_account_info(),
+            authority: ctx.accounts.structured_product.to_account_info(),
+            system_program: ctx.accounts.system_program.to_account_info(),
+        };
+
+        transfer_snapshot_hook::cpi::initialize(
+            CpiContext::new_with_signer(
+                ctx.accounts
+                    .snapshot_transfer_hook_program
+                    .to_account_info(),
+                cpi_accounts,
+                &[&signer_seeds[..]],
+            ),
+            max_snapshots,
         )?;
 
         msg!("Init structured product");
@@ -251,11 +290,11 @@ pub mod structured_product {
         let mint_key = ctx.accounts.mint.key();
         let signer_seeds = &[mint_key.as_ref(), &[ctx.accounts.structured_product.bump]];
 
-        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let token_program = ctx.accounts.token_program.to_account_info();
 
         let cpi_accounts = token_2022::MintTo {
             mint: ctx.accounts.mint.to_account_info(),
-            to: ctx.accounts.investor_token_account.to_account_info(),
+            to: ctx.accounts.program_token_account.to_account_info(),
             authority: ctx.accounts.structured_product.to_account_info(),
         };
 
@@ -271,19 +310,122 @@ pub mod structured_product {
 
         msg!("Minted tokens");
 
-        // TODO: self transfer won't trigger the hook have to transfer between program account and investor
-        let cpi_accounts = token_2022::TransferChecked {
-            from: ctx.accounts.investor_token_account.to_account_info(),
-            to: ctx.accounts.investor_token_account.to_account_info(),
+        msg!("Creating investors snapshot balances account");
+
+        let snapshot_program = &ctx.accounts.snapshot_transfer_hook_program;
+
+        let cpi_accounts = transfer_snapshot_hook::cpi::accounts::InitSnapshotBalancesAccount {
+            snapshot_config: ctx.accounts.snapshot_config.to_account_info(),
+            snapshot_balances: ctx
+                .accounts
+                .investor_token_snapshot_balances_account
+                .to_account_info(),
+            owner: ctx.accounts.investor.to_account_info(),
+            token_account: ctx.accounts.investor_token_account.to_account_info(),
+            payer: ctx.accounts.investor.to_account_info(),
             mint: ctx.accounts.mint.to_account_info(),
-            authority: ctx.accounts.investor.to_account_info(),
+            system_program: ctx.accounts.system_program.to_account_info(),
         };
 
-        msg!("Transferring tokens!");
-        token_2022::transfer_checked(
-            CpiContext::new_with_signer(cpi_program.clone(), cpi_accounts, &[&signer_seeds[..]]),
-            supply,
-            0,
+        transfer_snapshot_hook::cpi::init_snapshot_balances_account(CpiContext::new(
+            snapshot_program.to_account_info(),
+            cpi_accounts,
+        ))?;
+
+        msg!("Creating program snapshot balances account");
+
+        let cpi_accounts = transfer_snapshot_hook::cpi::accounts::InitSnapshotBalancesAccount {
+            snapshot_config: ctx.accounts.snapshot_config.to_account_info(),
+            snapshot_balances: ctx
+                .accounts
+                .program_token_snapshot_balances_account
+                .to_account_info(),
+            owner: ctx.accounts.structured_product.to_account_info(),
+            token_account: ctx.accounts.program_token_account.to_account_info(),
+            payer: ctx.accounts.issuer.to_account_info(),
+            mint: ctx.accounts.mint.to_account_info(),
+            system_program: ctx.accounts.system_program.to_account_info(),
+        };
+
+        transfer_snapshot_hook::cpi::init_snapshot_balances_account(CpiContext::new(
+            snapshot_program.to_account_info(),
+            cpi_accounts,
+        ))?;
+
+        msg!("Activating snapshot hook program");
+        let cpi_accounts = transfer_snapshot_hook::cpi::accounts::ActivateSnapshots {
+            snapshot_config: ctx.accounts.snapshot_config.to_account_info(),
+            authority: ctx.accounts.structured_product.to_account_info(),
+        };
+
+        transfer_snapshot_hook::cpi::activate(CpiContext::new_with_signer(
+            snapshot_program.to_account_info(),
+            cpi_accounts,
+            &[&signer_seeds[..]],
+        ))?;
+
+        // TODO: This could probably be done with less manual work using spl transfer_checked and tlv account resolution
+        msg!("Building transfer_checked ix!");
+        check_spl_token_program_account(&ctx.accounts.token_program.key())?;
+        let data = TokenInstruction::TransferChecked {
+            amount: supply,
+            decimals: 0,
+        }
+        .pack();
+
+        let accounts = vec![
+            AccountMeta::new(ctx.accounts.program_token_account.key(), false),
+            AccountMeta::new_readonly(ctx.accounts.mint.key(), false),
+            AccountMeta::new(ctx.accounts.investor_token_account.key(), false),
+            AccountMeta::new_readonly(ctx.accounts.structured_product.key(), true),
+            AccountMeta::new_readonly(ctx.accounts.extra_account_meta_list.key(), false),
+            AccountMeta::new_readonly(ctx.accounts.snapshot_config.key(), false),
+            AccountMeta::new(
+                ctx.accounts.program_token_snapshot_balances_account.key(),
+                false,
+            ),
+            AccountMeta::new(
+                ctx.accounts.investor_token_snapshot_balances_account.key(),
+                false,
+            ),
+            AccountMeta::new_readonly(ctx.accounts.snapshot_transfer_hook_program.key(), false),
+        ];
+        let cpi_account_infos = vec![
+            ctx.accounts.program_token_account.to_account_info(),
+            ctx.accounts.mint.to_account_info(),
+            ctx.accounts.investor_token_account.to_account_info(),
+            ctx.accounts.structured_product.to_account_info(),
+            ctx.accounts.extra_account_meta_list.clone(),
+            ctx.accounts.snapshot_config.clone(),
+            ctx.accounts.program_token_snapshot_balances_account.clone(),
+            ctx.accounts
+                .investor_token_snapshot_balances_account
+                .clone(),
+            ctx.accounts
+                .snapshot_transfer_hook_program
+                .to_account_info(),
+        ];
+
+        let transfer_checked_ix = Instruction {
+            program_id: token_program.key(),
+            accounts,
+            data,
+        };
+
+        //
+        // msg!("Adding extra account meta list");
+        // ExtraAccountMetaList::add_to_cpi_instruction::<ExecuteInstruction>(
+        //     &mut transfer_checked_ix,
+        //     &mut cpi_account_infos,
+        //     &**ctx.accounts.extra_account_meta_list.data.borrow_mut(),
+        //     remaining_account_infos.as_slice(),
+        // )?;
+
+        msg!("Invoke transfer_checked ix!");
+        solana_program::program::invoke_signed(
+            &transfer_checked_ix,
+            &cpi_account_infos,
+            &[&signer_seeds[..]],
         )?;
 
         let structured_product = &mut ctx.accounts.structured_product;
@@ -385,9 +527,13 @@ pub struct Initialize<'info> {
     // TODO: space calculation
     #[account(init, seeds=[mint.key().as_ref()], bump, payer=authority, space=200)]
     pub structured_product: Account<'info, StructuredProduct>,
-    /// CHECK: Add account validation back
+    /// CHECK: validated in initialize_extra_account_meta_list
+    pub snapshot_config: AccountInfo<'info>,
     pub issuer_treasury_wallet: Account<'info, TreasuryWalletAccount>,
     pub treasury_wallet_program: Program<'info, TreasuryWallet>,
+    /// CHECK: validated in initialize_extra_account_meta_list
+    #[account(mut)]
+    pub extra_account: AccountInfo<'info>,
     pub snapshot_transfer_hook_program: Program<'info, TransferSnapshotHook>,
     pub token_program: Program<'info, Token2022>,
     pub rent: Sysvar<'info, Rent>,
@@ -451,8 +597,22 @@ pub struct Issue<'info> {
     pub mint: InterfaceAccount<'info, Mint>,
     #[account(mut, seeds=[mint.key().as_ref()], bump=structured_product.bump)]
     pub structured_product: Account<'info, StructuredProduct>,
-    #[account(token::authority=investor, token::mint=mint)]
+    /// CHECK: account checked by snapshot hook program
+    #[account(mut)]
+    pub snapshot_config: AccountInfo<'info>,
+    /// CHECK: account checked token program?
+    pub extra_account_meta_list: AccountInfo<'info>,
+    #[account(init, associated_token::authority=structured_product, associated_token::mint=mint, payer=issuer)]
+    pub program_token_account: InterfaceAccount<'info, TokenAccount>,
+    /// CHECK: account initialized by snapshot hook program
+    #[account(mut)]
+    pub program_token_snapshot_balances_account: AccountInfo<'info>,
+    #[account(init, associated_token::authority=investor, associated_token::mint=mint, payer=investor)]
     pub investor_token_account: InterfaceAccount<'info, TokenAccount>,
+    /// CHECK: account initialized by snapshot hook program
+    #[account(mut)]
+    pub investor_token_snapshot_balances_account: AccountInfo<'info>,
+    pub snapshot_transfer_hook_program: Program<'info, TransferSnapshotHook>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Program<'info, Token2022>,
     pub rent: Sysvar<'info, Rent>,

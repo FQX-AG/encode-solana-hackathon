@@ -1,4 +1,7 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{
+    prelude::*,
+    system_program::{create_account, CreateAccount},
+};
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{Mint, Token2022, TokenAccount};
 
@@ -45,13 +48,10 @@ fn check_token_account_is_transferring(account_data: &[u8]) -> Result<()> {
 
 #[program]
 pub mod transfer_snapshot_hook {
-    use solana_program::program::invoke_signed;
-    use solana_program::system_instruction;
     use spl_pod::primitives::PodBool;
     use spl_tlv_account_resolution::account::ExtraAccountMeta;
     use spl_tlv_account_resolution::seeds::Seed;
     use spl_tlv_account_resolution::state::ExtraAccountMetaList;
-    use spl_transfer_hook_interface::collect_extra_account_metas_signer_seeds;
     use spl_transfer_hook_interface::instruction::ExecuteInstruction;
 
     use super::*;
@@ -133,6 +133,11 @@ pub mod transfer_snapshot_hook {
         amount: u64,
     ) -> Result<()> {
         msg!("Transfer hook invoked");
+        require!(
+            ctx.accounts.snapshot_config.activated_date.is_some(),
+            SnapshotHookError::Inactive
+        );
+
         msg!("Transfer amount: {}", amount);
         msg!(
             "Transfer with extra account PDA: {}",
@@ -143,7 +148,9 @@ pub mod transfer_snapshot_hook {
             ctx.accounts.source.key(),
             ctx.accounts.destination.key()
         );
-        let snapshot_config = &mut ctx.accounts.snapshot_config;
+
+        msg!("Source balance: {}", ctx.accounts.source.amount);
+        msg!("Destination balance: {}", ctx.accounts.destination.amount);
 
         let source_account = &ctx.accounts.source;
         let destination_account = &ctx.accounts.destination;
@@ -155,66 +162,66 @@ pub mod transfer_snapshot_hook {
 
         let timestamp = Clock::get()?.unix_timestamp;
 
-        let current_snapshot = snapshot_config.get_current_snapshot(timestamp);
+        let current_snapshot = ctx.accounts.snapshot_config.get_current_snapshot(timestamp);
 
-        require!(
-            current_snapshot.is_some(),
-            SnapshotHookError::NoSnapshotFound
-        );
+        if current_snapshot.is_none() {
+            // No more snapshots to maintain as they are all in the past.
+            return Ok(());
+        }
 
         let (current_snapshot_index, _) = current_snapshot.unwrap();
 
         let source_snapshot_balances = &mut ctx.accounts.source_snapshot_balances;
         let destination_snapshot_balances = &mut ctx.accounts.destination_snapshot_balances;
 
-        assert!(
-            source_snapshot_balances.snapshot_balances[current_snapshot_index].is_some()
-                && source_snapshot_balances.snapshot_balances[current_snapshot_index].unwrap()
-                    >= amount,
-            "PANIC: Incorrect transfer with insufficient funds"
-        );
+        source_snapshot_balances.snapshot_balances[current_snapshot_index] =
+            Some(ctx.accounts.source.amount);
 
-        source_snapshot_balances.snapshot_balances[current_snapshot_index] = Some(
-            source_snapshot_balances.snapshot_balances[current_snapshot_index].unwrap() - amount,
-        );
-
-        destination_snapshot_balances.snapshot_balances[current_snapshot_index] = Some(
-            destination_snapshot_balances.snapshot_balances[current_snapshot_index].unwrap_or(0)
-                + amount,
-        );
+        destination_snapshot_balances.snapshot_balances[current_snapshot_index] =
+            Some(ctx.accounts.destination.amount);
 
         Ok(())
     }
 
     pub fn initialize_extra_account_meta_list(
         ctx: Context<InitializeExtraAccountMetaList>,
-        bump_seed: u8,
     ) -> Result<()> {
         let account_metas = vec![
-            ExtraAccountMeta {
-                discriminator: 0,
-                address_config: ctx.accounts.snapshot_config.key().to_bytes(),
-                is_signer: PodBool::from(false),
-                is_writable: PodBool::from(true),
-            },
-            ExtraAccountMeta::new_with_seeds(&[Seed::AccountKey { index: 1 }], false, false)?,
-            ExtraAccountMeta::new_with_seeds(&[Seed::AccountKey { index: 0 }], false, false)?,
-            ExtraAccountMeta::new_with_seeds(&[Seed::AccountKey { index: 2 }], false, false)?,
+            ExtraAccountMeta::new_with_pubkey(&ctx.accounts.snapshot_config.key(), false, false)?,
+            ExtraAccountMeta::new_with_seeds(
+                &[Seed::AccountKey { index: 1 }, Seed::AccountKey { index: 0 }],
+                false,
+                true,
+            )?,
+            ExtraAccountMeta::new_with_seeds(
+                &[Seed::AccountKey { index: 1 }, Seed::AccountKey { index: 2 }],
+                false,
+                true,
+            )?,
         ];
         // Allocate extra account PDA account.
         let mint_key = ctx.accounts.mint.key();
-        let bump_seed = [bump_seed];
-        let signer_seeds = collect_extra_account_metas_signer_seeds(&mint_key, &bump_seed);
         let account_size = ExtraAccountMetaList::size_of(account_metas.len())?;
-        invoke_signed(
-            &system_instruction::allocate(ctx.accounts.extra_account.key, account_size as u64),
-            &[ctx.accounts.extra_account.clone()],
-            &[&signer_seeds],
-        )?;
-        invoke_signed(
-            &system_instruction::assign(ctx.accounts.extra_account.key, ctx.program_id),
-            &[ctx.accounts.extra_account.clone()],
-            &[&signer_seeds],
+        let lamports = Rent::get()?.minimum_balance(account_size as usize);
+
+        let signer_seeds: &[&[&[u8]]] = &[&[
+            b"extra-account-metas",
+            &mint_key.as_ref(),
+            &[ctx.bumps.extra_account],
+        ]];
+
+        create_account(
+            CpiContext::new(
+                ctx.accounts.system_program.to_account_info(),
+                CreateAccount {
+                    from: ctx.accounts.payer.to_account_info(),
+                    to: ctx.accounts.extra_account.to_account_info(),
+                },
+            )
+            .with_signer(signer_seeds),
+            lamports,
+            account_size as u64,
+            ctx.program_id,
         )?;
 
         // Write the extra account meta list to the extra account PDA.
@@ -233,6 +240,7 @@ pub mod transfer_snapshot_hook {
         accounts: &'a [AccountInfo<'a>],
         ix_data: &[u8],
     ) -> Result<()> {
+        msg!("Fallback invoked");
         let mut ix_data: &[u8] = ix_data;
         let sighash: [u8; 8] = {
             let mut sighash: [u8; 8] = [0; 8];
@@ -258,8 +266,7 @@ pub struct Initialize<'info> {
     payer=payer)]
     pub snapshot_config: Account<'info, SnapshotConfig>,
     pub mint: InterfaceAccount<'info, Mint>,
-    /// CHECK: authority to add snapshots isn't verified
-    pub authority: AccountInfo<'info>,
+    pub authority: Signer<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -326,17 +333,20 @@ pub struct TransferHook<'info> {
 
 #[derive(Accounts)]
 pub struct InitializeExtraAccountMetaList<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
     /// CHECK: must be the extra account PDA
     #[account(mut,
         seeds = [b"extra-account-metas", mint.key().as_ref()], 
         bump)
     ]
     pub extra_account: AccountInfo<'info>,
-    pub snapshot_config: Account<'info, SnapshotConfig>,
+    /// CHECK: seed constraint check is enough here
+    #[account(seeds=[b"snapshots", mint.key().as_ref()], bump)]
+    pub snapshot_config: AccountInfo<'info>,
     /// CHECK:
-    pub mint: InterfaceAccount<'info, Mint>,
+    pub mint: AccountInfo<'info>,
     /// CHECK:
-    pub authority: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -351,22 +361,32 @@ pub struct SnapshotConfig {
 impl SnapshotConfig {
     pub fn space<T: Into<usize>>(num_snapshots: T) -> usize {
         std::mem::size_of::<Pubkey>()
-            + 4 // Vector structure size
-            + num_snapshots.into() * std::mem::size_of::<i64>()
+            + std::mem::size_of::<Vec<i64>>()
+            + std::mem::size_of::<i64>() * num_snapshots.into()
             + std::mem::size_of::<u8>()
-            + std::mem::size_of::<bool>()
+            + std::mem::size_of::<Option<i64>>()
             + 8 // Anchor account discriminator
     }
 
     pub fn get_current_snapshot(&self, timestamp: i64) -> Option<(usize, i64)> {
+        msg!("Getting current snapshot");
+        msg!("Current timestamp: {}", timestamp);
+        msg!("Activated date: {:?}", self.activated_date);
+
+        msg!("Snapshots: {:?}", self.snapshots);
+
         let index = self
             .snapshots
             .iter()
-            .rposition(|&snapshot| snapshot <= timestamp);
-        match index {
+            .position(|&snapshot| self.activated_date.unwrap() + snapshot > timestamp);
+
+        let current_snapshot = match index {
             Some(i) => Some((i, self.snapshots[i])),
             None => None,
-        }
+        };
+
+        msg!("Current snapshot: {:?}", current_snapshot);
+        current_snapshot
     }
 }
 

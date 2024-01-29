@@ -21,6 +21,6 @@ anchor-lang = "0.29.0"
 anchor-spl = "0.29.0"
 sha2-const = "0.1.2"
 
-spl-transfer-hook-interface = { version = "0.4.1" }
+spl-transfer-hook-interface = { version = "0.5.0" }
 spl-tlv-account-resolution = { version = "0.5.1" }
 spl-pod = "0.1.0"

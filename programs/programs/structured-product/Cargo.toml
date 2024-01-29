@@ -19,6 +19,8 @@ default = []
 anchor-lang = "0.29.0"
 anchor-spl = "0.29.0"
 solana-program = "1.16.16"
+spl-transfer-hook-interface = { version = "0.5.0" }
+spl-tlv-account-resolution= { version = "0.5.1" }
 spl-token-2022= { version = "1.0.0", features = ["no-entrypoint"] }
 transfer-snapshot-hook = { path="../transfer-snapshot-hook", features = ["cpi"] }
 treasury-wallet = { path="../treasury-wallet", features = ["cpi"] }

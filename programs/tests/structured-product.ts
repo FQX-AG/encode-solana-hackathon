@@ -153,7 +153,6 @@ describe("structured-product", () => {
     console.log("Investor: ", sdk.provider.publicKey.toBase58());
     console.log("Issuer: ", issuerSdk.provider.publicKey.toBase58());
 
-    const paymentDate = new BN(Date.now()).divn(1000).addn(1);
     const mint = Keypair.generate();
     const config = {
       investor: investor,
@@ -217,6 +216,22 @@ describe("structured-product", () => {
 
     await sdk.confirmTx(finalInitTxId);
     console.log("Confirmed!");
+
+    const snapshotConfigPDA = await getPdaWithSeeds(
+      [Buffer.from("snapshots"), mint.publicKey.toBuffer()],
+      sdk.transferSnapshotHookProgram.programId
+    );
+
+    const { snapshots, ...snapshotConfig } =
+      await sdk.transferSnapshotHookProgram.account.snapshotConfig.fetch(
+        snapshotConfigPDA.publicKey
+      );
+
+    console.log("Snapshot config: ", snapshotConfig);
+    console.log(
+      "Snapshots: ",
+      snapshots.map((s) => s.toString())
+    );
     console.log("Sending final issue tx...");
     console.log(
       "Simulation: ",
@@ -265,12 +280,12 @@ describe("structured-product", () => {
 
     console.log(
       "Investor token snapshot balances: ",
-      investorTokenSnapshotBalancesAccount
+      investorTokenSnapshotBalancesAccount.snapshotBalances.map((b) =>
+        !b ? b : b.toString()
+      )
     );
 
-    // expect(investorTokenSnapshotBalancesAccount.snapshotBalances[0]).to.equal(
-    //   1000n
-    // );
+    expect(investorTokenSnapshotBalancesAccount.snapshotBalances[0].eqn(1000));
 
     console.log("Sleeping for 2 seconds...");
     await sleep(2001);
