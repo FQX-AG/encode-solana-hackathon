@@ -25,12 +25,13 @@ import { differenceInMonths } from "date-fns";
 import { useReport } from "@/hooks/useReport";
 import { BRC } from "@/components/graphs/BRC";
 import { StructuredNotesSdk, StructuredProductIDL, TreasuryWalletIDL } from "@fqx/programs";
-import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
+import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
 import * as anchor from "@coral-xyz/anchor";
 import { ensure } from "@/utils";
 import { PublicKey, sendAndConfirmTransaction } from "@solana/web3.js";
 import { getPdaWithSeeds, newAccountWithLamports } from "@fqx/programs/tests/utils";
 import { Wallet } from "@coral-xyz/anchor";
+import { SignDialog } from "@/components/SignDialog";
 
 type Tag = "bestOffer";
 
@@ -47,6 +48,13 @@ type QuoteInternal = {
   issuerName: string;
   yield: number;
   tags?: Tag[];
+};
+
+type QuoteInternalEnhanced = QuoteInternal & {
+  totalCouponPayment: number;
+  absoluteCouponRate: number;
+  repaymentPerENote: number;
+  totalRepayment: number;
 };
 
 const data: QuoteInternal[] = [
@@ -100,18 +108,20 @@ const columns: Column<QuoteInternal>[] = [
 const itemKey = (item: QuoteInternal) => item.id;
 
 export default function Page() {
+  const wallet = useWallet();
   const anchorWallet = useAnchorWallet();
   const { connection } = useConnection();
   const report = useReport();
   const issuanceDate = useMemo(() => new Date(), []);
   const [selection, setSelection] = useState<string>(data[0].id);
+  const [confirmationPayload, setConfirmationPayload] = useState<QuoteInternalEnhanced>();
   const router = useRouter();
   const values = useMemo(
     () => (router.query.payload ? validationSchema.cast(JSON.parse(atob(router.query.payload as string))) : undefined),
     [router.query.payload]
   );
 
-  const quote = useMemo(() => {
+  const quote = useMemo<QuoteInternalEnhanced | undefined>(() => {
     if (!values) return undefined;
 
     const quote = selection ? data.find((item) => item.id === selection) : undefined;
@@ -130,7 +140,7 @@ export default function Page() {
 
   if (values === undefined) return null;
 
-  const handleAcceptance = async (quote: QuoteInternal) => {
+  const handleAcceptance = async (quote: QuoteInternalEnhanced) => {
     try {
       const wallet = ensure(anchorWallet, "Wallet is unavailable. Is it connected?");
       const provider = new anchor.AnchorProvider(connection, wallet, { commitment: "confirmed" });
@@ -144,7 +154,7 @@ export default function Page() {
     }
   };
 
-  return (
+  const content = (
     <Box display="grid" flex="1 1 auto" gridTemplateColumns="repeat(12, 1fr)" gap={6}>
       <Stack spacing={6} gridColumn={{ xs: "span 12", xl: "span 8" }}>
         <Section title="Your request" sx={{ flex: "0 0 auto" }}>
@@ -215,7 +225,7 @@ export default function Page() {
               />
               <Property k="Total repayment" v={`${values.currency} ${formatDecimal(quote.totalRepayment)}`} />
             </Box>
-            <Button type="button" endIcon={<ArrowForward />} onClick={() => handleAcceptance(quote)}>
+            <Button type="button" endIcon={<ArrowForward />} onClick={() => setConfirmationPayload(quote)}>
               Accept
             </Button>
             {values.type === StructuredProductType.BRC && (
@@ -228,5 +238,66 @@ export default function Page() {
         )}
       </Box>
     </Box>
+  );
+
+  return (
+    <>
+      {content}
+      {confirmationPayload && (
+        <SignDialog
+          title="Sign and pay"
+          description="Your signature indicates acceptance of the quoted terms, and confirms your commitment to pay the investment amount for the creation of this issuance."
+          confirmText="Sign and pay"
+          onClose={() => setConfirmationPayload(undefined)}
+          onSign={async () => {
+            const signMessage = ensure(wallet?.signMessage, "Wallet signing is unavailable. Is your wallet connected?");
+            const message = JSON.stringify(confirmationPayload);
+            const signature = await signMessage(new TextEncoder().encode(message));
+
+            return signature;
+          }}
+          onContinue={async (payload) => {
+            console.log(new TextDecoder().decode(payload));
+            setConfirmationPayload(undefined);
+            report.success("Done!");
+          }}
+        >
+          <Panel spacing={2}>
+            <Property
+              horizontal
+              k="Investment amount"
+              v={
+                <>
+                  {values.currency}{" "}
+                  <Text component="span" variant="500|18px|23px">
+                    {formatDecimal(values.totalIssuanceAmount)}
+                  </Text>
+                </>
+              }
+            />
+            <Divider />
+            <Property horizontal k="Issuer" v={confirmationPayload.issuerName} />
+            <Property horizontal k="Coupon rate" v={formatPercentage(confirmationPayload.yield)} />
+            <Property
+              horizontal
+              k="Total coupon payment"
+              v={`${values.currency} ${formatDecimal(confirmationPayload.totalCouponPayment)}`}
+            />
+            <Property
+              horizontal
+              k="Total repayment"
+              v={
+                <>
+                  <Text component="span" variant="400|12px|16px" color="oxfordBlue500" sx={{ mr: "1ch" }}>
+                    Up to
+                  </Text>{" "}
+                  {`${values.currency} ${formatDecimal(confirmationPayload.totalRepayment)}`}
+                </>
+              }
+            />
+          </Panel>
+        </SignDialog>
+      )}
+    </>
   );
 }

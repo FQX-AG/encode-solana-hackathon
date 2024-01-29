@@ -32,7 +32,7 @@ export type Column<Item = any> = {
   component: React.ComponentType<Item>;
 };
 
-export type ListProps<Item extends object> = {
+type ListProps<Item extends object> = {
   data: Item[];
   itemKey: (item: Item) => string;
   columns: Column<Item>[];

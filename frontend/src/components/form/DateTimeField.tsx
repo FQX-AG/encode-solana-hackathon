@@ -11,7 +11,7 @@ import { ReactNode, useCallback, useRef, useState } from "react";
 import { Tooltip } from "@/components/Tooltip";
 import { DATE_AND_TIME_FORMAT } from "@/formatters";
 
-export type DateTimeFieldProps = {
+type DateTimeFieldProps = {
   name: string;
   label: ReactNode;
   id: string;

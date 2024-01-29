@@ -182,6 +182,9 @@ importers:
       react-number-format:
         specifier: ^5.3.1
         version: 5.3.1(react-dom@18.2.0)(react@18.2.0)
+      usehooks-ts:
+        specifier: ^2.10.0
+        version: 2.10.0(react-dom@18.2.0)(react@18.2.0)
       yup:
         specifier: ^1.3.3
         version: 1.3.3
@@ -14050,6 +14053,17 @@ packages:
       '@types/w3c-web-usb': 1.0.10
       node-addon-api: 7.1.0
       node-gyp-build: 4.8.0
+    dev: false
+
+  /usehooks-ts@2.10.0(react-dom@18.2.0)(react@18.2.0):
+    resolution: {integrity: sha512-hN22L5pqcsM1LwL6Q3p1QfxI9K+wuP4lrBXyCQ4Vi5Zo94YhphqRh2l7G7uhqPzLunAObLUAoSKzo64lisNyWQ==}
+    engines: {node: '>=16.15.0'}
+    peerDependencies:
+      react: ^16.8.0  || ^17.0.0 || ^18.0.0
+      react-dom: ^16.8.0  || ^17.0.0 || ^18.0.0
+    dependencies:
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
     dev: false
 
   /utf-8-validate@5.0.10:

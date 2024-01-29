@@ -31,7 +31,7 @@ const MenuProps = {
   },
 };
 
-export type SelectFieldProps<T extends string | number> = {
+type SelectFieldProps<T extends string | number> = {
   name: string;
   label?: string;
   id: string;

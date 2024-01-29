@@ -6,7 +6,7 @@ import { ReactNode, forwardRef } from "react";
 
 import { Tooltip } from "@/components/Tooltip";
 
-export type InfoProps = {
+type InfoProps = {
   children?: ReactNode;
   tooltip?: ReactNode;
   tooltipError?: string;

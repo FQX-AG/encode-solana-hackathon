@@ -10,6 +10,7 @@ const variants = [
   "500|18px|23px",
   "500|20px|26px",
   "500|22px|29px",
+  "600|24px|31px",
 ] as const;
 
 type Variant = (typeof variants)[number];

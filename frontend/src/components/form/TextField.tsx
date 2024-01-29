@@ -5,7 +5,7 @@ import { ReactNode, ClipboardEventHandler } from "react";
 
 import { Tooltip } from "@/components/Tooltip";
 
-export type TextFieldProps = {
+type TextFieldProps = {
   name: string;
   label?: ReactNode;
   placeholder?: string;

@@ -5,7 +5,7 @@ import { ReactNode } from "react";
 
 import { Info } from "@/components/Info";
 
-export type InfoAdornmentProps = {
+type InfoAdornmentProps = {
   children?: ReactNode;
   sx?: SxProps;
 };

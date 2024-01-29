@@ -9,7 +9,7 @@ import { NumericFormat } from "react-number-format";
 
 import { Tooltip } from "@/components/Tooltip";
 
-export type NumericFieldProps = {
+type NumericFieldProps = {
   tooltip?: string;
   name: string;
   label: ReactNode;
