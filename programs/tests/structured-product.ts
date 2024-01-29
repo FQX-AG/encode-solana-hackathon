@@ -155,6 +155,8 @@ describe("structured-product", () => {
 
     const paymentDate = new BN(Date.now()).divn(1000).addn(1);
     const mint = Keypair.generate();
+    /*** ----------------- BACKEND ----------------- ***/
+    // Inputs assumed to be given by investor and random yield provided by backend
     const encodedInitSPTx = await issuerSdk.signStructuredProductInitOffline(
       {
         investor: investor,
@@ -177,11 +179,13 @@ describe("structured-product", () => {
       new BN(1000)
     );
 
+    /*** ----------------- FRONTEND ----------------- ***/
     const [issuerSignedInitSPtx, issuerSignedIssueSPTx] = [
       sdk.decodeV0Tx(encodedInitSPTx),
       sdk.decodeV0Tx(encodedIssueSPTx),
     ];
 
+    /*** ----------------- User confirms signing here ----------------- ***/
     const [finalInitTx, finalIssueTx] =
       await provider.wallet.signAllTransactions([
         issuerSignedInitSPtx,
@@ -206,6 +210,8 @@ describe("structured-product", () => {
     const issueTxid = await provider.connection.sendTransaction(finalIssueTx);
     await sdk.confirmTx(issueTxid);
     console.log("Confirmed issue tx!", issueTxid);
+
+    /***------------------ Issuance success screen ------------------***/
 
     const investorATA = getAssociatedTokenAddressSync(
       mint.publicKey,
@@ -252,6 +258,8 @@ describe("structured-product", () => {
     await sleep(1001);
 
     console.log("Creating set payment price instruction...");
+
+    /*** ----------------------- BACKEND ----------------------- ***/
     const setPaymentIx = await sdk.createSetPaymentPriceInstruction(
       { mint: mint.publicKey },
       true,
