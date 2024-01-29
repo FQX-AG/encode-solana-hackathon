@@ -57,10 +57,6 @@ export type AddPaymentInstructionAccount = {
   priceAuthority?: PublicKey;
 };
 
-export type SetPaymentPriceInstructionAccounts = {
-  mint: PublicKey;
-};
-
 export type CreatePullPaymentInstructionAccounts = {
   structuredProductMint: PublicKey;
   treasuryWallet: PublicKey;
@@ -71,9 +67,13 @@ export type SignStructuredProductInitOfflineConfig = {
   investor: PublicKey;
   issuer: PublicKey;
   issuerTreasuryWallet: PublicKey;
-  paymentMint: PublicKey;
-  priceAuthority: PublicKey;
-  paymentDate: BN;
+  payments: {
+    amount?: BN;
+    priceAuthority?: PublicKey;
+    paymentMint: PublicKey;
+    principal: boolean;
+    paymentDateOffsetSeconds: BN;
+  }[];
 };
 
 export type SignStructuredProductIssueOffline = {
@@ -420,26 +420,26 @@ export class StructuredNotesSdk {
   }
 
   async createSetPaymentPriceInstruction(
-    accounts: SetPaymentPriceInstructionAccounts,
+    mint: PublicKey,
     principal: boolean,
     price: BN,
-    paymentTimestamp: BN
+    paymentDateOffsetSeconds: BN
   ) {
     const structuredProductPDA = getPdaWithSeeds(
-      [accounts.mint.toBuffer()],
+      [mint.toBuffer()],
       this.program.programId
     );
 
     const paymentPDA = await this.getPaymentPda(
-      accounts.mint,
+      mint,
       principal,
-      paymentTimestamp
+      paymentDateOffsetSeconds
     );
 
     console.log("paymentPDA", paymentPDA.publicKey.toBase58());
 
     return await this.program.methods
-      .setPaymentPrice(new BN(paymentTimestamp), price)
+      .setPaymentPrice(new BN(paymentDateOffsetSeconds), price)
       .accounts({
         authority: this.provider.publicKey,
         structuredProduct: structuredProductPDA.publicKey,
@@ -623,27 +623,22 @@ export class StructuredNotesSdk {
           mint: mint.publicKey,
           authority: structuredProductPDA.publicKey,
         },
-        1 // Just one snapshot for coupon and principal
+        config.payments.length - 1 // no snapshot for principal
       );
 
-    const addStaticCouponPaymentIx = await this.getAddPaymentInstruction(
-      {
-        paymentMint: config.paymentMint,
-        structuredProductMint: mint.publicKey,
-      },
-      config.paymentDate,
-      false,
-      new BN(100)
-    );
-
-    const addVariablePrincipalPaymentIx = await this.getAddPaymentInstruction(
-      {
-        paymentMint: config.paymentMint,
-        structuredProductMint: mint.publicKey,
-        priceAuthority: config.priceAuthority,
-      },
-      config.paymentDate,
-      true
+    const paymentIxs = await Promise.all(
+      config.payments.map((p) =>
+        this.getAddPaymentInstruction(
+          {
+            paymentMint: p.paymentMint,
+            structuredProductMint: mint.publicKey,
+            priceAuthority: p.priceAuthority,
+          },
+          p.paymentDateOffsetSeconds,
+          p.principal,
+          p.amount
+        )
+      )
     );
 
     const addAuthorizationIx = await this.treasuryWalletProgram.methods
@@ -685,8 +680,7 @@ export class StructuredNotesSdk {
         createMintAccountIx,
         initIx,
         initSnapshotConfigIx,
-        addStaticCouponPaymentIx,
-        addVariablePrincipalPaymentIx,
+        ...paymentIxs,
         addAuthorizationIx,
       ],
       [mint],

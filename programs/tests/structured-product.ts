@@ -155,17 +155,35 @@ describe("structured-product", () => {
 
     const paymentDate = new BN(Date.now()).divn(1000).addn(1);
     const mint = Keypair.generate();
+    const config = {
+      investor: investor,
+      issuer: issuer.publicKey,
+      issuerTreasuryWallet: treasuryWallet.publicKey,
+      payments: [
+        {
+          principal: false,
+          amount: new BN(1000),
+          paymentDateOffsetSeconds: new BN(1),
+          paymentMint: paymentMint.publicKey,
+        },
+        {
+          principal: false,
+          amount: new BN(1000),
+          paymentDateOffsetSeconds: new BN(2),
+          paymentMint: paymentMint.publicKey,
+        },
+        {
+          principal: true,
+          paymentDateOffsetSeconds: new BN(2),
+          paymentMint: paymentMint.publicKey,
+          priceAuthority: provider.publicKey, // TODO change to price setting contract
+        },
+      ],
+    };
     /*** ----------------- BACKEND ----------------- ***/
     // Inputs assumed to be given by investor and random yield provided by backend
     const encodedInitSPTx = await issuerSdk.signStructuredProductInitOffline(
-      {
-        investor: investor,
-        issuer: issuer.publicKey,
-        issuerTreasuryWallet: treasuryWallet.publicKey,
-        paymentDate: paymentDate,
-        paymentMint: paymentMint.publicKey,
-        priceAuthority: provider.publicKey,
-      },
+      config,
       mint
     );
 
@@ -254,17 +272,17 @@ describe("structured-product", () => {
     //   1000n
     // );
 
-    console.log("Sleeping for 1 second...");
-    await sleep(1001);
+    console.log("Sleeping for 2 seconds...");
+    await sleep(2001);
 
     console.log("Creating set payment price instruction...");
 
     /*** ----------------------- BACKEND ----------------------- ***/
     const setPaymentIx = await sdk.createSetPaymentPriceInstruction(
-      { mint: mint.publicKey },
+      mint.publicKey,
       true,
       new BN(100),
-      paymentDate
+      config.payments[2].paymentDateOffsetSeconds
     );
 
     console.log("Creating pull payment instruction...");
@@ -275,7 +293,7 @@ describe("structured-product", () => {
         treasuryWallet: treasuryWallet.publicKey,
       },
       true,
-      paymentDate
+      config.payments[2].paymentDateOffsetSeconds
     );
 
     console.log("Creating pull payment tx...");
@@ -293,7 +311,7 @@ describe("structured-product", () => {
       mint.publicKey,
       paymentMint.publicKey,
       true,
-      paymentDate
+      config.payments[2].paymentDateOffsetSeconds
     );
 
     expect(paymentTokenAccount.amount).to.equal(100000n);
