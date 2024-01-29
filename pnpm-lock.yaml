@@ -179,6 +179,9 @@ importers:
       numeral:
         specifier: ^2.0.6
         version: 2.0.6
+      qrcode.react:
+        specifier: ^3.1.0
+        version: 3.1.0(react@18.2.0)
       react:
         specifier: ^18
         version: 18.2.0
@@ -12145,6 +12148,14 @@ packages:
       prop-types: 15.8.1
       qr.js: 0.0.0
       react: 16.13.1
+    dev: false
+
+  /qrcode.react@3.1.0(react@18.2.0):
+    resolution: {integrity: sha512-oyF+Urr3oAMUG/OiOuONL3HXM+53wvuH3mtIWQrYmsXoAq0DkvZp2RYUWFSMFtbdOpuS++9v+WAkzNVkMlNW6Q==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0
+    dependencies:
+      react: 18.2.0
     dev: false
 
   /qrcode@1.4.4:
