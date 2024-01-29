@@ -10,18 +10,22 @@ import { Text } from "@/components/Text";
 import { styled } from "@mui/material";
 
 const Table = styled(TableBase)`
+  border-spacing: 0;
+
   thead > tr > th {
-    background: #0b0d29;
-    padding-top: 24px;
-  }
-  thead > tr:first-of-type > th:first-of-type {
-    border-top-left-radius: 10px;
-  }
-  thead > tr:first-of-type > th:last-of-type {
-    border-top-right-radius: 10px;
+    padding-block: 16px;
+    color: ${({ theme }) => theme.customColors.oxfordBlue500};
   }
   tbody > tr.selected > td {
     background-color: #15163a;
+  }
+  tbody > tr > td {
+    border-bottom: 1px solid #3f3f76;
+    border-top: 16px solid transparent;
+    background-clip: padding-box;
+  }
+  tbody > tr:last-of-type > td {
+    border-bottom-width: 0;
   }
 `;
 
@@ -42,7 +46,7 @@ type ListProps<Item extends object> = {
 
 export function List<Item extends object>(props: ListProps<Item>) {
   return (
-    <TableContainer>
+    <TableContainer sx={{ borderRadius: "10px", border: (theme) => `1px solid ${theme.customColors.oxfordBlue800}` }}>
       <Table>
         <TableHead>
           <TableRow>

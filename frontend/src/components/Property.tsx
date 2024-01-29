@@ -13,7 +13,9 @@ export function Property(props: { k: string; v: ReactNode; horizontal?: boolean 
       <Text variant="500|14px|18px" color="oxfordBlue500">
         {props.k}
       </Text>
-      <Text variant="400|16px|21px">{props.v}</Text>
+      <Text variant="400|16px|21px" sx={props.horizontal ? { textAlign: "end" } : undefined}>
+        {props.v}
+      </Text>
     </Stack>
   );
 }

@@ -16,6 +16,7 @@ type SPChartProps = {
   data: ChartData<"scatter", DefaultDataPoint<"scatter">, unknown>;
   options?: SPChartOptions;
   plugins?: Plugin<"scatter">[];
+  xLabel: string;
 };
 
 function SPChart(props: SPChartProps) {
@@ -84,10 +85,11 @@ function SPChart(props: SPChartProps) {
               transform: "translate(0, -50%)",
               top: PADDING[0] + chartArea.top + chartArea.height,
               right: 0,
+              width: PADDING[1],
               marginLeft: SPACING,
             }}
           >
-            Underlying asset price
+            {props.xLabel}
           </Label>
           <Legend
             items={legendItems}

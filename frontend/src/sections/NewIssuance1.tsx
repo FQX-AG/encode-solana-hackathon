@@ -58,13 +58,13 @@ export function NewIssuance1() {
       <Panel spacing={3}>
         <WithSideContent side={<WithSideContent.Side>Product type</WithSideContent.Side>}>
           <Stack direction="row" spacing={3} flexWrap="wrap">
-            <SelectField name="type" id="type" label="Type" options={typeOptions} sx={{ width: "307px" }} />
+            <SelectField name="type" id="type" label="Type" options={typeOptions} sx={{ flex: "1 1 307px" }} />
             <SelectField
               name="underlyingAsset"
               id="underlyingAsset"
               label="Underlying asset"
               options={underlyingAssetOptions}
-              sx={{ width: "307px" }}
+              sx={{ flex: "1 1 307px" }}
             />
           </Stack>
         </WithSideContent>
@@ -75,7 +75,7 @@ export function NewIssuance1() {
                 name="brcDetails.level"
                 id="brcDetails.level"
                 label="Barrier level"
-                sx={{ width: "307px" }}
+                sx={{ flex: "1 1 307px" }}
                 hasFixedDecimalScale={true}
                 endAdornment={<Box sx={{ color: (theme) => theme.customColors.oxfordBlue500 }}>%</Box>}
               />
@@ -84,7 +84,7 @@ export function NewIssuance1() {
                 id="brcDetails.type"
                 label="Barrier type"
                 options={brcTypeOptions}
-                sx={{ width: "307px" }}
+                sx={{ flex: "1 1 307px" }}
               />
             </Stack>
           </WithSideContent>
@@ -96,32 +96,32 @@ export function NewIssuance1() {
               id="currency"
               label="Currency"
               options={currencyOptions}
-              sx={{ width: "130px" }}
+              sx={{ flex: "1 1 130px" }}
             />
             <NumericField
               name="totalIssuanceAmount"
               id="totalIssuanceAmount"
               label="Target issuance amount"
-              sx={{ width: "230px" }}
+              sx={{ flex: "2 1 230px" }}
             />
             <SelectField
               name="principal"
               id="principal"
               label="eNote denomination"
               options={principalOptions}
-              sx={{ width: "230px" }}
+              sx={{ flex: "2 1 230px" }}
             />
           </Stack>
         </WithSideContent>
         <WithSideContent side={<WithSideContent.Side>Payment details</WithSideContent.Side>}>
           <Stack direction="row" spacing={3} flexWrap="wrap">
-            <DateTimeField name="maturityDate" id="maturityDate" label="Maturity date" sx={{ width: "307px" }} />
+            <DateTimeField name="maturityDate" id="maturityDate" label="Maturity date" sx={{ flex: "1 1 307px" }} />
             <SelectField
               name="couponFrequency"
               id="couponFrequency"
               label="Coupon frequency"
               options={couponFrequencyOptions}
-              sx={{ width: "307px" }}
+              sx={{ flex: "1 1 307px" }}
             />
           </Stack>
         </WithSideContent>

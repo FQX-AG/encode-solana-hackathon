@@ -32,6 +32,7 @@ import { PublicKey, sendAndConfirmTransaction } from "@solana/web3.js";
 import { getPdaWithSeeds, newAccountWithLamports } from "@fqx/programs/tests/utils";
 import { Wallet } from "@coral-xyz/anchor";
 import { SignDialog } from "@/components/SignDialog";
+import { Tooltip } from "@/components/Tooltip";
 
 type Tag = "bestOffer";
 
@@ -46,6 +47,7 @@ type QuoteInternal = {
   id: string;
   issuerCountryCode: string;
   issuerName: string;
+  initialFixingPrice: { currency: string; amount: number };
   yield: number;
   tags?: Tag[];
 };
@@ -53,17 +55,53 @@ type QuoteInternal = {
 type QuoteInternalEnhanced = QuoteInternal & {
   totalCouponPayment: number;
   absoluteCouponRate: number;
-  repaymentPerENote: number;
   totalRepayment: number;
 };
 
 const data: QuoteInternal[] = [
-  { id: "1", issuerCountryCode: "FR", issuerName: "France Company", yield: 0.36, tags: ["bestOffer"] },
-  { id: "2", issuerCountryCode: "DE", issuerName: "Germany Company", yield: 0.3 },
-  { id: "3", issuerCountryCode: "AT", issuerName: "Austria Company", yield: 0.2 },
-  { id: "4", issuerCountryCode: "CH", issuerName: "Swiss Company", yield: 0.18 },
-  { id: "5", issuerCountryCode: "PL", issuerName: "Web 3 Company", yield: 0.05 },
-  { id: "6", issuerCountryCode: "JM", issuerName: "Waganda Company", yield: 0.05 },
+  {
+    id: "1",
+    issuerCountryCode: "FR",
+    issuerName: "France Company",
+    initialFixingPrice: { currency: "USDC", amount: 43000 },
+    yield: 0.36,
+    tags: ["bestOffer"],
+  },
+  {
+    id: "2",
+    issuerCountryCode: "DE",
+    issuerName: "Germany Company",
+    initialFixingPrice: { currency: "USDC", amount: 40987 },
+    yield: 0.3,
+  },
+  {
+    id: "3",
+    issuerCountryCode: "AT",
+    issuerName: "Austria Company",
+    initialFixingPrice: { currency: "USDC", amount: 35321 },
+    yield: 0.2,
+  },
+  {
+    id: "4",
+    issuerCountryCode: "CH",
+    issuerName: "Swiss Company",
+    initialFixingPrice: { currency: "USDC", amount: 33345 },
+    yield: 0.18,
+  },
+  {
+    id: "5",
+    issuerCountryCode: "PL",
+    issuerName: "Web 3 Company",
+    initialFixingPrice: { currency: "USDC", amount: 20765 },
+    yield: 0.05,
+  },
+  {
+    id: "6",
+    issuerCountryCode: "JM",
+    issuerName: "Waganda Company",
+    initialFixingPrice: { currency: "USDC", amount: 15456 },
+    yield: 0.05,
+  },
 ];
 
 const columns: Column<QuoteInternal>[] = [
@@ -78,8 +116,13 @@ const columns: Column<QuoteInternal>[] = [
     ),
   },
   {
+    id: "initialFixingPrice",
+    title: "Initial fixing price",
+    component: (quote) => `${quote.initialFixingPrice.currency} ${formatDecimal(quote.initialFixingPrice.amount)}`,
+  },
+  {
     id: "yield",
-    title: "Yield",
+    title: "Yield (p.a.)",
     component: (quote) => formatPercentage(quote.yield),
   },
   {
@@ -129,10 +172,9 @@ export default function Page() {
       const totalCouponPayment = new Decimal(values.totalIssuanceAmount).times(quote.yield).toNumber();
       const maturity = differenceInMonths(values.maturityDate, issuanceDate);
       const absoluteCouponRate = new Decimal(quote.yield).times(maturity).div(12).toNumber();
-      const repaymentPerENote = new Decimal(totalCouponPayment).div(2).toNumber();
       const totalRepayment = new Decimal(totalCouponPayment).plus(values.totalIssuanceAmount).toNumber();
 
-      return { ...quote, totalCouponPayment, absoluteCouponRate, repaymentPerENote, totalRepayment };
+      return { ...quote, totalCouponPayment, absoluteCouponRate, totalRepayment };
     }
 
     return undefined;
@@ -158,7 +200,7 @@ export default function Page() {
     <Box display="grid" flex="1 1 auto" gridTemplateColumns="repeat(12, 1fr)" gap={6}>
       <Stack spacing={6} gridColumn={{ xs: "span 12", xl: "span 8" }}>
         <Section title="Your request" sx={{ flex: "0 0 auto" }}>
-          <Panel
+          <Stack
             sx={{
               overflow: "auto",
               display: "flex",
@@ -169,10 +211,13 @@ export default function Page() {
             }}
           >
             <Property k="Type" v={`${values.type}-${values.underlyingAsset}`} />
-            <Property k="Issuance amount" v={`${values.currency} ${formatDecimal(values.totalIssuanceAmount)}`} />
             {values.type === StructuredProductType.BRC && (
-              <Property k="Barrier" v={`${formatPercentage(values.brcDetails.level)} ${values.brcDetails.type}`} />
+              <Property
+                k="Barrier"
+                v={`${formatPercentage(values.brcDetails.level / 100)} ${values.brcDetails.type}`}
+              />
             )}
+            <Property k="Issuance amount" v={`${values.currency} ${formatDecimal(values.totalIssuanceAmount)}`} />
             <Property
               k="Maturity date"
               v={
@@ -181,8 +226,18 @@ export default function Page() {
                 </Info>
               }
             />
-            <Property k="Coupon" v={COUPON_FREQUENCY_NAMES[values.couponFrequency]} />
-          </Panel>
+            <Property
+              k="Coupon payment"
+              v={
+                <Tooltip title="For demonstration purposes, the coupon frequency is set to 2 payments in this issuance.">
+                  <Box sx={{ display: "inline-block", borderBottom: "1px solid #fff", cursor: "help" }}>
+                    {COUPON_FREQUENCY_NAMES[values.couponFrequency]}
+                  </Box>
+                </Tooltip>
+              }
+            />
+          </Stack>
+          <Divider />
         </Section>
         <Section title="Received quotes" sx={{ flex: "1 0 auto" }}>
           <Box sx={{ flex: "1 1 auto", overflow: "auto" }}>
@@ -199,41 +254,56 @@ export default function Page() {
       <Box gridColumn={{ xs: "span 12", xl: "span 4" }}>
         {quote && (
           <GlowingPanel spacing={3} sx={{ position: "sticky", top: 0 }}>
-            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 3 }}>
-              <Property k="Total coupon payment" v={`${values.currency} ${formatDecimal(quote.totalCouponPayment)}`} />
+            <Stack spacing={2}>
               <Property
+                horizontal
                 k="Coupon rate"
                 v={
                   <>
-                    {`${formatPercentage(quote.yield)} p.a.`}{" "}
-                    <Text component="span" variant="400|12px|16px" color="oxfordBlue500">{`(${formatPercentage(
+                    <Text variant="500|32px|35px">{formatPercentage(quote.yield)}</Text>{" "}
+                    <Text variant="400|12px|16px" color="oxfordBlue500">{`(${formatPercentage(
                       quote.absoluteCouponRate
                     )} absolute)`}</Text>
                   </>
                 }
               />
               <Property
-                k="Repayment per eNote"
+                horizontal
+                k="Total coupon payment"
+                v={`${values.currency} ${formatDecimal(quote.totalCouponPayment)}`}
+              />
+              <Property
+                horizontal
+                k="Total repayment"
                 v={
-                  <>
-                    {`${values.currency} ${formatDecimal(quote.repaymentPerENote)}`}{" "}
-                    <Text component="span" variant="400|12px|16px" color="oxfordBlue500">
-                      (Up to)
-                    </Text>
-                  </>
+                  <Tooltip title="The payment amount will be update by the final fixing date ... ">
+                    <Box sx={{ display: "inline-block", borderBottom: "1px solid #fff", cursor: "help" }}>
+                      <Text component="span" variant="400|12px|16px" color="oxfordBlue500" sx={{ mr: "1ch" }}>
+                        Up to
+                      </Text>{" "}
+                      {`${values.currency} ${formatDecimal(quote.totalRepayment)}`}
+                    </Box>
+                  </Tooltip>
                 }
               />
-              <Property k="Total repayment" v={`${values.currency} ${formatDecimal(quote.totalRepayment)}`} />
-            </Box>
-            <Button type="button" endIcon={<ArrowForward />} onClick={() => setConfirmationPayload(quote)}>
-              Accept
-            </Button>
+            </Stack>
             {values.type === StructuredProductType.BRC && (
               <>
                 <Divider />
-                <BRC type={values.brcDetails.type} barrier={values.brcDetails.level} coupon={quote.yield * 100} />
+                <BRC
+                  type={values.brcDetails.type}
+                  barrier={values.brcDetails.level}
+                  coupon={quote.absoluteCouponRate * 100}
+                  underlyingAsset={values.underlyingAsset}
+                  currency={values.currency}
+                  issuanceAmount={values.totalIssuanceAmount}
+                  initialFixingPrice={quote.initialFixingPrice.amount}
+                />
               </>
             )}
+            <Button type="button" endIcon={<ArrowForward />} onClick={() => setConfirmationPayload(quote)}>
+              Accept & pay
+            </Button>
           </GlowingPanel>
         )}
       </Box>

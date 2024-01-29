@@ -2,14 +2,17 @@ import { Box, styled, SxProps, Theme } from "@mui/material";
 import { createElement, ElementType, forwardRef, ReactNode } from "react";
 
 const variants = [
+  "400|10px|11px",
   "400|12px|16px",
   "400|14px|16px",
   "400|14px|18px",
   "400|16px|21px",
+  "500|12px|13px",
   "500|14px|18px",
   "500|18px|23px",
   "500|20px|26px",
   "500|22px|29px",
+  "500|32px|35px",
   "600|24px|31px",
 ] as const;
 

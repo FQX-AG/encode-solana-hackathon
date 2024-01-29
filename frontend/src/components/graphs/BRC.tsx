@@ -1,9 +1,10 @@
-import { ChartData, ChartDataset, ChartOptions, Point, Scale } from "chart.js";
+import { ChartData, ChartDataset, Point, Scale } from "chart.js";
+import numeral from "numeral";
 import { useMemo } from "react";
 
 import SPChart, { SPChartOptions } from "./partials/SPChart";
 import { brcPayoff } from "./calculations";
-import { formatPercentage, getBackgroundGradient } from "./common";
+import { getBackgroundGradient } from "./common";
 import {
   TEXT_COLOR,
   LINE_COLOR_A,
@@ -19,7 +20,12 @@ import {
 import crosshair from "./plugins/crosshair";
 import { BRCType } from "@/constants";
 
-function getGraphData(barrier: number, coupon: number, type: BRCType): ChartData<"scatter"> {
+function getGraphData(
+  barrier: number,
+  coupon: number,
+  type: BRCType,
+  initialFixingPrice: number
+): ChartData<"scatter"> {
   const xMin = Math.min(barrier - 0.1, 1 - OFFSET);
   const xBreak = barrier;
   const xMiddle = 1;
@@ -101,7 +107,7 @@ function getGraphData(barrier: number, coupon: number, type: BRCType): ChartData
       borderWidth: 1,
       borderColor: LABEL_BORDER_COLOR,
       borderRadius: 2,
-      formatter: () => `Barrier = ${formatPercentage(barrier)}`,
+      formatter: () => `Barrier = ${numeral(initialFixingPrice).multiply(barrier).format("0,0")}`,
       align: "top",
       anchor: "end",
       color: TEXT_COLOR,
@@ -116,7 +122,12 @@ function getGraphData(barrier: number, coupon: number, type: BRCType): ChartData
   return { datasets };
 }
 
-function getGraphOptions(barrier: number, coupon: number): SPChartOptions {
+function getGraphOptions(
+  barrier: number,
+  coupon: number,
+  issuanceAmount: number,
+  initialFixingPrice: number
+): SPChartOptions {
   const xMin = Math.min(barrier - 0.1, 1 - OFFSET);
   const xMax = 1 + (1 - xMin);
   const yMin = -OFFSET;
@@ -130,7 +141,9 @@ function getGraphOptions(barrier: number, coupon: number): SPChartOptions {
         ticks: {
           count: 3,
           color: TEXT_COLOR,
-          callback: formatPercentage,
+          callback: (value) => {
+            return numeral(initialFixingPrice).multiply(value).format("0[.]0a");
+          },
         },
         grid: {
           drawOnChartArea: false,
@@ -147,7 +160,9 @@ function getGraphOptions(barrier: number, coupon: number): SPChartOptions {
         ticks: {
           count: 3,
           color: TEXT_COLOR,
-          callback: formatPercentage,
+          callback: (value) => {
+            return value === 0 ? "0" : numeral(issuanceAmount).multiply(value).format("0[.]0a");
+          },
         },
         grid: {
           color: (ctx) => {
@@ -180,6 +195,10 @@ type BRCProps = {
   barrier: number;
   coupon: number;
   type: BRCType;
+  underlyingAsset: string;
+  currency: string;
+  issuanceAmount: number;
+  initialFixingPrice: number;
 };
 
 export function BRC(props: BRCProps) {
@@ -188,11 +207,13 @@ export function BRC(props: BRCProps) {
     const normalizedCoupon = props.coupon / 100;
 
     return {
-      data: getGraphData(normalizedBarrier, normalizedCoupon, props.type),
-      options: getGraphOptions(normalizedBarrier, normalizedCoupon),
+      data: getGraphData(normalizedBarrier, normalizedCoupon, props.type, props.initialFixingPrice),
+      options: getGraphOptions(normalizedBarrier, normalizedCoupon, props.issuanceAmount, props.initialFixingPrice),
       plugins: [crosshair],
     };
   }, [props.barrier, props.coupon, props.type]);
 
-  return <SPChart data={data} options={options} plugins={plugins} />;
+  return (
+    <SPChart data={data} options={options} plugins={plugins} xLabel={`${props.underlyingAsset}${props.currency}`} />
+  );
 }
