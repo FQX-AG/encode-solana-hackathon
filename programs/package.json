@@ -13,6 +13,7 @@
     "typecheck": "tsc",
     "typecheck:watch": "tsc -w",
     "build": "anchor build && cp -R target/types/* src/types && tsc -P tsconfig.cjs.json && tsc -P tsconfig.esm.json",
+    "build:ts": "tsc -P tsconfig.cjs.json && tsc -P tsconfig.esm.json",
     "clean": "rm -rf dist",
     "test": "anchor test",
     "test-debug": "DEBUG=true BLUEBIRD_LONG_STACK_TRACES=1 anchor test",

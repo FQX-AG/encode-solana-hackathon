@@ -186,6 +186,8 @@ export class StructuredNotesSdk {
         `Failed to confirm: ${confirmation.value.err.toString()}`
       );
     }
+
+    return txId;
   }
 
   async getPaymentPda(mint: PublicKey, principal: boolean, timestamp: BN) {
