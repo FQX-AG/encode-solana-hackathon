@@ -1,5 +1,5 @@
 import * as Yup from "yup";
-import { addMinutes, isFuture } from "date-fns";
+import { addMonths, isFuture } from "date-fns";
 
 import {
   BRCType,
@@ -50,7 +50,7 @@ export const getInitialValues = (): FormValues => ({
   totalIssuanceAmount: (8_000_000).toString(),
   currency: Currency.USDC,
   principal: (1_000_000).toString(),
-  maturityDate: addMinutes(new Date(), 5),
+  maturityDate: addMonths(new Date(), 3),
   couponFrequency: CouponFrequency.DemoMode,
   cpnDetails: {
     level: "100",

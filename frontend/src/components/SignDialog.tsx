@@ -8,17 +8,18 @@ import { Stack } from "@mui/material";
 import { useReport } from "@/hooks/useReport";
 import { useIsMounted } from "usehooks-ts";
 
-type SignDialogProps<Payload> = {
+type SignDialogProps<PayloadA, PayloadB> = {
   title: string;
   description: string;
   confirmText: string;
   children?: ReactNode;
   onClose: () => void;
-  onSign: () => Promise<Payload>;
-  onContinue?: (payload: Payload) => Promise<void>;
+  onBeforeSign: () => Promise<PayloadA>;
+  onSign: (payload: PayloadA) => Promise<PayloadB>;
+  onAfterSign: (payload: PayloadB) => Promise<void>;
 };
 
-export function SignDialog<Payload>(props: SignDialogProps<Payload>) {
+export function SignDialog<PayloadA, PayloadB>(props: SignDialogProps<PayloadA, PayloadB>) {
   const report = useReport();
   const isMounted = useIsMounted();
   const [isSigning, setIsSigning] = useState(false);
@@ -26,10 +27,12 @@ export function SignDialog<Payload>(props: SignDialogProps<Payload>) {
   const handleConfirm = async () => {
     if (isSigning) return;
 
-    let payload: Payload;
+    const payloadA = await props.onBeforeSign();
+
+    let payloadB: PayloadB;
     try {
       setIsSigning(true);
-      payload = await props.onSign();
+      payloadB = await props.onSign(payloadA);
     } catch (err: unknown) {
       report.error(err);
       return;
@@ -37,7 +40,7 @@ export function SignDialog<Payload>(props: SignDialogProps<Payload>) {
       if (isMounted()) setIsSigning(false);
     }
 
-    await props.onContinue?.(payload);
+    await props.onAfterSign(payloadB);
   };
 
   return (

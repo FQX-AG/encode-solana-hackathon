@@ -1,7 +1,7 @@
 import { Box, Button, Divider, Stack, Theme } from "@mui/material";
 import { Panel } from "@/components/Panel";
 import { Section } from "@/components/Section";
-import { List, Column } from "@/components/list/List";
+import { Column, List } from "@/components/list/List";
 import { Flag } from "@/components/Flag";
 import { formatDate, formatDateUTC, formatDecimal, formatPercentage } from "@/formatters";
 import { Chip } from "@/components/Chip";
@@ -11,9 +11,11 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import { Property } from "@/components/Property";
 import {
+  API_URL,
   COUPON_FREQUENCY_NAMES,
   STRUCTURED_PRODUCT_PROGRAM_ID,
   StructuredProductType,
+  TRANSFER_SNAPSHOT_HOOK_PROGRAM_ID,
   TREASURY_WALLET_PROGRAM_ID,
 } from "@/constants";
 import { Info } from "@/components/Info";
@@ -24,15 +26,18 @@ import { ArrowForward, ChevronRight } from "@mui/icons-material";
 import { differenceInMonths } from "date-fns";
 import { useReport } from "@/hooks/useReport";
 import { BRC } from "@/components/graphs/BRC";
-import { StructuredNotesSdk, StructuredProductIDL, TreasuryWalletIDL } from "@fqx/programs";
+import { StructuredNotesSdk, StructuredProductIDL, TransferSnapshotHookIDL, TreasuryWalletIDL } from "@fqx/programs";
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
 import * as anchor from "@coral-xyz/anchor";
 import { ensure } from "@/utils";
-import { PublicKey, sendAndConfirmTransaction } from "@solana/web3.js";
-import { getPdaWithSeeds, newAccountWithLamports } from "@fqx/programs/tests/utils";
-import { Wallet } from "@coral-xyz/anchor";
 import { SignDialog } from "@/components/SignDialog";
 import { Tooltip } from "@/components/Tooltip";
+
+type DeploymentInfo = {
+  encodedInitSPTx: string;
+  encodedIssueSPTx: string;
+  mintPublicKey: string;
+};
 
 type Tag = "bestOffer";
 
@@ -163,7 +168,6 @@ export default function Page() {
     () => (router.query.payload ? validationSchema.cast(JSON.parse(atob(router.query.payload as string))) : undefined),
     [router.query.payload]
   );
-
   const quote = useMemo<QuoteInternalEnhanced | undefined>(() => {
     if (!values) return undefined;
 
@@ -182,18 +186,52 @@ export default function Page() {
 
   if (values === undefined) return null;
 
-  const handleAcceptance = async (quote: QuoteInternalEnhanced) => {
-    try {
-      const wallet = ensure(anchorWallet, "Wallet is unavailable. Is it connected?");
-      const provider = new anchor.AnchorProvider(connection, wallet, { commitment: "confirmed" });
-      const program = new anchor.Program(StructuredProductIDL, STRUCTURED_PRODUCT_PROGRAM_ID, provider);
-      const treasuryWalletProgram = new anchor.Program(TreasuryWalletIDL, TREASURY_WALLET_PROGRAM_ID, provider);
-      const sdk = new StructuredNotesSdk(provider.connection, provider.wallet, program, treasuryWalletProgram);
-      // await sdk.signAndBroadcastInitialize(issuerSignedInit);
-      report.success("Success!");
-    } catch (e) {
-      report.error(e);
-    }
+  const handleClose = () => setConfirmationPayload(undefined);
+
+  const handleBeforeSign = async (): Promise<DeploymentInfo> => {
+    const { publicKey: walletPublicKey } = ensure(wallet, "Wallet is unavailable. Is it connected?");
+    const response = await fetch(`${API_URL}/api/deploy`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ investorPublicKey: walletPublicKey }),
+    });
+    return await response.json();
+  };
+
+  const handleSign = async (deploymentInfo: DeploymentInfo): Promise<DeploymentInfo> => {
+    const provider = new anchor.AnchorProvider(
+      connection,
+      ensure(anchorWallet, "Wallet is unavailable. Is it connected?"),
+      { commitment: "confirmed" }
+    );
+    const program = new anchor.Program(StructuredProductIDL, STRUCTURED_PRODUCT_PROGRAM_ID, provider);
+    const treasuryWalletProgram = new anchor.Program(TreasuryWalletIDL, TREASURY_WALLET_PROGRAM_ID, provider);
+    const transferSnapshotHookProgram = new anchor.Program(
+      TransferSnapshotHookIDL,
+      TRANSFER_SNAPSHOT_HOOK_PROGRAM_ID,
+      provider
+    );
+    const sdk = new StructuredNotesSdk(provider, program, treasuryWalletProgram, transferSnapshotHookProgram);
+
+    const [finalInitTx, finalIssueTx] = await provider.wallet.signAllTransactions([
+      sdk.decodeV0Tx(deploymentInfo.encodedInitSPTx),
+      sdk.decodeV0Tx(deploymentInfo.encodedIssueSPTx),
+    ]);
+    const finalInitTxId = await provider.connection.sendTransaction(finalInitTx);
+    await sdk.confirmTx(finalInitTxId);
+    await sdk.provider.connection.simulateTransaction(finalIssueTx, {
+      sigVerify: false,
+      replaceRecentBlockhash: true,
+    });
+    const issueTxid = await provider.connection.sendTransaction(finalIssueTx);
+    await sdk.confirmTx(issueTxid);
+
+    return deploymentInfo;
+  };
+
+  const handleAfterSign = async (deploymentInfo: DeploymentInfo) => {
+    await router.push(`/token/${deploymentInfo.mintPublicKey}`);
+    report.success("Success!");
   };
 
   const content = (
@@ -318,19 +356,10 @@ export default function Page() {
           title="Sign and pay"
           description="Your signature indicates acceptance of the quoted terms, and confirms your commitment to pay the investment amount for the creation of this issuance."
           confirmText="Sign and pay"
-          onClose={() => setConfirmationPayload(undefined)}
-          onSign={async () => {
-            const signMessage = ensure(wallet?.signMessage, "Wallet signing is unavailable. Is your wallet connected?");
-            const message = JSON.stringify(confirmationPayload);
-            const signature = await signMessage(new TextEncoder().encode(message));
-
-            return signature;
-          }}
-          onContinue={async (payload) => {
-            console.log(new TextDecoder().decode(payload));
-            setConfirmationPayload(undefined);
-            report.success("Done!");
-          }}
+          onClose={handleClose}
+          onBeforeSign={handleBeforeSign}
+          onSign={handleSign}
+          onAfterSign={handleAfterSign}
         >
           <Panel spacing={2}>
             <Property
