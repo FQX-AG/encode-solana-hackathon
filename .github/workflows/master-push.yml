@@ -21,6 +21,13 @@ jobs:
         run: pnpm run --filter programs build:ts
       - name: Build frontend
         run: pnpm run --filter ./frontend build
+        env:
+          NEXT_PUBLIC_API_URL: "localhost:3000"
+          NEXT_PUBLIC_STRUCTURED_PRODUCT_PROGRAM_ID: ${{secrets.STRUCTURED_PRODUCT_PROGRAM_ID}}
+          NEXT_PUBLIC_TREASURY_WALLET_PROGRAM_ID: ${{secrets.TREASURY_WALLET_PROGRAM_ID}} \
+          NEXT_PUBLIC_TRANSFER_SNAPSHOT_HOOK_PROGRAM_ID: ${{secrets.TRANSFER_SNAPSHOT_HOOK_PROGRAM_ID}} \
+          NEXT_PUBLIC_TERMS_AND_CONDITIONS_URL: ""
+          NEXT_PUBLIC_PRIVACY_POLICY_URL: ""
       - name: Build backend
         run: pnpm run --filter backend build
   build-anchor:
