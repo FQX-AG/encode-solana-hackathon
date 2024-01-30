@@ -3,11 +3,13 @@ import { styled } from "@mui/material/styles";
 export const Table = styled("table")({
   width: "100%",
   borderCollapse: "separate",
+  borderSpacing: 0,
   margin: "0 -8px",
   "thead > tr > td": {
     padding: "0 8px",
   },
   "tbody > tr > td": {
+    backgroundClip: "padding-box",
     boxSizing: "content-box",
     height: "32px",
     verticalAlign: "middle",

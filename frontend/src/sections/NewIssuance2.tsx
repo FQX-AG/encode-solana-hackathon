@@ -3,12 +3,10 @@ import { Panel } from "@/components/Panel";
 import { differenceInMilliseconds, addMilliseconds } from "date-fns";
 import { useMemo } from "react";
 import { Divider } from "@mui/material";
-import { PaymentScheduleTimeline } from "@/components/PaymentScheduleTimeline";
-import { PaymentScheduleList } from "@/components/PaymentScheduleList";
 import { Text } from "@/components/Text";
 import { useFormikContext } from "formik";
 import { FormValues } from "@/schemas/newIssuance";
-import { PaymentSchedule } from "@/components/PaymentSchedule";
+import { PaymentSchedule } from "@/components/paymentSchedule/PaymentSchedule";
 
 type Item = {
   type: "coupon" | "principal";

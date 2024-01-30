@@ -1,6 +1,6 @@
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { partition } from "lodash-es";
-import { Bar, ProgressBar, Ticker } from "@/components/ProgressBar";
+import { ProgressBar, Bar, Ticker, Dot } from "@/components/ProgressBar";
 import { Text } from "@/components/Text";
 import { Info } from "@/components/Info";
 import { formatDate, formatDateUTC } from "@/formatters";
@@ -14,9 +14,12 @@ type PaymentScheduleTimelineProps = {
   issuanceDate?: Date | string;
   maturityDate?: Date | string;
   payments: Payment[];
+  highlightedPaymentIndex: number;
 };
 
 export function PaymentScheduleTimeline(props: PaymentScheduleTimelineProps) {
+  const [dotHoverTarget, setDotHoverTarget] = useState<number>();
+
   const bars: Bar[] = [
     {
       start: 0,
@@ -64,7 +67,9 @@ export function PaymentScheduleTimeline(props: PaymentScheduleTimelineProps) {
       </Text>
     ),
     color: (theme) => theme.palette.success.main,
+    labelAlignment: "center",
     isAtBottom: true,
+    hidden: props.highlightedPaymentIndex !== 0 && dotHoverTarget !== 1,
   };
   const tickers: (Ticker | undefined)[] = [
     {
@@ -91,6 +96,28 @@ export function PaymentScheduleTimeline(props: PaymentScheduleTimelineProps) {
     summaryTicker,
     nextPaymentTicker,
   ];
+  const dots: (Dot | undefined)[] = [
+    {
+      position: 0,
+      variant: "small",
+      highlighted: false,
+    },
+    {
+      position: 50,
+      variant: "big",
+      highlighted: dotHoverTarget === 1 || props.highlightedPaymentIndex === 0,
+    },
+    {
+      position: 100,
+      variant: "big",
+      highlighted: props.highlightedPaymentIndex === 1,
+    },
+    {
+      position: 100,
+      variant: "big",
+      highlighted: props.highlightedPaymentIndex === 2,
+    },
+  ];
 
-  return <ProgressBar bars={bars} tickers={tickers} />;
+  return <ProgressBar bars={bars} tickers={tickers} dots={dots} onDotHoverTargetChange={setDotHoverTarget} />;
 }

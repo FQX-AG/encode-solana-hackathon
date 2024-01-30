@@ -3,10 +3,16 @@ import Stack from "@mui/material/Stack";
 import { styled, SxProps, Theme } from "@mui/material/styles";
 import { clamp, inRange } from "lodash-es";
 import * as React from "react";
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useMemo, useState } from "react";
 
 import { Tooltip } from "@/components/Tooltip";
 import { Text } from "@/components/Text";
+
+export type Dot = {
+  position: number;
+  variant: "small" | "big";
+  highlighted: boolean;
+};
 
 export type Ticker = {
   position: number;
@@ -16,6 +22,7 @@ export type Ticker = {
   color?: string | ((theme: Theme) => string);
   isAtBottom?: boolean;
   tooltip?: string;
+  hidden?: boolean;
 };
 
 export type Bar = {
@@ -28,7 +35,7 @@ export type Bar = {
   secondaryLabel?: ReactNode;
 };
 
-const BAR_HEIGHT = 10;
+const BAR_HEIGHT = 9;
 const DEFAULT_COLOR = "#A2A2DC";
 
 const VerticalBar = styled("div")`
@@ -41,7 +48,7 @@ const VerticalBar = styled("div")`
 const TopVerticalBar = styled(VerticalBar, {
   shouldForwardProp: (name: any) => !["hasDot"].includes(name),
 })<{ hasDot?: boolean }>`
-  margin-bottom: -${BAR_HEIGHT}px;
+  margin-bottom: 8px;
 
   ::before {
     content: "";
@@ -65,7 +72,7 @@ const TopVerticalBar = styled(VerticalBar, {
 const BottomVerticalBar = styled(VerticalBar, {
   shouldForwardProp: (name: any) => !["hasDot"].includes(name),
 })<{ hasDot?: boolean }>`
-  margin-top: -${BAR_HEIGHT}px;
+  margin-top: 8px;
 
   ::after {
     content: "";
@@ -87,6 +94,7 @@ const TopTicker = (props: Ticker & { marginBottom: number }) => {
         width: 0,
         whiteSpace: "nowrap",
         left: `${props.position}%`,
+        visibility: props.hidden ? "hidden" : undefined,
       }}
     >
       <Stack
@@ -119,6 +127,7 @@ const BottomTicker = (props: Ticker) => {
         width: 0,
         whiteSpace: "nowrap",
         left: `${props.position}%`,
+        visibility: props.hidden ? "hidden" : undefined,
       }}
     >
       <BottomVerticalBar hasDot={!!props.tooltip} sx={{ backgroundColor: props.color ?? DEFAULT_COLOR }} />
@@ -141,10 +150,83 @@ const BottomTicker = (props: Ticker) => {
   );
 };
 
+const DotComponent = (
+  props: Dot & {
+    onMouseEnter?: React.MouseEventHandler<SVGSVGElement>;
+    onMouseLeave?: React.MouseEventHandler<SVGSVGElement>;
+  }
+) => {
+  let size, strokeWidth;
+  switch (props.variant) {
+    case "small":
+      size = 14;
+      strokeWidth = 3;
+      break;
+    case "big":
+      size = 24;
+      strokeWidth = 4;
+      break;
+  }
+  const highlightSize = size * 2;
+
+  return (
+    <Box
+      sx={{
+        position: "absolute",
+        width: 0,
+        whiteSpace: "nowrap",
+        left: `${props.position}%`,
+        top: "50%",
+        zIndex: props.highlighted ? 1 : 0,
+      }}
+    >
+      {props.highlighted && (
+        <svg
+          style={{ position: "absolute", top: -highlightSize / 2, left: -highlightSize / 2, pointerEvents: "none" }}
+          xmlns="http://www.w3.org/2000/svg"
+          width={highlightSize}
+          height={highlightSize}
+          viewBox={`0 0 ${highlightSize} ${highlightSize}`}
+          fill="none"
+        >
+          <circle
+            cx={highlightSize / 2}
+            cy={highlightSize / 2}
+            r={highlightSize / 2}
+            fill="#00B2FF"
+            fill-opacity="0.2"
+          />
+        </svg>
+      )}
+      <svg
+        style={{ position: "absolute", top: -size / 2, left: -size / 2 }}
+        xmlns="http://www.w3.org/2000/svg"
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        fill="none"
+        onMouseEnter={props.onMouseEnter}
+        onMouseLeave={props.onMouseLeave}
+      >
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={size / 2 - strokeWidth}
+          fill={props.highlighted ? "#00B2FF" : "#3F3F76"}
+          stroke="white"
+          strokeWidth={strokeWidth}
+        />
+      </svg>
+    </Box>
+  );
+};
+
 type ProgressBarProps = {
   bars?: (Bar | null | undefined)[];
   tickers?: (Ticker | null | undefined)[];
+  dots?: (Dot | null | undefined)[];
   sx?: SxProps;
+  onDotHoverTargetChange?: (index?: number) => void;
 };
 
 export function ProgressBar(props: ProgressBarProps) {
@@ -169,6 +251,9 @@ export function ProgressBar(props: ProgressBarProps) {
       bottomTickers: tickers?.filter((ticker) => ticker.isAtBottom),
     };
   }, [props.tickers]);
+  const dots = useMemo(() => {
+    return props.dots?.filter<Dot>((dot): dot is Dot => !!dot);
+  }, [props.dots]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", ...props.sx }}>
@@ -230,6 +315,14 @@ export function ProgressBar(props: ProgressBarProps) {
               opacity: bar.opacity ?? 1,
               zIndex: bar.zIndex ?? 1,
             }}
+          />
+        ))}
+        {dots?.map((dot, index) => (
+          <DotComponent
+            key={index}
+            {...dot}
+            onMouseEnter={props.onDotHoverTargetChange && (() => props.onDotHoverTargetChange?.(index))}
+            onMouseLeave={props.onDotHoverTargetChange && (() => props.onDotHoverTargetChange?.(undefined))}
           />
         ))}
       </Box>
