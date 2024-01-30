@@ -43,13 +43,10 @@ describe("structured-product", () => {
   const provider: AnchorProvider = anchor.getProvider() as AnchorProvider;
 
   let issuer: Keypair;
-  let issuerATA: PublicKey;
   let investor: PublicKey;
   let investorATA: PublicKey;
+  let investorPaymentATA: PublicKey;
   let mint: Keypair;
-  let structuredProduct: PDA;
-  let programATA: PublicKey;
-
   let paymentMint: Keypair;
 
   let treasuryWallet: Keypair;
@@ -121,7 +118,7 @@ describe("structured-product", () => {
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
-    investorATA = getAssociatedTokenAddressSync(
+    investorPaymentATA = getAssociatedTokenAddressSync(
       paymentMint.publicKey,
       investor,
       false,
@@ -130,7 +127,7 @@ describe("structured-product", () => {
     );
     const createPayerATAIx = createAssociatedTokenAccountInstruction(
       provider.publicKey,
-      investorATA,
+      investorPaymentATA,
       investor,
       paymentMint.publicKey,
       TOKEN_2022_PROGRAM_ID,
@@ -139,7 +136,7 @@ describe("structured-product", () => {
 
     const createMintToInvestorWalletIx = createMintToCheckedInstruction(
       paymentMint.publicKey,
-      investorATA,
+      investorPaymentATA,
       provider.publicKey,
       1000000000000,
       6,
@@ -167,6 +164,15 @@ describe("structured-product", () => {
     // .add(mintToTreasuryWalletIx)
 
     await provider.sendAndConfirm(tx, [issuer, treasuryWallet, paymentMint]);
+    mint = Keypair.generate();
+
+    investorATA = getAssociatedTokenAddressSync(
+      mint.publicKey,
+      investor,
+      false,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
   });
 
   it("structured product happy flow!", async () => {
@@ -182,7 +188,6 @@ describe("structured-product", () => {
     console.log("Investor: ", sdk.provider.publicKey.toBase58());
     console.log("Issuer: ", issuerSdk.provider.publicKey.toBase58());
 
-    const mint = Keypair.generate();
     const config = {
       investor: investor,
       issuer: issuer.publicKey,
@@ -277,14 +282,6 @@ describe("structured-product", () => {
 
     /***------------------ Issuance success screen ------------------***/
 
-    const investorATA = getAssociatedTokenAddressSync(
-      mint.publicKey,
-      investor,
-      false,
-      TOKEN_2022_PROGRAM_ID,
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    );
-
     console.log("Getting investor token account...");
 
     const investorTokenAccountInfo = await provider.connection.getAccountInfo(
@@ -360,6 +357,50 @@ describe("structured-product", () => {
       config.payments[2].paymentDateOffsetSeconds
     );
 
-    expect(paymentTokenAccount.amount).to.equal(100000n);
+    const settlePaymentTx = await sdk.createV0Tx([
+      await sdk.createSettlePaymentInstruction(
+        {
+          structuredProductMint: mint.publicKey,
+          beneficiaryPaymentTokenAccount: investorPaymentATA,
+          beneficiaryTokenAccount: investorATA,
+          paymentMint: paymentMint.publicKey,
+          beneficiary: investor,
+        },
+        true,
+        config.payments[2].paymentDateOffsetSeconds
+      ),
+    ]);
+
+    const simulationResult2 = await provider.connection.simulateTransaction(
+      settlePaymentTx
+    );
+
+    console.log("Simulation result: ", simulationResult2);
+
+    const investorTokenAccountInfo2 = await provider.connection.getAccountInfo(
+      investorPaymentATA
+    );
+
+    const investorTokenAccount2 = unpackAccount(
+      investorPaymentATA,
+      investorTokenAccountInfo2,
+      TOKEN_2022_PROGRAM_ID
+    );
+
+    await provider.sendAndConfirm(settlePaymentTx);
+
+    const investorTokenAccountInfo3 = await provider.connection.getAccountInfo(
+      investorPaymentATA
+    );
+
+    const investorTokenAccount3 = unpackAccount(
+      investorATA,
+      investorTokenAccountInfo3,
+      TOKEN_2022_PROGRAM_ID
+    );
+
+    expect(investorTokenAccount3.amount).to.equal(
+      investorTokenAccount2.amount + 100000n
+    );
   });
 });

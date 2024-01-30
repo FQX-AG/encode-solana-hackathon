@@ -5,7 +5,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount};
 use spl_token_2022::instruction::TokenInstruction;
 
 use transfer_snapshot_hook::program::TransferSnapshotHook;
-use transfer_snapshot_hook::SnapshotConfig;
+use transfer_snapshot_hook::{SnapshotConfig, SnapshotTokenAccountBalances};
 use treasury_wallet::program::TreasuryWallet;
 use treasury_wallet::TreasuryWalletAccount;
 
@@ -31,10 +31,12 @@ pub enum StructuredProductError {
     DateNotInPast,
     #[msg("Date not in future")]
     DateNotInFuture,
-    #[msg("Principal payment must be same date as last payment")]
-    InvalidPrincipalPaymentDate,
+    #[msg("Invalid date")]
+    InvalidPaymentDate,
     #[msg("Principal undefined")]
     PrincipalUndefined,
+    #[msg("Insufficient balance")]
+    InsufficientBalance,
 }
 
 #[program]
@@ -166,7 +168,7 @@ pub mod structured_product {
                 ctx.accounts.snapshot_config.snapshots
                     [ctx.accounts.snapshot_config.defined_snapshots as usize - 1]
                     == payment_date_offset,
-                StructuredProductError::InvalidPrincipalPaymentDate
+                StructuredProductError::InvalidPaymentDate
             )
         }
 
@@ -237,7 +239,7 @@ pub mod structured_product {
                 ctx.accounts.snapshot_config.snapshots
                     [ctx.accounts.snapshot_config.defined_snapshots as usize - 1]
                     == payment_date_offset,
-                StructuredProductError::InvalidPrincipalPaymentDate
+                StructuredProductError::InvalidPaymentDate
             )
         }
 
@@ -601,6 +603,73 @@ pub mod structured_product {
         )?;
         Ok(())
     }
+
+    pub fn settle_payment(ctx: Context<SettlePayment>, payment_date_offset: i64) -> Result<()> {
+        require!(
+            ctx.accounts.payment.price_per_unit.is_some(),
+            StructuredProductError::PaymentAmountNotSet
+        );
+        require!(
+            !ctx.accounts.payment.paid,
+            StructuredProductError::AlreadyPaid
+        );
+
+        let snapshot_config = &ctx.accounts.snapshot_config;
+
+        // find index of snapshot with payment_date_offset
+        let snapshot_index = snapshot_config
+            .snapshots
+            .iter()
+            .position(|&x| x == payment_date_offset);
+
+        // this should never happen...
+        require!(
+            snapshot_index.is_some(),
+            StructuredProductError::InvalidPaymentDate
+        );
+
+        let snapshot_balance = ctx
+            .accounts
+            .beneficiary_snapshot_balances_account
+            .balance_at_snapshot(snapshot_index.unwrap());
+
+        require!(
+            snapshot_balance > 0,
+            StructuredProductError::InsufficientBalance
+        );
+
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+
+        let cpi_accounts = token_2022::TransferChecked {
+            from: ctx.accounts.payment_token_account.to_account_info(),
+            to: ctx
+                .accounts
+                .beneficiary_payment_token_account
+                .to_account_info(),
+            mint: ctx.accounts.payment_mint.to_account_info(),
+            authority: ctx.accounts.payment.to_account_info(),
+        };
+
+        let structured_product_key = ctx.accounts.structured_product.key();
+
+        let seeds = &[
+            structured_product_key.as_ref(),
+            &[ctx.accounts.payment.principal.into()],
+            &payment_date_offset.to_le_bytes(),
+            &[ctx.accounts.payment.bump],
+        ];
+
+        token_2022::transfer_checked(
+            CpiContext::new_with_signer(cpi_program, cpi_accounts, &[&seeds[..]]),
+            snapshot_balance * ctx.accounts.payment.price_per_unit.unwrap(),
+            ctx.accounts.payment_mint.decimals,
+        )?;
+
+        let payment_paid = &mut ctx.accounts.payment_paid;
+        payment_paid.paid = true;
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -785,6 +854,36 @@ pub struct PullPayment<'info> {
     system_program: Program<'info, System>,
 }
 
+#[derive(Accounts)]
+#[instruction(payment_date_offset: i64)]
+pub struct SettlePayment<'info> {
+    #[account(mut)]
+    payer: Signer<'info>,
+    mint: InterfaceAccount<'info, Mint>,
+    #[account(mut, seeds=[mint.key().as_ref()], bump=structured_product.bump)]
+    structured_product: Account<'info, StructuredProduct>,
+    #[account(seeds=[b"snapshots", mint.key().as_ref()], seeds::program=snapshot_transfer_hook_program, bump)]
+    snapshot_config: Account<'info, SnapshotConfig>,
+    payment_mint: InterfaceAccount<'info, Mint>,
+    #[account(mut, seeds=[structured_product.key().as_ref(), &[payment.principal.into()], &payment_date_offset.to_le_bytes()], bump=payment.bump)]
+    payment: Account<'info, Payment>,
+    #[account(mut, token::mint=payment_mint, token::authority=payment)]
+    payment_token_account: InterfaceAccount<'info, TokenAccount>,
+    #[account(init, seeds=[payment.key().as_ref(), beneficiary_token_account.key().as_ref()], bump, space=9, payer=payer)]
+    payment_paid: Account<'info, PaymentPaid>,
+    /// CHECK: will only get paid if has an unpaid snapshot balance
+    beneficiary: AccountInfo<'info>,
+    #[account(mut, token::mint=mint, token::authority=beneficiary)]
+    beneficiary_token_account: InterfaceAccount<'info, TokenAccount>,
+    #[account(seeds=[mint.key().as_ref(), beneficiary_token_account.key().as_ref()], seeds::program=snapshot_transfer_hook_program, bump)]
+    beneficiary_snapshot_balances_account: Account<'info, SnapshotTokenAccountBalances>,
+    #[account(mut, token::mint=payment_mint, token::authority=beneficiary)]
+    beneficiary_payment_token_account: InterfaceAccount<'info, TokenAccount>,
+    snapshot_transfer_hook_program: Program<'info, TransferSnapshotHook>,
+    token_program: Program<'info, Token2022>,
+    system_program: Program<'info, System>,
+}
+
 #[account]
 pub struct StructuredProduct {
     authority: Pubkey,
@@ -809,4 +908,9 @@ pub struct Payment {
     principal: bool,
     paid: bool,
     bump: u8,
+}
+
+#[account]
+pub struct PaymentPaid {
+    paid: bool,
 }

@@ -498,6 +498,92 @@ export type StructuredProduct = {
           "type": "i64"
         }
       ]
+    },
+    {
+      "name": "settlePayment",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "structuredProduct",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "snapshotConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "paymentMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "payment",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "paymentTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "paymentPaid",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "beneficiary",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "beneficiaryTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "beneficiarySnapshotBalancesAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "beneficiaryPaymentTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "snapshotTransferHookProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "paymentDateOffset",
+          "type": "i64"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -594,6 +680,18 @@ export type StructuredProduct = {
           }
         ]
       }
+    },
+    {
+      "name": "paymentPaid",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "paid",
+            "type": "bool"
+          }
+        ]
+      }
     }
   ],
   "errors": [
@@ -644,13 +742,18 @@ export type StructuredProduct = {
     },
     {
       "code": 6009,
-      "name": "InvalidPrincipalPaymentDate",
-      "msg": "Principal payment must be same date as last payment"
+      "name": "InvalidPaymentDate",
+      "msg": "Invalid date"
     },
     {
       "code": 6010,
       "name": "PrincipalUndefined",
       "msg": "Principal undefined"
+    },
+    {
+      "code": 6011,
+      "name": "InsufficientBalance",
+      "msg": "Insufficient balance"
     }
   ]
 };
@@ -1155,6 +1258,92 @@ export const IDL: StructuredProduct = {
           "type": "i64"
         }
       ]
+    },
+    {
+      "name": "settlePayment",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "structuredProduct",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "snapshotConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "paymentMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "payment",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "paymentTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "paymentPaid",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "beneficiary",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "beneficiaryTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "beneficiarySnapshotBalancesAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "beneficiaryPaymentTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "snapshotTransferHookProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "paymentDateOffset",
+          "type": "i64"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -1251,6 +1440,18 @@ export const IDL: StructuredProduct = {
           }
         ]
       }
+    },
+    {
+      "name": "paymentPaid",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "paid",
+            "type": "bool"
+          }
+        ]
+      }
     }
   ],
   "errors": [
@@ -1301,13 +1502,18 @@ export const IDL: StructuredProduct = {
     },
     {
       "code": 6009,
-      "name": "InvalidPrincipalPaymentDate",
-      "msg": "Principal payment must be same date as last payment"
+      "name": "InvalidPaymentDate",
+      "msg": "Invalid date"
     },
     {
       "code": 6010,
       "name": "PrincipalUndefined",
       "msg": "Principal undefined"
+    },
+    {
+      "code": 6011,
+      "name": "InsufficientBalance",
+      "msg": "Insufficient balance"
     }
   ]
 };

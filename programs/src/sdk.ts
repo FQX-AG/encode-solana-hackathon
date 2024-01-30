@@ -77,6 +77,14 @@ export type CreatePullPaymentInstructionAccounts = {
   paymentMint: PublicKey;
 };
 
+export type CreateSettlePaymentInstructionAccounts = {
+  structuredProductMint: PublicKey;
+  beneficiary: PublicKey;
+  beneficiaryTokenAccount: PublicKey;
+  beneficiaryPaymentTokenAccount: PublicKey;
+  paymentMint: PublicKey;
+};
+
 export type SignStructuredProductInitOfflineConfig = {
   investor: PublicKey;
   issuer: PublicKey;
@@ -655,6 +663,72 @@ export class StructuredNotesSdk {
       .instruction();
   }
 
+  async createSettlePaymentInstruction(
+    accounts: CreateSettlePaymentInstructionAccounts,
+    principal: boolean,
+    paymentTimestamp: BN
+  ) {
+    const structuredProductPDA = getPdaWithSeeds(
+      [accounts.structuredProductMint.toBuffer()],
+      this.program.programId
+    );
+
+    const paymentPDA = await this.getPaymentPda(
+      accounts.structuredProductMint,
+      principal,
+      paymentTimestamp
+    );
+
+    const paymentTokenAccount = getAssociatedTokenAddressSync(
+      accounts.paymentMint,
+      paymentPDA.publicKey,
+      true,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const paymentPaidPDA = getPdaWithSeeds(
+      [
+        paymentPDA.publicKey.toBuffer(),
+        accounts.beneficiaryTokenAccount.toBuffer(),
+      ],
+      this.program.programId
+    );
+
+    const snapshotBalancesAccount = getPdaWithSeeds(
+      [
+        accounts.structuredProductMint.toBuffer(),
+        accounts.beneficiaryTokenAccount.toBuffer(),
+      ],
+      this.transferSnapshotHookProgram.programId
+    );
+
+    const snapshotConfigPDA = getPdaWithSeeds(
+      [Buffer.from("snapshots"), accounts.structuredProductMint.toBuffer()],
+      this.transferSnapshotHookProgram.programId
+    );
+
+    return await this.program.methods
+      .settlePayment(new BN(paymentTimestamp))
+      .accounts({
+        payer: this.provider.publicKey,
+        beneficiary: accounts.beneficiary,
+        beneficiaryTokenAccount: accounts.beneficiaryTokenAccount,
+        beneficiarySnapshotBalancesAccount: snapshotBalancesAccount.publicKey,
+        beneficiaryPaymentTokenAccount: accounts.beneficiaryPaymentTokenAccount,
+        mint: accounts.structuredProductMint,
+        structuredProduct: structuredProductPDA.publicKey,
+        snapshotConfig: snapshotConfigPDA.publicKey,
+        paymentMint: accounts.paymentMint,
+        payment: paymentPDA.publicKey,
+        paymentTokenAccount,
+        paymentPaid: paymentPaidPDA.publicKey,
+        snapshotTransferHookProgram: this.transferSnapshotHookProgram.programId,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .instruction();
+  }
   async waitForNewBlock(targetHeight: number) {
     console.log(`Waiting for new block with target height ${targetHeight}`);
 
