@@ -2,7 +2,7 @@ import { Text } from "@/components/Text";
 import { ReactNode } from "react";
 import { Stack } from "@mui/material";
 
-export function Property(props: { k: string; v: ReactNode; horizontal?: boolean }) {
+export function Property(props: { k: ReactNode; v: ReactNode; horizontal?: boolean }) {
   return (
     <Stack
       spacing={1}

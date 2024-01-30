@@ -10,23 +10,17 @@ import {
   StructuredProductUnderlyingAsset,
 } from "@/constants";
 import { Text } from "@/components/Text";
-import { Info } from "../Info";
 import { NoteValue } from "./NoteValue";
 import { formatDateUTC, formatDecimal, formatPercentage } from "@/formatters";
 import { NoteQrCode } from "@/components/note/NoteQrCode";
 import { NoteAgreementLink } from "@/components/note/NoteAgreementLink";
 import { NoteBackground } from "@/components/note/NoteBackground";
 
-const VDivider = () => (
-  <Box component="span" sx={{ color: "#7C7CBA", mx: 1 }}>
-    {"|"}
-  </Box>
-);
-
 const Root = styled("div")({
   overflow: "auto hidden",
+  borderRadius: "10px",
   border: "2px solid #272754",
-  borderRadius: "4px",
+  boxShadow: "0px -1px 4px 10px rgba(23, 23, 72, 0.64)",
 });
 
 const Main = styled("div")((props) => ({
@@ -197,9 +191,7 @@ const Note = (props: NoteProps) => {
           style={{ verticalAlign: "middle" }}
         />
       </Box>
-      {props.address && (
-        <NoteQrCode address={props.address} explorerName={"Solscan"} explorerUrl={"https://solscan.io"} />
-      )}
+      {props.address && <NoteQrCode address={props.address} />}
       <Stack flex="0 0 auto" useFlexGap spacing={1} alignItems="flex-end">
         {props.registrationAgreementUrl !== undefined && (
           <NoteAgreementLink href={props.registrationAgreementUrl} label="Registration agreement" />

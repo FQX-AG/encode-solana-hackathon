@@ -14,6 +14,7 @@ const Root = styled(Text)`
   border-radius: 4px;
   color: #a2a2dc;
   white-space: nowrap;
+  border-color: currentColor;
 `;
 
 export function Chip(props: { children: ReactNode; sx?: SxProps<Theme> }) {
