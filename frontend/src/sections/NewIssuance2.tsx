@@ -8,6 +8,7 @@ import { PaymentScheduleList } from "@/components/PaymentScheduleList";
 import { Text } from "@/components/Text";
 import { useFormikContext } from "formik";
 import { FormValues } from "@/schemas/newIssuance";
+import { PaymentSchedule } from "@/components/PaymentSchedule";
 
 type Item = {
   type: "coupon" | "principal";
@@ -35,16 +36,7 @@ function NewIssuance2Inner(props: NewIssuance2InnerProps) {
     return items;
   }, [issuanceDate, props.couponsCount, props.maturityDate]);
 
-  return (
-    <>
-      <PaymentScheduleTimeline
-        issuanceDate={issuanceDate}
-        maturityDate={props.maturityDate}
-        payments={paymentsPreview}
-      />
-      <PaymentScheduleList payments={paymentsPreview} />
-    </>
-  );
+  return <PaymentSchedule issuanceDate={issuanceDate} maturityDate={props.maturityDate} payments={paymentsPreview} />;
 }
 
 export function NewIssuance2() {

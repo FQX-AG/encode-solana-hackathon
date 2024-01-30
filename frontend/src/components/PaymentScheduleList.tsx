@@ -42,17 +42,14 @@ type PaymentScheduleListProps = {
 export function PaymentScheduleList(props: PaymentScheduleListProps) {
   return (
     <Table>
-      <tbody>
-        <Row>
-          <Text variant="500|18px|23px" sx={{ mb: 2 }}>
-            Payment schedule
-          </Text>
-        </Row>
+      <thead>
         <Row sx={{ color: (theme) => theme.customColors.oxfordBlue500 }}>
           <Text variant="500|14px|18px">Payment deadline</Text>
           <Text variant="500|14px|18px">Payment details</Text>
           <Text variant="500|14px|18px">Status</Text>
         </Row>
+      </thead>
+      <tbody>
         {props.payments.map((payment, index, payments) => (
           <Row key={index}>
             <Text variant="400|16px|21px">
