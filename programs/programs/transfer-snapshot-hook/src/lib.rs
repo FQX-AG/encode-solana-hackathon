@@ -398,11 +398,11 @@ impl SnapshotTokenAccountBalances {
         4 + std::mem::size_of::<Option<u64>>() * num_snapshots.into() + 8
     }
 
-    // If snapshot_balance at given index is some we just return the balance => ez!
+    // If snapshot_balance at given index is Some we just return the balance => ez!
     // If balance is None, that means in the period between the given snapshot and the earlier snapshot, no transfer occurred.
     // There could still be a balance at the earlier snapshot, so we need to check that.
     // If there is a balance at the earlier snapshot, we return that balance.
-    // If there is no balance at the earlier snapshot, we return 0.
+    // If there is no balance at any earlier snapshot, we return 0.
     pub fn balance_at_snapshot(&self, snapshot_index: usize) -> u64 {
         let snapshot_balance = self.snapshot_balances[snapshot_index];
         match snapshot_balance {
