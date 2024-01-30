@@ -36,6 +36,7 @@ export type InitializeStructuredProductInstructionAccounts = {
   investor: PublicKey;
   issuer: PublicKey;
   issuerTreasuryWallet: PublicKey;
+  paymentMint: PublicKey;
 };
 
 export type InitializeSnapshotTransferHookInstructionAccounts = {
@@ -51,10 +52,23 @@ export type IssueInstructionAccounts = {
   mint: PublicKey;
 };
 
+export type PayIssuanceInstructionAccounts = {
+  mint: PublicKey;
+  paymentMint: PublicKey;
+  payer: PublicKey;
+};
+
 export type AddPaymentInstructionAccount = {
   paymentMint: PublicKey;
   structuredProductMint: PublicKey;
   priceAuthority?: PublicKey;
+};
+
+export type WithdrawIssuanceProceedsInstructionAccounts = {
+  mint: PublicKey;
+  paymentMint: PublicKey;
+  issuer: PublicKey;
+  beneficiaryTokenAccount: PublicKey;
 };
 
 export type CreatePullPaymentInstructionAccounts = {
@@ -74,6 +88,9 @@ export type SignStructuredProductInitOfflineConfig = {
     principal: boolean;
     paymentDateOffsetSeconds: BN;
   }[];
+  paymentMint: PublicKey;
+  issuancePricePerUnit: BN;
+  supply: BN;
 };
 
 export type SignStructuredProductIssueOffline = {
@@ -81,6 +98,8 @@ export type SignStructuredProductIssueOffline = {
   issuer: PublicKey;
   issuerTreasuryWallet: PublicKey;
   mint: PublicKey;
+  paymentMint: PublicKey;
+  issuanceProceedsBeneficiary: PublicKey;
 };
 
 export type LookupTableMap = {
@@ -250,7 +269,9 @@ export class StructuredNotesSdk {
   async createInitializeStructuredProductInstruction(
     accounts: InitializeStructuredProductInstructionAccounts,
     mint: Keypair,
-    maxSnapshots: number
+    maxSnapshots: number,
+    issuancePricePerUnit: BN,
+    supply: BN
   ) {
     const structuredProductPDA = getPdaWithSeeds(
       [mint.publicKey.toBuffer()],
@@ -284,6 +305,7 @@ export class StructuredNotesSdk {
       structuredProduct: structuredProductPDA.publicKey,
       issuerTreasuryWallet: accounts.issuerTreasuryWallet,
       treasuryWalletProgram: this.treasuryWalletProgram.programId,
+      paymentMint: accounts.paymentMint,
       snapshotConfig: snapshotConfigPda.publicKey,
       extraAccount: extraAccountPDA.publicKey,
       snapshotTransferHookProgram: this.transferSnapshotHookProgram.programId,
@@ -293,9 +315,78 @@ export class StructuredNotesSdk {
     };
     console.log({ allAccounts });
     return await this.program.methods
-      .initialize(maxSnapshots)
+      .initialize(maxSnapshots, issuancePricePerUnit, supply)
       .accounts(allAccounts)
       .signers([mint])
+      .instruction();
+  }
+
+  async createPayIssuanceInstruction(accounts: PayIssuanceInstructionAccounts) {
+    const structuredProductPDA = getPdaWithSeeds(
+      [accounts.mint.toBuffer()],
+      this.program.programId
+    );
+
+    const payerATA = getAssociatedTokenAddressSync(
+      accounts.paymentMint,
+      accounts.payer,
+      false,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const structuredProductATA = getAssociatedTokenAddressSync(
+      accounts.paymentMint,
+      structuredProductPDA.publicKey,
+      true,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    return this.program.methods
+      .payIssuance()
+      .accounts({
+        mint: accounts.mint,
+        structuredProduct: structuredProductPDA.publicKey,
+        paymentMint: accounts.paymentMint,
+        payer: accounts.payer,
+        payerTokenAccount: payerATA,
+        structuredProductTokenAccount: structuredProductATA,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .instruction();
+  }
+
+  async createWithdrawIssuanceProceedsInstruction(
+    accounts: WithdrawIssuanceProceedsInstructionAccounts
+  ) {
+    const structuredProductPDA = getPdaWithSeeds(
+      [accounts.mint.toBuffer()],
+      this.program.programId
+    );
+
+    const structuredProductATA = getAssociatedTokenAddressSync(
+      accounts.paymentMint,
+      structuredProductPDA.publicKey,
+      true,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    return this.program.methods
+      .withdrawIssuanceProceeds()
+      .accounts({
+        mint: accounts.mint,
+        structuredProduct: structuredProductPDA.publicKey,
+        paymentMint: accounts.paymentMint,
+        payer: this.provider.publicKey,
+        issuer: accounts.issuer,
+        beneficiaryTokenAccount: accounts.beneficiaryTokenAccount,
+        structuredProductTokenAccount: structuredProductATA,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+      })
       .instruction();
   }
   async getAddPaymentInstruction(
@@ -405,7 +496,7 @@ export class StructuredNotesSdk {
       .instruction();
   }
 
-  async createIssueInstruction(accounts: IssueInstructionAccounts, supply: BN) {
+  async createIssueInstruction(accounts: IssueInstructionAccounts) {
     const structuredProductPDA = getPdaWithSeeds(
       [accounts.mint.toBuffer()],
       this.program.programId
@@ -450,7 +541,7 @@ export class StructuredNotesSdk {
     );
 
     return await this.program.methods
-      .issue(supply)
+      .issue()
       .accounts({
         mint: accounts.mint,
         issuer: accounts.issuer,
@@ -661,9 +752,12 @@ export class StructuredNotesSdk {
         investor: config.investor,
         issuer: config.issuer,
         issuerTreasuryWallet: config.issuerTreasuryWallet,
+        paymentMint: config.paymentMint,
       },
       mint,
-      config.payments.length - 1 // principal uses same snapshot as last coupon
+      config.payments.length - 1, // principal uses same snapshot as last coupon,
+      config.issuancePricePerUnit, // this is the principal amount,
+      config.supply
     );
 
     const paymentIxs = await Promise.all(
@@ -738,8 +832,7 @@ export class StructuredNotesSdk {
   }
 
   async signStructuredProductIssueOffline(
-    accounts: SignStructuredProductIssueOffline,
-    supply: BN
+    accounts: SignStructuredProductIssueOffline
   ) {
     const { nonceAccount, noncePubkey } =
       await this.createDurableNonceAccount();
@@ -749,18 +842,29 @@ export class StructuredNotesSdk {
       authorizedPubkey: this.provider.publicKey,
     });
 
-    const issueIx = await this.createIssueInstruction(
-      {
-        investor: accounts.investor,
-        issuer: accounts.issuer,
-        issuerTreasuryWallet: accounts.issuerTreasuryWallet,
+    const payIssuanceIx = await this.createPayIssuanceInstruction({
+      mint: accounts.mint,
+      paymentMint: accounts.paymentMint,
+      payer: accounts.investor,
+    });
+
+    const issueIx = await this.createIssueInstruction({
+      investor: accounts.investor,
+      issuer: accounts.issuer,
+      issuerTreasuryWallet: accounts.issuerTreasuryWallet,
+      mint: accounts.mint,
+    });
+
+    const withdrawIssuanceProceedsIx =
+      await this.createWithdrawIssuanceProceedsInstruction({
         mint: accounts.mint,
-      },
-      supply
-    );
+        paymentMint: accounts.paymentMint,
+        issuer: accounts.issuer,
+        beneficiaryTokenAccount: accounts.issuanceProceedsBeneficiary,
+      });
 
     const signedIssueTx = await this.createAndSignV0Tx(
-      [advanceIx, issueIx],
+      [advanceIx, payIssuanceIx, issueIx, withdrawIssuanceProceedsIx],
       [],
       nonceAccount.nonce
     );

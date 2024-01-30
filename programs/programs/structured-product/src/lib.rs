@@ -23,6 +23,8 @@ pub enum StructuredProductError {
     PaymentAmountNotSet,
     #[msg("Already paid")]
     AlreadyPaid,
+    #[msg("Issuance not paid for")]
+    Unpaid,
     #[msg("Already issued")]
     AlreadyIssued,
     #[msg("Date not in past")]
@@ -45,7 +47,12 @@ pub mod structured_product {
 
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, max_snapshots: u8) -> Result<()> {
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        max_snapshots: u8,
+        payment_amount_per_unit: u64,
+        supply: u64,
+    ) -> Result<()> {
         let init_transfer_hook_instruction =
             token_2022::spl_token_2022::extension::transfer_hook::instruction::initialize(
                 &ctx.accounts.token_program.key(),
@@ -127,6 +134,9 @@ pub mod structured_product {
         structured_product.investor = ctx.accounts.investor.key();
         structured_product.issuer = ctx.accounts.issuer.key();
         structured_product.issuer_treasury_wallet = ctx.accounts.issuer_treasury_wallet.key();
+        structured_product.issuance_payment_mint = ctx.accounts.payment_mint.key();
+        structured_product.issuance_payment_amount_per_unit = payment_amount_per_unit;
+        structured_product.supply = supply;
         structured_product.num_payments = 0;
         structured_product.principal_defined = false;
         structured_product.issuance_date = None;
@@ -273,7 +283,40 @@ pub mod structured_product {
         Ok(())
     }
 
-    pub fn issue(ctx: Context<Issue>, supply: u64) -> Result<()> {
+    pub fn pay_issuance(ctx: Context<PayIssuance>) -> Result<()> {
+        require!(
+            !ctx.accounts.structured_product.paid,
+            StructuredProductError::AlreadyPaid
+        );
+
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+
+        let cpi_accounts = token_2022::TransferChecked {
+            from: ctx.accounts.payer_token_account.to_account_info(),
+            to: ctx
+                .accounts
+                .structured_product_token_account
+                .to_account_info(),
+            mint: ctx.accounts.payment_mint.to_account_info(),
+            authority: ctx.accounts.payer.to_account_info(),
+        };
+
+        token_2022::transfer_checked(
+            CpiContext::new(cpi_program, cpi_accounts),
+            ctx.accounts.structured_product.supply
+                * ctx
+                    .accounts
+                    .structured_product
+                    .issuance_payment_amount_per_unit,
+            ctx.accounts.payment_mint.decimals,
+        )?;
+
+        let structured_product = &mut ctx.accounts.structured_product;
+        structured_product.paid = true;
+        Ok(())
+    }
+
+    pub fn issue(ctx: Context<Issue>) -> Result<()> {
         require!(
             ctx.accounts.issuer.key() == ctx.accounts.structured_product.issuer.key(),
             StructuredProductError::Unauthorized
@@ -285,6 +328,10 @@ pub mod structured_product {
         require!(
             ctx.accounts.structured_product.issuance_date.is_none(),
             StructuredProductError::Unauthorized
+        );
+        require!(
+            ctx.accounts.structured_product.paid,
+            StructuredProductError::Unpaid
         );
 
         let mint_key = ctx.accounts.mint.key();
@@ -305,7 +352,7 @@ pub mod structured_product {
                 cpi_accounts,
                 &[&signer_seeds[..]],
             ),
-            supply,
+            ctx.accounts.structured_product.supply,
         )?;
 
         msg!("Minted tokens");
@@ -368,7 +415,7 @@ pub mod structured_product {
         msg!("Building transfer_checked ix!");
         check_spl_token_program_account(&ctx.accounts.token_program.key())?;
         let data = TokenInstruction::TransferChecked {
-            amount: supply,
+            amount: ctx.accounts.structured_product.supply,
             decimals: 0,
         }
         .pack();
@@ -436,6 +483,49 @@ pub mod structured_product {
         Ok(())
     }
 
+    pub fn withdraw_issuance_proceeds(ctx: Context<WithdrawIssuanceProceeds>) -> Result<()> {
+        require!(
+            ctx.accounts.structured_product.issuance_date.is_some(),
+            StructuredProductError::Unauthorized
+        );
+        require!(
+            ctx.accounts.structured_product.issuer == ctx.accounts.issuer.key(),
+            StructuredProductError::Unauthorized
+        );
+        require!(
+            ctx.accounts.structured_product_token_account.amount
+                == ctx.accounts.mint.supply
+                    * ctx
+                        .accounts
+                        .structured_product
+                        .issuance_payment_amount_per_unit,
+            StructuredProductError::Unauthorized
+        );
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+
+        let cpi_accounts = token_2022::TransferChecked {
+            from: ctx
+                .accounts
+                .structured_product_token_account
+                .to_account_info(),
+            to: ctx.accounts.beneficiary_token_account.to_account_info(),
+            mint: ctx.accounts.payment_mint.to_account_info(),
+            authority: ctx.accounts.structured_product.to_account_info(),
+        };
+
+        let mint_key = ctx.accounts.mint.key();
+
+        let seeds = &[mint_key.as_ref(), &[ctx.accounts.structured_product.bump]];
+
+        token_2022::transfer_checked(
+            CpiContext::new_with_signer(cpi_program, cpi_accounts, &[&seeds[..]]),
+            ctx.accounts.structured_product_token_account.amount,
+            ctx.accounts.payment_mint.decimals,
+        )?;
+
+        Ok(())
+    }
+
     pub fn set_payment_price(
         ctx: Context<SetPaymentPrice>,
         _payment_date_offset: i64,
@@ -477,7 +567,7 @@ pub mod structured_product {
             StructuredProductError::PaymentAmountNotSet
         );
 
-        require!(!payment.paid, StructuredProductError::AlreadyPaid);
+        require!(!payment.paid, StructuredProductError::Unpaid);
 
         require!(
             ctx.accounts.structured_product.issuer_treasury_wallet
@@ -527,6 +617,7 @@ pub struct Initialize<'info> {
     // TODO: space calculation
     #[account(init, seeds=[mint.key().as_ref()], bump, payer=authority, space=200)]
     pub structured_product: Account<'info, StructuredProduct>,
+    pub payment_mint: InterfaceAccount<'info, Mint>,
     /// CHECK: validated in initialize_extra_account_meta_list
     pub snapshot_config: AccountInfo<'info>,
     pub issuer_treasury_wallet: Account<'info, TreasuryWalletAccount>,
@@ -587,6 +678,26 @@ pub struct AddVariablePayment<'info> {
     system_program: Program<'info, System>,
 }
 
+// TODO: handle withdrawal when never issued
+#[derive(Accounts)]
+pub struct PayIssuance<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub mint: InterfaceAccount<'info, Mint>,
+    #[account(mut, seeds=[mint.key().as_ref()], bump=structured_product.bump)]
+    pub structured_product: Account<'info, StructuredProduct>,
+    #[account(mut, token::mint=structured_product.issuance_payment_mint, token::authority=payer)]
+    pub payer_token_account: InterfaceAccount<'info, TokenAccount>,
+    pub payment_mint: InterfaceAccount<'info, Mint>,
+    #[account(init,
+    associated_token::mint=payment_mint, associated_token::authority=structured_product,
+    payer=payer)]
+    pub structured_product_token_account: InterfaceAccount<'info, TokenAccount>,
+    pub token_program: Program<'info, Token2022>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+}
+
 #[derive(Accounts)]
 pub struct Issue<'info> {
     #[account(mut)]
@@ -617,6 +728,23 @@ pub struct Issue<'info> {
     pub token_program: Program<'info, Token2022>,
     pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct WithdrawIssuanceProceeds<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(mut)]
+    pub issuer: Signer<'info>,
+    pub mint: InterfaceAccount<'info, Mint>,
+    #[account(mut, seeds=[mint.key().as_ref()], bump=structured_product.bump)]
+    pub structured_product: Account<'info, StructuredProduct>,
+    #[account(mut, token::mint=payment_mint)]
+    pub beneficiary_token_account: InterfaceAccount<'info, TokenAccount>,
+    pub payment_mint: InterfaceAccount<'info, Mint>,
+    #[account(mut, token::mint=payment_mint, token::authority=structured_product)]
+    pub structured_product_token_account: InterfaceAccount<'info, TokenAccount>,
+    pub token_program: Program<'info, Token2022>,
 }
 
 #[derive(Accounts)]
@@ -662,7 +790,11 @@ pub struct StructuredProduct {
     authority: Pubkey,
     investor: Pubkey,
     issuer: Pubkey,
+    supply: u64,
     issuer_treasury_wallet: Pubkey,
+    issuance_payment_mint: Pubkey,
+    issuance_payment_amount_per_unit: u64,
+    paid: bool,
     num_payments: u8,
     principal_defined: bool,
     issuance_date: Option<i64>,

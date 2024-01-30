@@ -2,8 +2,7 @@ use anchor_lang::{
     prelude::*,
     system_program::{create_account, CreateAccount},
 };
-use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token_interface::{Mint, Token2022, TokenAccount};
+use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use {
     anchor_spl::token_2022::spl_token_2022::{
@@ -48,7 +47,6 @@ fn check_token_account_is_transferring(account_data: &[u8]) -> Result<()> {
 
 #[program]
 pub mod transfer_snapshot_hook {
-    use spl_pod::primitives::PodBool;
     use spl_tlv_account_resolution::account::ExtraAccountMeta;
     use spl_tlv_account_resolution::seeds::Seed;
     use spl_tlv_account_resolution::state::ExtraAccountMetaList;
