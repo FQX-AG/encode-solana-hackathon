@@ -1,0 +1,1 @@
+export const SOLANA_PROVIDER = 'SOLANA_PROVIDER';
