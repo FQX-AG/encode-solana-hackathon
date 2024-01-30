@@ -73,8 +73,13 @@ export type TreasuryWallet = {
       "name": "withdraw",
       "accounts": [
         {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
           "name": "treasuryWallet",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -101,11 +106,6 @@ export type TreasuryWallet = {
           "name": "destination",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "authority",
-          "isMut": false,
-          "isSigner": true
         },
         {
           "name": "tokenProgram",
@@ -236,8 +236,13 @@ export const IDL: TreasuryWallet = {
       "name": "withdraw",
       "accounts": [
         {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
           "name": "treasuryWallet",
-          "isMut": true,
+          "isMut": false,
           "isSigner": false
         },
         {
@@ -264,11 +269,6 @@ export const IDL: TreasuryWallet = {
           "name": "destination",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "authority",
-          "isMut": false,
-          "isSigner": true
         },
         {
           "name": "tokenProgram",

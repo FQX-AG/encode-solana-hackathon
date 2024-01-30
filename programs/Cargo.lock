@@ -2238,6 +2238,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "spl-transfer-hook-interface"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "825a69d531baa1ff261a29b98fcf08e134249e624052a6b60183bb2eab2fa8ae"
+dependencies = [
+ "arrayref",
+ "bytemuck",
+ "solana-program",
+ "spl-discriminator",
+ "spl-pod",
+ "spl-program-error",
+ "spl-tlv-account-resolution 0.5.1",
+ "spl-type-length-value",
+]
+
+[[package]]
 name = "spl-type-length-value"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2263,7 +2279,9 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "solana-program",
+ "spl-tlv-account-resolution 0.5.1",
  "spl-token-2022 1.0.0",
+ "spl-transfer-hook-interface 0.5.0",
  "transfer-snapshot-hook",
  "treasury-wallet",
 ]
@@ -2395,7 +2413,7 @@ dependencies = [
  "solana-program",
  "spl-pod",
  "spl-tlv-account-resolution 0.5.1",
- "spl-transfer-hook-interface 0.4.1",
+ "spl-transfer-hook-interface 0.5.0",
 ]
 
 [[package]]

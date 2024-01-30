@@ -6,6 +6,11 @@ export type TransferSnapshotHook = {
       "name": "initialize",
       "accounts": [
         {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
           "name": "snapshotConfig",
           "isMut": true,
           "isSigner": false
@@ -17,22 +22,72 @@ export type TransferSnapshotHook = {
         },
         {
           "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "maxSnapshots",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "defineSnapshot",
+      "accounts": [
+        {
+          "name": "snapshotConfig",
           "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
           "isSigner": true
         }
       ],
       "args": [
         {
-          "name": "snapshots",
-          "type": {
-            "vec": "i64"
-          }
+          "name": "timestampOffset",
+          "type": "i64"
         }
       ]
     },
     {
+      "name": "activate",
+      "accounts": [
+        {
+          "name": "snapshotConfig",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initSnapshotBalancesAccount",
       "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": false
+        },
         {
           "name": "snapshotConfig",
           "isMut": false,
@@ -54,9 +109,9 @@ export type TransferSnapshotHook = {
           "isSigner": false
         },
         {
-          "name": "authority",
-          "isMut": true,
-          "isSigner": true
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": []
@@ -116,6 +171,11 @@ export type TransferSnapshotHook = {
       "name": "initializeExtraAccountMetaList",
       "accounts": [
         {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
           "name": "extraAccount",
           "isMut": true,
           "isSigner": false
@@ -131,22 +191,12 @@ export type TransferSnapshotHook = {
           "isSigner": false
         },
         {
-          "name": "authority",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "bumpSeed",
-          "type": "u8"
-        }
-      ]
+      "args": []
     }
   ],
   "accounts": [
@@ -160,13 +210,19 @@ export type TransferSnapshotHook = {
             "type": "publicKey"
           },
           {
-            "name": "initialized",
-            "type": "bool"
+            "name": "definedSnapshots",
+            "type": "u8"
           },
           {
             "name": "snapshots",
             "type": {
               "vec": "i64"
+            }
+          },
+          {
+            "name": "activatedDate",
+            "type": {
+              "option": "i64"
             }
           }
         ]
@@ -192,21 +248,26 @@ export type TransferSnapshotHook = {
   "errors": [
     {
       "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6001,
       "name": "NoSnapshotFound",
       "msg": "No snapshot found"
     },
     {
-      "code": 6001,
-      "name": "AlreadyInitialized",
-      "msg": "Already initialized"
-    },
-    {
       "code": 6002,
-      "name": "NotInitialized",
-      "msg": "Not initialized"
+      "name": "Active",
+      "msg": "Snapshots are active"
     },
     {
       "code": 6003,
+      "name": "Inactive",
+      "msg": "Snapshots are inactive"
+    },
+    {
+      "code": 6004,
       "name": "InvalidTimestamp",
       "msg": "Invalid timestamp"
     }
@@ -221,6 +282,11 @@ export const IDL: TransferSnapshotHook = {
       "name": "initialize",
       "accounts": [
         {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
           "name": "snapshotConfig",
           "isMut": true,
           "isSigner": false
@@ -232,22 +298,72 @@ export const IDL: TransferSnapshotHook = {
         },
         {
           "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "maxSnapshots",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "defineSnapshot",
+      "accounts": [
+        {
+          "name": "snapshotConfig",
           "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
           "isSigner": true
         }
       ],
       "args": [
         {
-          "name": "snapshots",
-          "type": {
-            "vec": "i64"
-          }
+          "name": "timestampOffset",
+          "type": "i64"
         }
       ]
     },
     {
+      "name": "activate",
+      "accounts": [
+        {
+          "name": "snapshotConfig",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initSnapshotBalancesAccount",
       "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": false
+        },
         {
           "name": "snapshotConfig",
           "isMut": false,
@@ -269,9 +385,9 @@ export const IDL: TransferSnapshotHook = {
           "isSigner": false
         },
         {
-          "name": "authority",
-          "isMut": true,
-          "isSigner": true
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
         }
       ],
       "args": []
@@ -331,6 +447,11 @@ export const IDL: TransferSnapshotHook = {
       "name": "initializeExtraAccountMetaList",
       "accounts": [
         {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
           "name": "extraAccount",
           "isMut": true,
           "isSigner": false
@@ -346,22 +467,12 @@ export const IDL: TransferSnapshotHook = {
           "isSigner": false
         },
         {
-          "name": "authority",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "bumpSeed",
-          "type": "u8"
-        }
-      ]
+      "args": []
     }
   ],
   "accounts": [
@@ -375,13 +486,19 @@ export const IDL: TransferSnapshotHook = {
             "type": "publicKey"
           },
           {
-            "name": "initialized",
-            "type": "bool"
+            "name": "definedSnapshots",
+            "type": "u8"
           },
           {
             "name": "snapshots",
             "type": {
               "vec": "i64"
+            }
+          },
+          {
+            "name": "activatedDate",
+            "type": {
+              "option": "i64"
             }
           }
         ]
@@ -407,21 +524,26 @@ export const IDL: TransferSnapshotHook = {
   "errors": [
     {
       "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6001,
       "name": "NoSnapshotFound",
       "msg": "No snapshot found"
     },
     {
-      "code": 6001,
-      "name": "AlreadyInitialized",
-      "msg": "Already initialized"
-    },
-    {
       "code": 6002,
-      "name": "NotInitialized",
-      "msg": "Not initialized"
+      "name": "Active",
+      "msg": "Snapshots are active"
     },
     {
       "code": 6003,
+      "name": "Inactive",
+      "msg": "Snapshots are inactive"
+    },
+    {
+      "code": 6004,
       "name": "InvalidTimestamp",
       "msg": "Invalid timestamp"
     }
