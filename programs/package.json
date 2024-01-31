@@ -17,10 +17,9 @@
     "clean": "rm -rf dist",
     "test": "anchor test",
     "test-debug": "DEBUG=true BLUEBIRD_LONG_STACK_TRACES=1 anchor test",
-    "deploy:devnet": "anchor deploy --provider.cluster devnet",
-    "upgrade:structured-product:devnet": "anchor upgrade --provider.cluster devnet --program-id=GYFmKqbpYHUrML3BstU9VUnVdEE6ho9tzVJzs1DAR5iz ./target/deploy/structured_product.so",
-    "upgrade:treasury-wallet:devnet": "anchor upgrade --provider.cluster devnet --program-id=3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3 ./target/deploy/treasury_wallet.so",
-    "upgrade:transferhook:devnet": "anchor upgrade --provider.cluster devnet --program-id=6sGAcb6vw8bhcVNPv5pMEhr3dXyeYoX2X89S3NkEaaJP ./target/deploy/transfer_snapshot_hook.so"
+    "upgrade:structured-product": "solana program deploy --program-id=GYFmKqbpYHUrML3BstU9VUnVdEE6ho9tzVJzs1DAR5iz ./target/deploy/structured_product.so",
+    "upgrade:treasury-wallet": "solana program deploy --program-id=3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3 ./target/deploy/treasury_wallet.so",
+    "upgrade:transferhook": "solana program deploy --program-id=6sGAcb6vw8bhcVNPv5pMEhr3dXyeYoX2X89S3NkEaaJP ./target/deploy/transfer_snapshot_hook.so"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.29.0",

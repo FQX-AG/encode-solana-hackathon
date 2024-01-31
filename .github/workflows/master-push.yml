@@ -44,11 +44,11 @@ jobs:
       # - name: Test
       #   run: pnpm run --filter programs test
       - name: Upgrade structured product program
-        run: pnpm run --filter programs upgrade:structured-product:devnet
+        run: pnpm run --filter programs upgrade:structured-product
       - name: Upgrade treasury wallet program
-        run: pnpm run --filter programs upgrade:treasury-wallet:devnet
+        run: pnpm run --filter programs upgrade:treasury-wallet
       - name: Upgrade transfer hook program
-        run: pnpm run --filter programs upgrade:transferhook:devnet
+        run: pnpm run --filter programs upgrade:transferhook
   deploy-backend-to-cloud-run:
     runs-on: ubuntu-latest
     needs: [build-sdk-and-backend]
