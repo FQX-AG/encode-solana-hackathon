@@ -10,9 +10,9 @@ transferhook = "7aeu4HRHR4UwQndRDyh5f7nMwgxgH3rrtLgRntxdivZw"
 treasury-wallet = "3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3"
 
 [programs.devnet]
-structured-product = "6wY4z82JNzufboHA3Gd2cwUVrijoTjFuYf3nG4LsnbHL"
-treasury-wallet = "4eruY9bV8NRs5t1Q4s3jpUgk94R5woLU8hBn2GvXSzjG"
-transferhook = "92wm1a2viQkts2yXQF9hAQFZJ4bXRRof5zKCsuN4zWg3"
+structured-product = "GYFmKqbpYHUrML3BstU9VUnVdEE6ho9tzVJzs1DAR5iz"
+treasury-wallet = "7aeu4HRHR4UwQndRDyh5f7nMwgxgH3rrtLgRntxdivZw"
+transferhook = "3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3"
 
 [registry]
 url = "https://api.apr.dev"
