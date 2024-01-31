@@ -83,3 +83,4 @@ jobs:
             --update-secrets=ISSUER_SECRET_KEY=ISSUER_SECRET_KEY:latest \
             --update-secrets=SERVER_SECRET_KEY=SERVER_SECRET_KEY:latest \
             --set-env-vars PAYMENT_TOKEN_MINT_ADDRESS=${{secrets.PAYMENT_TOKEN_MINT_ADDRESS}} \
+            --set-env-vars TREASURY_WALLET_PUBLIC_KEY=${{secrets.TREASURY_WALLET_PUBLIC_KEY}} \
