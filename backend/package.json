@@ -20,6 +20,9 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@bull-board/api": "^5.14.0",
+    "@bull-board/express": "^5.14.0",
+    "@bull-board/nestjs": "^5.14.0",
     "@coral-xyz/anchor": "^0.29.0",
     "@fqx/programs": "workspace:^",
     "@nestjs/bull": "^10.0.1",
@@ -31,6 +34,7 @@
     "@solana/web3.js": "1.89.1",
     "bn.js": "^5.2.1",
     "bull": "^4.12.2",
+    "express-basic-auth": "^1.2.1",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.2.0"
   },

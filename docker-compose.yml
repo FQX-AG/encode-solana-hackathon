@@ -1,5 +1,12 @@
 version: "3.8"
 services:
+  redis:
+    hostname: redis
+    image: redis:7.2.4-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - default
   backend:
     hostname: backend
     build:
@@ -25,6 +32,8 @@ services:
     command: pnpm --filter backend start:dev
     networks:
       - default
+    depends_on:
+      - redis
   frontend:
     hostname: frontend
     build:
