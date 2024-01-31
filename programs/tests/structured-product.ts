@@ -218,19 +218,34 @@ describe("structured-product", () => {
     };
     /*** ----------------- BACKEND ----------------- ***/
     // Inputs assumed to be given by investor and random yield provided by backend
+    const nonce1 = Keypair.generate();
+
+    const nonce2 = Keypair.generate();
+
+    const [nonce1Ixs, nonce2Ixs] = await Promise.all([
+      sdk.createDurableNonceAccountInstructions(nonce1),
+      sdk.createDurableNonceAccountInstructions(nonce2),
+    ]);
+
+    await sdk.sendAndConfirmV0Tx([...nonce1Ixs, ...nonce2Ixs]);
+
     const encodedInitSPTx = await issuerSdk.signStructuredProductInitOffline(
       config,
-      mint
+      mint,
+      nonce1.publicKey
     );
 
-    const encodedIssueSPTx = await issuerSdk.signStructuredProductIssueOffline({
-      investor: investor,
-      issuer: issuer.publicKey,
-      issuerTreasuryWallet: treasuryWallet.publicKey,
-      mint: mint.publicKey,
-      paymentMint: paymentMint.publicKey,
-      issuanceProceedsBeneficiary: treasuryWalletPaymentATA,
-    });
+    const encodedIssueSPTx = await issuerSdk.signStructuredProductIssueOffline(
+      {
+        investor: investor,
+        issuer: issuer.publicKey,
+        issuerTreasuryWallet: treasuryWallet.publicKey,
+        mint: mint.publicKey,
+        paymentMint: paymentMint.publicKey,
+        issuanceProceedsBeneficiary: treasuryWalletPaymentATA,
+      },
+      nonce2.publicKey
+    );
 
     /*** ----------------- FRONTEND ----------------- ***/
     const [issuerSignedInitSPtx, issuerSignedIssueSPTx] = [

@@ -32,6 +32,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { ensure } from "@/utils";
 import { SignDialog } from "@/components/SignDialog";
 import { Tooltip } from "@/components/Tooltip";
+import { Connection } from "@solana/web3.js";
 
 type DeploymentInfo = {
   transactions: string[];
@@ -157,7 +158,7 @@ const itemKey = (item: QuoteInternal) => item.id;
 export default function Page() {
   const wallet = useWallet();
   const anchorWallet = useAnchorWallet();
-  const { connection } = useConnection();
+  const { connection }: { connection: Connection } = useConnection();
   const report = useReport();
   const issuanceDate = useMemo(() => new Date(), []);
   const [selection, setSelection] = useState<string>(data[0].id);
@@ -215,6 +216,13 @@ export default function Page() {
     const [finalInitTx, finalIssueTx] = await provider.wallet.signAllTransactions(
       deploymentInfo.transactions.map(sdk.decodeV0Tx)
     );
+
+    const initSimulation = await sdk.provider.connection.simulateTransaction(finalInitTx, {
+      sigVerify: false,
+      replaceRecentBlockhash: true,
+    });
+
+    console.log(initSimulation);
     const finalInitTxId = await provider.connection.sendTransaction(finalInitTx);
     await sdk.confirmTx(finalInitTxId);
     await sdk.provider.connection.simulateTransaction(finalIssueTx, {

@@ -41,11 +41,10 @@ async function proxy(request: Request) {
     return await fetch(`${IRONFORGE_RPC_URL}?apiKey=${env.IRONFORGE_API_KEY}`, request);
   }
 
-  const {  search } = new URL(request.url);
+  const { search } = new URL(request.url);
   const payload = await request.text();
-  const proxyRequestUrl = `${IRONFORGE_RPC_URL}?apiKey=${env.IRONFORGE_API_KEY}${
-    search ? `&${search.slice(1)}` : ""
-  }`;
+  const proxyRequestUrl = `${IRONFORGE_RPC_URL}?apiKey=${env.IRONFORGE_API_KEY}${search ? `&${search.slice(1)}` : ""}`;
+
   const proxyRequest = new Request(proxyRequestUrl, {
     method: request.method,
     body: payload || null,

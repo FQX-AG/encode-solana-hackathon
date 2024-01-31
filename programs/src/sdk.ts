@@ -19,7 +19,6 @@ import { StructuredProduct } from "./types/structured_product";
 import BN from "bn.js";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
-  createAssociatedTokenAccountInstruction,
   ExtensionType,
   getAssociatedTokenAddressSync,
   getMintLen,
@@ -30,7 +29,6 @@ import { getPdaWithSeeds } from "./utils";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import { TreasuryWallet } from "./types/treasury_wallet";
 import { TransferSnapshotHook } from "./types/transfer_snapshot_hook";
-import { config } from "chai";
 
 export type InitializeStructuredProductInstructionAccounts = {
   investor: PublicKey;
@@ -191,7 +189,6 @@ export class StructuredNotesSdk {
     recentBlockHash?: string,
     lookupTables?: AddressLookupTableAccount[]
   ) {
-    console.log(this.provider.connection);
     const latestBlockHash = await this.provider.connection.getLatestBlockhash(
       "finalized"
     );
@@ -240,39 +237,24 @@ export class StructuredNotesSdk {
   }
 
   // TODO remove augmented provider
-  async createDurableNonceAccount() {
-    const nonceKeypair = Keypair.generate();
-
-    await this.sendAndConfirmV0Tx(
-      [
-        // create system account with the minimum amount needed for rent exemption.
-        // NONCE_ACCOUNT_LENGTH is the space a nonce account takes
-        SystemProgram.createAccount({
-          fromPubkey: this.provider.publicKey,
-          newAccountPubkey: nonceKeypair.publicKey,
-          lamports: 0.0015 * LAMPORTS_PER_SOL,
-          space: NONCE_ACCOUNT_LENGTH,
-          programId: SystemProgram.programId,
-        }),
-        // initialise nonce with the created nonceKeypair's pubkey as the noncePubkey
-        // also specify the authority of the nonce account
-        SystemProgram.nonceInitialize({
-          noncePubkey: nonceKeypair.publicKey,
-          authorizedPubkey: this.provider.publicKey,
-        }),
-      ],
-      [nonceKeypair]
-    );
-
-    console.log("created nonce with v0 tx!");
-
-    const accountInfo = await this.provider.connection.getAccountInfo(
-      nonceKeypair.publicKey
-    );
-    return {
-      nonceAccount: NonceAccount.fromAccountData(accountInfo.data),
-      noncePubkey: nonceKeypair.publicKey,
-    };
+  async createDurableNonceAccountInstructions(nonceKeypair: Keypair) {
+    return [
+      // create system account with the minimum amount needed for rent exemption.
+      // NONCE_ACCOUNT_LENGTH is the space a nonce account takes
+      SystemProgram.createAccount({
+        fromPubkey: this.provider.publicKey,
+        newAccountPubkey: nonceKeypair.publicKey,
+        lamports: 0.0015 * LAMPORTS_PER_SOL,
+        space: NONCE_ACCOUNT_LENGTH,
+        programId: SystemProgram.programId,
+      }),
+      // initialise nonce with the created nonceKeypair's pubkey as the noncePubkey
+      // also specify the authority of the nonce account
+      SystemProgram.nonceInitialize({
+        noncePubkey: nonceKeypair.publicKey,
+        authorizedPubkey: this.provider.publicKey,
+      }),
+    ];
   }
 
   async createInitializeStructuredProductInstruction(
@@ -784,11 +766,9 @@ export class StructuredNotesSdk {
 
   async signStructuredProductInitOffline(
     config: SignStructuredProductInitOfflineConfig,
-    mint: Keypair
+    mint: Keypair,
+    noncePubkey: PublicKey
   ) {
-    const { nonceAccount, noncePubkey } =
-      await this.createDurableNonceAccount();
-
     const advanceIx = SystemProgram.nonceAdvance({
       noncePubkey,
       authorizedPubkey: this.provider.publicKey,
@@ -878,10 +858,11 @@ export class StructuredNotesSdk {
     // const lookupTableAccount =
     //   await this.provider.connection.getAddressLookupTable(lookupTableAddress);
 
-    console.log(
-      "StructuredProductPDA: ",
-      structuredProductPDA.publicKey.toBase58()
+    const accountInfo = await this.provider.connection.getAccountInfo(
+      noncePubkey
     );
+
+    const nonceAccount = NonceAccount.fromAccountData(accountInfo.data);
 
     const signedInitTx = await this.createAndSignV0Tx(
       [
@@ -896,21 +877,18 @@ export class StructuredNotesSdk {
       []
     );
 
-    console.log(
-      "Simulation: ",
-      await this.provider.connection.simulateTransaction(signedInitTx, {
-        sigVerify: false,
-      })
-    );
-
     return bs58.encode(signedInitTx.serialize());
   }
 
   async signStructuredProductIssueOffline(
-    accounts: SignStructuredProductIssueOffline
+    accounts: SignStructuredProductIssueOffline,
+    noncePubkey: PublicKey
   ) {
-    const { nonceAccount, noncePubkey } =
-      await this.createDurableNonceAccount();
+    const accountInfo = await this.provider.connection.getAccountInfo(
+      noncePubkey
+    );
+
+    const nonceAccount = NonceAccount.fromAccountData(accountInfo.data);
 
     const advanceIx = SystemProgram.nonceAdvance({
       noncePubkey,
@@ -943,6 +921,7 @@ export class StructuredNotesSdk {
       [],
       nonceAccount.nonce
     );
+
     return bs58.encode(signedIssueTx.serialize());
   }
   decodeV0Tx(issueTransaction: string) {
