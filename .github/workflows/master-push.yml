@@ -32,7 +32,7 @@ jobs:
       - name: Set rust version
         run: rustup default stable
       - name: Set solana key from secret
-        run: echo ${{ secrets.SOLANA_PRIVATE_KEY }} > ~/.config/solana/id.json
+        run: echo ${{ secrets.SERVER_SECRET_KEY }} > ~/.config/solana/id.json
       - name: Install pnpm
         run: npm install -g pnpm
       - name: set rpc provider
@@ -66,17 +66,20 @@ jobs:
         run: |
           docker build -t europe-west6-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/staging/hackathon-backend:${{github.sha}} -f ./docker/backend/Dockerfile .
           docker push europe-west6-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/staging/hackathon-backend:${{github.sha}}
-
+      - name: Update secrets
+        run: |
+          printf "${{secrets.ISSUER_SECRET_KEY}}" | gcloud secrets versions add ISSUER_SECRET_KEY --data-file=-
+          printf "${{secrets.SERVER_SECRET_KEY}}" | gcloud secrets versions add SERVER_SECRET_KEY --data-file=-
       - name: Deploy to Google Cloud Run
         run: |
           gcloud run deploy hackathon-backend-service \
             --image europe-west6-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/staging/hackathon-backend:${{github.sha}} \
             --platform managed \
             --region europe-west6 \
-            --set-env-vars PROVIDER_RPC_URL=https://api.devnet.solana.com \
+            --set-env-vars PROVIDER_RPC_URL=https://rpc.ironforge.network/devnet\?apiKey\${{secrets.IRONFORGE_API_KEY}} \
             --set-env-vars STRUCTURED_PRODUCT_PROGRAM_ID=${{secrets.STRUCTURED_PRODUCT_PROGRAM_ID}} \
             --set-env-vars TREASURY_WALLET_PROGRAM_ID=${{secrets.TREASURY_WALLET_PROGRAM_ID}} \
             --set-env-vars TRANSFER_HOOK_PROGRAM_ID=${{secrets.TRANSFER_HOOK_PROGRAM_ID}} \
-            --set-env-vars ^@^ISSUER_SECRET_KEY=${{secrets.ISSUER_SECRET_KEY}} \
-            --set-env-vars ^@^SERVER_SECRET_KEY=${{secrets.SERVER_SECRET_KEY}} \
+            --update-secrets=ISSUER_SECRET_KEY=ISSUER_SECRET_KEY:latest \
+            --update-secrets=SERVER_SECRET_KEY=SERVER_SECRET_KEY:latest \
             --set-env-vars PAYMENT_TOKEN_MINT_ADDRESS=${{secrets.PAYMENT_TOKEN_MINT_ADDRESS}} \
