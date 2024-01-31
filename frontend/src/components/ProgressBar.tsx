@@ -3,15 +3,18 @@ import Stack from "@mui/material/Stack";
 import { styled, SxProps, Theme } from "@mui/material/styles";
 import { clamp, inRange } from "lodash-es";
 import * as React from "react";
-import { ReactNode, useMemo, useState } from "react";
+import { CSSProperties, ReactNode, useMemo, useState } from "react";
 
 import { Tooltip } from "@/components/Tooltip";
 import { Text } from "@/components/Text";
+import { Popper, PopperProps } from "@mui/material";
 
 export type Dot = {
+  id: number;
   position: number;
   variant: "small" | "big";
   highlighted: boolean;
+  popper?: ReactNode;
 };
 
 export type Ticker = {
@@ -93,8 +96,10 @@ const TopTicker = (props: Ticker & { marginBottom: number }) => {
         position: "relative",
         width: 0,
         whiteSpace: "nowrap",
-        left: `${props.position}%`,
         visibility: props.hidden ? "hidden" : undefined,
+      }}
+      style={{
+        left: `${props.position}%`,
       }}
     >
       <Stack
@@ -126,8 +131,10 @@ const BottomTicker = (props: Ticker) => {
         position: "relative",
         width: 0,
         whiteSpace: "nowrap",
-        left: `${props.position}%`,
         visibility: props.hidden ? "hidden" : undefined,
+      }}
+      style={{
+        left: `${props.position}%`,
       }}
     >
       <BottomVerticalBar hasDot={!!props.tooltip} sx={{ backgroundColor: props.color ?? DEFAULT_COLOR }} />
@@ -156,6 +163,29 @@ const DotComponent = (
     onMouseLeave?: React.MouseEventHandler<SVGSVGElement>;
   }
 ) => {
+  const [anchorEl, setAnchorEl] = useState<SVGSVGElement | null>(null);
+  const popperProps = useMemo<Partial<PopperProps>>(() => {
+    if (typeof window === "undefined") return {};
+    const boundaryElement = window.document.querySelector("[data-tooltip-boundary]");
+
+    return {
+      modifiers: [
+        {
+          name: "flip",
+          enabled: false,
+        },
+        {
+          name: "preventOverflow",
+          enabled: true,
+          options: {
+            boundary: boundaryElement,
+            rootBoundary: "document",
+          },
+        },
+      ],
+    };
+  }, []);
+
   let size, strokeWidth;
   switch (props.variant) {
     case "small":
@@ -175,9 +205,11 @@ const DotComponent = (
         position: "absolute",
         width: 0,
         whiteSpace: "nowrap",
-        left: `${props.position}%`,
         top: "50%",
         zIndex: props.highlighted ? 1 : 0,
+      }}
+      style={{
+        left: `${props.position}%`,
       }}
     >
       {props.highlighted && (
@@ -194,11 +226,12 @@ const DotComponent = (
             cy={highlightSize / 2}
             r={highlightSize / 2}
             fill="#00B2FF"
-            fill-opacity="0.2"
+            fillOpacity="0.2"
           />
         </svg>
       )}
       <svg
+        ref={setAnchorEl}
         style={{ position: "absolute", top: -size / 2, left: -size / 2 }}
         xmlns="http://www.w3.org/2000/svg"
         width={size}
@@ -217,6 +250,11 @@ const DotComponent = (
           strokeWidth={strokeWidth}
         />
       </svg>
+      {props.popper && anchorEl && (
+        <Popper open={props.highlighted} anchorEl={anchorEl} disablePortal {...popperProps}>
+          {props.popper}
+        </Popper>
+      )}
     </Box>
   );
 };
@@ -226,7 +264,8 @@ type ProgressBarProps = {
   tickers?: (Ticker | null | undefined)[];
   dots?: (Dot | null | undefined)[];
   sx?: SxProps;
-  onDotHoverTargetChange?: (index?: number) => void;
+  onDotHoverTargetChange?: (dotId?: number) => void;
+  bottomTickersContainerStyle?: CSSProperties;
 };
 
 export function ProgressBar(props: ProgressBarProps) {
@@ -274,11 +313,13 @@ export function ProgressBar(props: ProgressBarProps) {
                 sx={{
                   position: "absolute",
                   bottom: "calc(100% + 8px)",
-                  left: bar.position.left,
-                  right: bar.position.right,
                   color: "#7C7CBA",
                   textAlign: "center",
                   px: 2,
+                }}
+                style={{
+                  left: bar.position.left,
+                  right: bar.position.right,
                 }}
               >
                 {bar.secondaryLabel}
@@ -309,11 +350,13 @@ export function ProgressBar(props: ProgressBarProps) {
               width: "auto",
               position: "absolute",
               top: 0,
-              left: bar.position.left,
-              right: bar.position.right,
               backgroundColor: bar.color ?? DEFAULT_COLOR,
               opacity: bar.opacity ?? 1,
               zIndex: bar.zIndex ?? 1,
+            }}
+            style={{
+              left: bar.position.left,
+              right: bar.position.right,
             }}
           />
         ))}
@@ -321,7 +364,7 @@ export function ProgressBar(props: ProgressBarProps) {
           <DotComponent
             key={index}
             {...dot}
-            onMouseEnter={props.onDotHoverTargetChange && (() => props.onDotHoverTargetChange?.(index))}
+            onMouseEnter={props.onDotHoverTargetChange && (() => props.onDotHoverTargetChange?.(dot.id))}
             onMouseLeave={props.onDotHoverTargetChange && (() => props.onDotHoverTargetChange?.(undefined))}
           />
         ))}
@@ -338,8 +381,6 @@ export function ProgressBar(props: ProgressBarProps) {
                   sx={{
                     position: "absolute",
                     top: 0,
-                    left: bar.position.left,
-                    right: bar.position.right,
                     color: "#7C7CBA",
                     display: "flex",
                     alignItems: "flex-end",
@@ -352,6 +393,10 @@ export function ProgressBar(props: ProgressBarProps) {
                       borderBottom: `2px solid currentColor`,
                       flex: "1",
                     },
+                  }}
+                  style={{
+                    left: bar.position.left,
+                    right: bar.position.right,
                   }}
                 >
                   <Text
@@ -372,7 +417,11 @@ export function ProgressBar(props: ProgressBarProps) {
         </Box>
       )}
 
-      <Box sx={{ display: "flex", alignItems: "flex-start" }}>
+      <Box
+        sx={{ display: "flex", alignItems: "flex-start" }}
+        style={props.bottomTickersContainerStyle}
+        data-tooltip-boundary
+      >
         {bottomTickers?.map((ticker, index) => (
           <BottomTicker key={index} {...ticker} />
         ))}

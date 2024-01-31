@@ -7,6 +7,8 @@ import { PaymentScheduleControls } from "@/components/paymentSchedule/PaymentSch
 type Payment = {
   type: "coupon" | "principal";
   scheduledAt: Date;
+  currency?: string;
+  amount?: number;
 };
 
 type PaymentScheduleProps = {

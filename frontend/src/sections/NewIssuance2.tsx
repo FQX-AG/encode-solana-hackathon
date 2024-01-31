@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { Divider } from "@mui/material";
 import { Text } from "@/components/Text";
 import { useFormikContext } from "formik";
-import { FormValues } from "@/schemas/newIssuance";
+import { FormValues, validationSchema } from "@/schemas/newIssuance";
 import { PaymentSchedule } from "@/components/paymentSchedule/PaymentSchedule";
 
 type Item = {
@@ -27,7 +27,7 @@ function NewIssuance2Inner(props: NewIssuance2InnerProps) {
     for (let i = 0; i < props.couponsCount; i++) {
       items.push({
         type: "coupon",
-        scheduledAt: addMilliseconds(issuanceDate, timeStepInMilliseconds),
+        scheduledAt: addMilliseconds(issuanceDate, timeStepInMilliseconds * (i + 1)),
       });
     }
     items.push({ type: "principal", scheduledAt: props.maturityDate });
@@ -39,12 +39,16 @@ function NewIssuance2Inner(props: NewIssuance2InnerProps) {
 
 export function NewIssuance2() {
   const formik = useFormikContext<FormValues>();
+  let maturityDate;
+  try {
+    maturityDate = validationSchema.validateSyncAt("maturityDate", formik.values);
+  } catch {}
 
   return (
     <Section title="Payment schedule" description="Preview your issuance program payment schedule.">
       <Panel spacing={3} divider={<Divider />}>
-        {formik.isValid && formik.values.maturityDate ? (
-          <NewIssuance2Inner couponsCount={2} maturityDate={formik.values.maturityDate} />
+        {maturityDate ? (
+          <NewIssuance2Inner couponsCount={2} maturityDate={maturityDate} />
         ) : (
           <Text variant="400|16px|21px" color="oxfordBlue600">
             To view the payment schedule, correct the input errors.

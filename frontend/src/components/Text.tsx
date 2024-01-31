@@ -1,5 +1,5 @@
 import { Box, styled, SxProps, Theme } from "@mui/material";
-import { createElement, ElementType, forwardRef, ReactNode } from "react";
+import { createElement, CSSProperties, ElementType, forwardRef, ReactNode } from "react";
 
 const variants = [
   "400|10px|11px",
@@ -33,6 +33,7 @@ type TextProps = {
   component?: ElementType;
   sx?: SxProps<Theme>;
   className?: string;
+  style?: CSSProperties;
 };
 
 export const Text = forwardRef<HTMLElement, TextProps>((props, ref) => {
@@ -42,6 +43,10 @@ export const Text = forwardRef<HTMLElement, TextProps>((props, ref) => {
     ? { ...props.sx, color: (theme) => theme.customColors[color] }
     : props.sx;
 
-  return createElement(Component, { ref, component: props.component, sx, className: props.className }, props.children);
+  return createElement(
+    Component,
+    { ref, component: props.component, sx, className: props.className, style: props.style },
+    props.children
+  );
 });
 Text.displayName = "Text";

@@ -1,19 +1,21 @@
-import { Tooltip as TooltipBase, tooltipClasses, styled } from "@mui/material";
-import { ReactElement, ReactNode } from "react";
+import { Tooltip as TooltipBase, TooltipProps as TooltipBaseProps, tooltipClasses, styled } from "@mui/material";
 
-type TooltipProps = { title: ReactNode; children: ReactElement; className?: string; error?: string };
+type TooltipProps = Pick<TooltipBaseProps, "title" | "slotProps" | "children" | "className" | "placement" | "arrow"> & {
+  error?: string;
+};
 
 const PopperProps = { container: () => document.querySelector("#__next") };
 
-export const Tooltip = styled((props: TooltipProps) => {
+export const Tooltip = styled(({ error, title, children, ...props }: TooltipProps) => {
   return (
     <TooltipBase
       placement="top"
       PopperProps={PopperProps}
-      title={props.error ? props.error : props.title}
-      classes={{ popper: [props.className, props.error ? "error" : undefined].filter(Boolean).join(" ") }}
+      title={error ?? title}
+      classes={{ popper: [props.className, error ? "error" : undefined].filter(Boolean).join(" ") }}
+      {...props}
     >
-      {props.children}
+      {children}
     </TooltipBase>
   );
 })(({ theme }) => ({

@@ -1,7 +1,6 @@
 import { styled } from "@mui/material/styles";
 
 export const Table = styled("table")({
-  width: "100%",
   borderCollapse: "separate",
   borderSpacing: 0,
   margin: "0 -8px",
