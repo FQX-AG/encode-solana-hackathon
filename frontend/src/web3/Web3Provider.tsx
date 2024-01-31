@@ -7,7 +7,8 @@ import { clusterApiUrl } from "@solana/web3.js";
 // The network can be set to 'devnet', 'testnet', or 'mainnet-beta'.
 const network = WalletAdapterNetwork.Devnet;
 // You can also provide a custom RPC endpoint.
-const endpoint = clusterApiUrl(network);
+const endpoint =
+  typeof window === "undefined" ? clusterApiUrl(network) : new URL("/api/rpc", window.location.href).toString();
 const wallets: Adapter[] = [
   /**
    * Wallets that implement either of these standards will be available automatically.
