@@ -8,6 +8,7 @@ import { theme } from "@/theme";
 import { Web3Provider } from "@/web3/Web3Provider";
 import { SnackbarProvider } from "notistack";
 import { Layout } from "@/components/layout/Layout";
+import { Analytics } from '@vercel/analytics/react';
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
@@ -30,6 +31,7 @@ export default function App({ Component, pageProps }: AppProps) {
           </SnackbarProvider>
         </ThemeProvider>
       </AppCacheProvider>
+      <Analytics />
     </>
   );
 }
