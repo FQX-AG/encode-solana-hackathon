@@ -15,6 +15,7 @@ import { randomInt } from 'crypto';
 import { SdkFactory } from 'src/solana-client/sdk-factory';
 import { SOLANA_PROVIDER } from '../solana-client/contants';
 import { StructuredProductDeployDto } from './dtos/structured-product-deploy.dto';
+import { getPdaWithSeeds } from '@fqx/programs';
 
 @Injectable()
 export class StructuredProductService {
@@ -28,14 +29,21 @@ export class StructuredProductService {
   async deploy(structuredProductDeployDto: StructuredProductDeployDto) {
     const { investorPublicKey } = structuredProductDeployDto;
 
-    const treasuryWallet = anchor.web3.Keypair.generate();
-
     const issuerSecretKey = Uint8Array.from(
       JSON.parse(this.configService.get<string>('ISSUER_SECRET_KEY')),
     );
     const issuer = Keypair.fromSecretKey(issuerSecretKey);
 
     const issuerSdk = this.sdkFactory.getSdkForSigner(issuer);
+
+    const treasuryWalletPublicKey = new PublicKey(
+      this.configService.get<string>('TREASURY_WALLET_PUBLIC_KEY'),
+    );
+
+    getPdaWithSeeds(
+      [treasuryWalletPublicKey.toBuffer()],
+      issuerSdk.treasuryWalletProgram.programId,
+    );
 
     const mint = Keypair.generate();
     const yieldValue = randomInt(1, 400000);
@@ -46,7 +54,7 @@ export class StructuredProductService {
       {
         investor: new PublicKey(investorPublicKey),
         issuer: issuer.publicKey,
-        issuerTreasuryWallet: treasuryWallet.publicKey,
+        issuerTreasuryWallet: treasuryWalletPublicKey,
         paymentMint: paymentMintAddress,
         issuancePricePerUnit: new BN(1000),
         supply: new BN(1000),
@@ -71,16 +79,15 @@ export class StructuredProductService {
     const encodedIssueSPTx = await issuerSdk.signStructuredProductIssueOffline({
       investor: new PublicKey(investorPublicKey),
       issuer: issuer.publicKey,
-      issuerTreasuryWallet: treasuryWallet.publicKey,
+      issuerTreasuryWallet: treasuryWalletPublicKey,
       mint: mint.publicKey,
       paymentMint: paymentMintAddress,
       issuanceProceedsBeneficiary: new PublicKey(investorPublicKey),
     });
 
     return {
-      initStructuredProductTx: encodedInitSPTx,
-      issueStructuredProductTx: encodedIssueSPTx,
-      mint,
+      transactions: [encodedInitSPTx, encodedIssueSPTx],
+      mint: mint.publicKey,
       ...structuredProductDeployDto,
       yieldValue,
     };
