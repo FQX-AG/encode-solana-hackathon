@@ -37,23 +37,25 @@ async function proxy(request: Request) {
   const upgradeHeader = request.headers.get("Upgrade");
 
   if (upgradeHeader || upgradeHeader === "websocket") {
+    console.log("UPGRADE", `${IRONFORGE_RPC_URL}?apiKey=${env.IRONFORGE_API_KEY}`);
     return await fetch(`${IRONFORGE_RPC_URL}?apiKey=${env.IRONFORGE_API_KEY}`, request);
   }
 
   const { pathname, search } = new URL(request.url);
   const payload = await request.text();
-  const proxyRequest = new Request(
-    `${IRONFORGE_RPC_URL}${pathname}?apiKey=${env.IRONFORGE_API_KEY}${search ? `&${search.slice(1)}` : ""}`,
-    {
-      method: request.method,
-      body: payload || null,
-      headers: {
-        "Content-Type": "application/json",
-        // "X-Helius-Cloudflare-Proxy": "true",
-      },
-    }
-  );
+  const proxyRequestUrl = `${IRONFORGE_RPC_URL}${pathname}?apiKey=${env.IRONFORGE_API_KEY}${
+    search ? `&${search.slice(1)}` : ""
+  }`;
+  const proxyRequest = new Request(proxyRequestUrl, {
+    method: request.method,
+    body: payload || null,
+    headers: {
+      "Content-Type": "application/json",
+      // "X-Helius-Cloudflare-Proxy": "true",
+    },
+  });
 
+  console.log("PROXY", proxyRequestUrl);
   return await fetch(proxyRequest).then((res) => {
     return new Response(res.body, {
       status: res.status,

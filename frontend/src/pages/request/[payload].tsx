@@ -34,9 +34,8 @@ import { SignDialog } from "@/components/SignDialog";
 import { Tooltip } from "@/components/Tooltip";
 
 type DeploymentInfo = {
-  encodedInitSPTx: string;
-  encodedIssueSPTx: string;
-  mintPublicKey: string;
+  transactions: string[];
+  mint: string;
 };
 
 type Tag = "bestOffer";
@@ -190,7 +189,7 @@ export default function Page() {
 
   const handleBeforeSign = async (): Promise<DeploymentInfo> => {
     const { publicKey: walletPublicKey } = ensure(wallet, "Wallet is unavailable. Is it connected?");
-    const response = await fetch(`${API_URL}/api/deploy`, {
+    const response = await fetch(`${API_URL}/structured-product`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ investorPublicKey: walletPublicKey }),
@@ -213,10 +212,9 @@ export default function Page() {
     );
     const sdk = new StructuredNotesSdk(provider, program, treasuryWalletProgram, transferSnapshotHookProgram);
 
-    const [finalInitTx, finalIssueTx] = await provider.wallet.signAllTransactions([
-      sdk.decodeV0Tx(deploymentInfo.encodedInitSPTx),
-      sdk.decodeV0Tx(deploymentInfo.encodedIssueSPTx),
-    ]);
+    const [finalInitTx, finalIssueTx] = await provider.wallet.signAllTransactions(
+      deploymentInfo.transactions.map(sdk.decodeV0Tx)
+    );
     const finalInitTxId = await provider.connection.sendTransaction(finalInitTx);
     await sdk.confirmTx(finalInitTxId);
     await sdk.provider.connection.simulateTransaction(finalIssueTx, {
@@ -230,7 +228,7 @@ export default function Page() {
   };
 
   const handleAfterSign = async (deploymentInfo: DeploymentInfo) => {
-    await router.push(`/token/${deploymentInfo.mintPublicKey}`);
+    await router.push(`/token/${deploymentInfo.mint}`);
     report.success("Success!");
   };
 
