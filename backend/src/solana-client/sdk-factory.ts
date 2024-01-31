@@ -51,9 +51,7 @@ export class SdkFactory {
     );
 
     return new StructuredNotesSdk(
-      new AnchorProvider(this.provider.connection, new NodeWallet(signer), {
-        commitment: 'confirmed',
-      }),
+      this.provider,
       structuredProductProgram,
       treasuryWalletProgram,
       transferSnapshotHookProgram,

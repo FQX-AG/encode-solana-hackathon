@@ -191,6 +191,7 @@ export class StructuredNotesSdk {
     recentBlockHash?: string,
     lookupTables?: AddressLookupTableAccount[]
   ) {
+    console.log(this.provider.connection);
     const latestBlockHash = await this.provider.connection.getLatestBlockhash(
       "finalized"
     );

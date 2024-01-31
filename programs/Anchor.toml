@@ -6,13 +6,13 @@ skip-lint = false
 
 [programs.localnet]
 structured-product = "GYFmKqbpYHUrML3BstU9VUnVdEE6ho9tzVJzs1DAR5iz"
-transferhook = "7aeu4HRHR4UwQndRDyh5f7nMwgxgH3rrtLgRntxdivZw"
+transferhook = "6sGAcb6vw8bhcVNPv5pMEhr3dXyeYoX2X89S3NkEaaJP"
 treasury-wallet = "3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3"
 
 [programs.devnet]
 structured-product = "GYFmKqbpYHUrML3BstU9VUnVdEE6ho9tzVJzs1DAR5iz"
-treasury-wallet = "7aeu4HRHR4UwQndRDyh5f7nMwgxgH3rrtLgRntxdivZw"
-transferhook = "3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3"
+transferhook = "6sGAcb6vw8bhcVNPv5pMEhr3dXyeYoX2X89S3NkEaaJP"
+treasury-wallet = "3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3"
 
 [registry]
 url = "https://api.apr.dev"
