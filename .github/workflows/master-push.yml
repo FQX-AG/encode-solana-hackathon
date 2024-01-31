@@ -35,6 +35,8 @@ jobs:
         run: echo ${{ secrets.SOLANA_PRIVATE_KEY }} > ~/.config/solana/id.json
       - name: Install pnpm
         run: npm install -g pnpm
+      - name: set rpc provider
+        run: solana config set --url https://rpc.ironforge.network/devnet?apiKey=${{ secrets.IRONFORGE_API_KEY }}
       - name: Install pnpm dependencies
         run: pnpm install
       - name: Build
