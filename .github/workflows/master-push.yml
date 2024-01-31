@@ -76,7 +76,7 @@ jobs:
             --image europe-west6-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/staging/hackathon-backend:${{github.sha}} \
             --platform managed \
             --region europe-west6 \
-            --set-env-vars PROVIDER_RPC_URL=https://rpc.ironforge.network/devnet\?apiKey\${{secrets.IRONFORGE_API_KEY}} \
+            --set-env-vars PROVIDER_RPC_URL=https://rpc.ironforge.network/devnet?apiKey=${{secrets.IRONFORGE_API_KEY}} \
             --set-env-vars STRUCTURED_PRODUCT_PROGRAM_ID=${{secrets.STRUCTURED_PRODUCT_PROGRAM_ID}} \
             --set-env-vars TREASURY_WALLET_PROGRAM_ID=${{secrets.TREASURY_WALLET_PROGRAM_ID}} \
             --set-env-vars TRANSFER_HOOK_PROGRAM_ID=${{secrets.TRANSFER_HOOK_PROGRAM_ID}} \
