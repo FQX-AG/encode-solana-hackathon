@@ -1,3 +1,4 @@
+import util from "node:util";
 import * as anchor from "@coral-xyz/anchor";
 import { AnchorProvider, Program } from "@coral-xyz/anchor";
 import { StructuredProduct } from "../src/types/structured_product";
@@ -12,12 +13,10 @@ import { TransferSnapshotHook } from "../src/types/transfer_snapshot_hook";
 import { TreasuryWallet } from "../src/types/treasury_wallet";
 import { StructuredNotesSdk } from "../src";
 import {
-  AccountState,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountInstruction,
   createInitializeMint2Instruction,
   createMintToCheckedInstruction,
-  getAccount,
   getAssociatedTokenAddressSync,
   TOKEN_2022_PROGRAM_ID,
   unpackAccount,
@@ -25,7 +24,9 @@ import {
 import BN from "bn.js";
 import { expect } from "chai";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
-import { Account } from "@solana/spl-token/src/state/account";
+
+// prevent console.log truncating arrays
+util.inspect.defaultOptions.maxArrayLength = null;
 
 describe("structured-product", () => {
   const structuredProductProgram = anchor.workspace
@@ -42,13 +43,10 @@ describe("structured-product", () => {
   const provider: AnchorProvider = anchor.getProvider() as AnchorProvider;
 
   let issuer: Keypair;
-  let issuerATA: PublicKey;
   let investor: PublicKey;
   let investorATA: PublicKey;
+  let investorPaymentATA: PublicKey;
   let mint: Keypair;
-  let structuredProduct: PDA;
-  let programATA: PublicKey;
-
   let paymentMint: Keypair;
 
   let treasuryWallet: Keypair;
@@ -120,6 +118,32 @@ describe("structured-product", () => {
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
+    investorPaymentATA = getAssociatedTokenAddressSync(
+      paymentMint.publicKey,
+      investor,
+      false,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+    const createPayerATAIx = createAssociatedTokenAccountInstruction(
+      provider.publicKey,
+      investorPaymentATA,
+      investor,
+      paymentMint.publicKey,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const createMintToInvestorWalletIx = createMintToCheckedInstruction(
+      paymentMint.publicKey,
+      investorPaymentATA,
+      provider.publicKey,
+      1000000000000,
+      6,
+      [],
+      TOKEN_2022_PROGRAM_ID
+    );
+
     const mintToTreasuryWalletIx = createMintToCheckedInstruction(
       paymentMint.publicKey,
       treasuryWalletPaymentATA,
@@ -135,9 +159,20 @@ describe("structured-product", () => {
       .add(createPaymentMintAccountIx)
       .add(initPaymentMintIx)
       .add(treasuryWalletATAInitIx)
-      .add(mintToTreasuryWalletIx);
+      .add(createPayerATAIx)
+      .add(createMintToInvestorWalletIx);
+    // .add(mintToTreasuryWalletIx)
 
     await provider.sendAndConfirm(tx, [issuer, treasuryWallet, paymentMint]);
+    mint = Keypair.generate();
+
+    investorATA = getAssociatedTokenAddressSync(
+      mint.publicKey,
+      investor,
+      false,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
   });
 
   it("structured product happy flow!", async () => {
@@ -153,7 +188,6 @@ describe("structured-product", () => {
     console.log("Investor: ", sdk.provider.publicKey.toBase58());
     console.log("Issuer: ", issuerSdk.provider.publicKey.toBase58());
 
-    const mint = Keypair.generate();
     const config = {
       investor: investor,
       issuer: issuer.publicKey,
@@ -178,6 +212,9 @@ describe("structured-product", () => {
           priceAuthority: provider.publicKey, // TODO change to price setting contract
         },
       ],
+      paymentMint: paymentMint.publicKey,
+      issuancePricePerUnit: new BN(1000000),
+      supply: new BN(1000),
     };
     /*** ----------------- BACKEND ----------------- ***/
     // Inputs assumed to be given by investor and random yield provided by backend
@@ -186,15 +223,14 @@ describe("structured-product", () => {
       mint
     );
 
-    const encodedIssueSPTx = await issuerSdk.signStructuredProductIssueOffline(
-      {
-        investor: investor,
-        issuer: issuer.publicKey,
-        issuerTreasuryWallet: treasuryWallet.publicKey,
-        mint: mint.publicKey,
-      },
-      new BN(1000)
-    );
+    const encodedIssueSPTx = await issuerSdk.signStructuredProductIssueOffline({
+      investor: investor,
+      issuer: issuer.publicKey,
+      issuerTreasuryWallet: treasuryWallet.publicKey,
+      mint: mint.publicKey,
+      paymentMint: paymentMint.publicKey,
+      issuanceProceedsBeneficiary: treasuryWalletPaymentATA,
+    });
 
     /*** ----------------- FRONTEND ----------------- ***/
     const [issuerSignedInitSPtx, issuerSignedIssueSPTx] = [
@@ -245,14 +281,6 @@ describe("structured-product", () => {
     console.log("Confirmed issue tx!", issueTxid);
 
     /***------------------ Issuance success screen ------------------***/
-
-    const investorATA = getAssociatedTokenAddressSync(
-      mint.publicKey,
-      investor,
-      false,
-      TOKEN_2022_PROGRAM_ID,
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    );
 
     console.log("Getting investor token account...");
 
@@ -329,6 +357,50 @@ describe("structured-product", () => {
       config.payments[2].paymentDateOffsetSeconds
     );
 
-    expect(paymentTokenAccount.amount).to.equal(100000n);
+    const settlePaymentTx = await sdk.createV0Tx([
+      await sdk.createSettlePaymentInstruction(
+        {
+          structuredProductMint: mint.publicKey,
+          beneficiaryPaymentTokenAccount: investorPaymentATA,
+          beneficiaryTokenAccount: investorATA,
+          paymentMint: paymentMint.publicKey,
+          beneficiary: investor,
+        },
+        true,
+        config.payments[2].paymentDateOffsetSeconds
+      ),
+    ]);
+
+    const simulationResult2 = await provider.connection.simulateTransaction(
+      settlePaymentTx
+    );
+
+    console.log("Simulation result: ", simulationResult2);
+
+    const investorTokenAccountInfo2 = await provider.connection.getAccountInfo(
+      investorPaymentATA
+    );
+
+    const investorTokenAccount2 = unpackAccount(
+      investorPaymentATA,
+      investorTokenAccountInfo2,
+      TOKEN_2022_PROGRAM_ID
+    );
+
+    await provider.sendAndConfirm(settlePaymentTx);
+
+    const investorTokenAccountInfo3 = await provider.connection.getAccountInfo(
+      investorPaymentATA
+    );
+
+    const investorTokenAccount3 = unpackAccount(
+      investorATA,
+      investorTokenAccountInfo3,
+      TOKEN_2022_PROGRAM_ID
+    );
+
+    expect(investorTokenAccount3.amount).to.equal(
+      investorTokenAccount2.amount + 100000n
+    );
   });
 });

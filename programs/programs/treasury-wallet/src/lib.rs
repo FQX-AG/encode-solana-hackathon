@@ -12,8 +12,9 @@ pub enum TreasuryWalletError {
 
 #[program]
 pub mod treasury_wallet {
+    use anchor_spl::token_2022;
+
     use super::*;
-    use anchor_spl::{token, token_2022};
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         let treasury_wallet = &mut ctx.accounts.treasury_wallet;

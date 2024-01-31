@@ -2,8 +2,7 @@ use anchor_lang::{
     prelude::*,
     system_program::{create_account, CreateAccount},
 };
-use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token_interface::{Mint, Token2022, TokenAccount};
+use anchor_spl::token_interface::{Mint, TokenAccount};
 
 use {
     anchor_spl::token_2022::spl_token_2022::{
@@ -48,7 +47,6 @@ fn check_token_account_is_transferring(account_data: &[u8]) -> Result<()> {
 
 #[program]
 pub mod transfer_snapshot_hook {
-    use spl_pod::primitives::PodBool;
     use spl_tlv_account_resolution::account::ExtraAccountMeta;
     use spl_tlv_account_resolution::seeds::Seed;
     use spl_tlv_account_resolution::state::ExtraAccountMetaList;
@@ -398,5 +396,29 @@ pub struct SnapshotTokenAccountBalances {
 impl SnapshotTokenAccountBalances {
     pub fn space<T: Into<usize>>(num_snapshots: T) -> usize {
         4 + std::mem::size_of::<Option<u64>>() * num_snapshots.into() + 8
+    }
+
+    // If snapshot_balance at given index is Some we just return the balance => ez!
+    // If balance is None, that means in the period between the given snapshot and the earlier snapshot, no transfer occurred.
+    // There could still be a balance at the earlier snapshot, so we need to check that.
+    // If there is a balance at the earlier snapshot, we return that balance.
+    // If there is no balance at any earlier snapshot, we return 0.
+    pub fn balance_at_snapshot(&self, snapshot_index: usize) -> u64 {
+        let snapshot_balance = self.snapshot_balances[snapshot_index];
+        match snapshot_balance {
+            Some(balance) => balance,
+            None => {
+                let mut i = snapshot_index;
+                while i > 0 {
+                    i -= 1;
+                    let snapshot_balance = self.snapshot_balances[i];
+                    match snapshot_balance {
+                        Some(balance) => return balance,
+                        None => continue,
+                    }
+                }
+                0
+            }
+        }
     }
 }

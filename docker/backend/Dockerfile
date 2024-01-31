@@ -13,5 +13,5 @@ RUN pnpm install
 COPY ./backend/ ./backend/
 COPY ./programs/ ./programs/
 RUN pnpm --filter programs run build:ts
-EXPOSE 3000
+EXPOSE 8080
 CMD ["pnpm", "--filter", "backend", "start"]

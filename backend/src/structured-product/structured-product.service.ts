@@ -47,6 +47,9 @@ export class StructuredProductService {
         investor: new PublicKey(investorPublicKey),
         issuer: issuer.publicKey,
         issuerTreasuryWallet: treasuryWallet.publicKey,
+        paymentMint: paymentMintAddress,
+        issuancePricePerUnit: new BN(1000),
+        supply: new BN(1000),
         payments: [
           {
             principal: false,
@@ -65,15 +68,14 @@ export class StructuredProductService {
       mint,
     );
 
-    const encodedIssueSPTx = await issuerSdk.signStructuredProductIssueOffline(
-      {
-        investor: new PublicKey(investorPublicKey),
-        issuer: issuer.publicKey,
-        issuerTreasuryWallet: treasuryWallet.publicKey,
-        mint: mint.publicKey,
-      },
-      new BN(1000),
-    );
+    const encodedIssueSPTx = await issuerSdk.signStructuredProductIssueOffline({
+      investor: new PublicKey(investorPublicKey),
+      issuer: issuer.publicKey,
+      issuerTreasuryWallet: treasuryWallet.publicKey,
+      mint: mint.publicKey,
+      paymentMint: paymentMintAddress,
+      issuanceProceedsBeneficiary: new PublicKey(investorPublicKey),
+    });
 
     return {
       initStructuredProductTx: encodedInitSPTx,

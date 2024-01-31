@@ -5,7 +5,7 @@ on:
       - master
 
 jobs:
-  build-typescript:
+  build-sdk-and-backend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,8 +17,8 @@ jobs:
         run: npm install -g pnpm
       - name: Install dependencies
         run: pnpm install  --frozen-lockfile
-      - name: Build frontend
-        run: pnpm run --filter ./frontend build
+      - name: Build programs typescript
+        run: pnpm run --filter programs build:ts
       - name: Build backend
         run: pnpm run --filter backend build
   build-anchor:
@@ -32,9 +32,11 @@ jobs:
       - name: Set rust version
         run: rustup default stable
       - name: Set solana key from secret
-        run: echo ${{ secrets.SOLANA_PRIVATE_KEY }} > ~/.config/solana/id.json
+        run: echo ${{ secrets.SERVER_SECRET_KEY }} > ~/.config/solana/id.json
       - name: Install pnpm
         run: npm install -g pnpm
+      - name: set rpc provider
+        run: solana config set --url https://rpc.ironforge.network/devnet?apiKey=${{ secrets.IRONFORGE_API_KEY }}
       - name: Install pnpm dependencies
         run: pnpm install
       - name: Build
@@ -42,8 +44,42 @@ jobs:
       # - name: Test
       #   run: pnpm run --filter programs test
       - name: Upgrade structured product program
-        run: pnpm run --filter programs upgrade:structured-product:devnet
+        run: pnpm run --filter programs upgrade:structured-product
       - name: Upgrade treasury wallet program
-        run: pnpm run --filter programs upgrade:treasury-wallet:devnet
+        run: pnpm run --filter programs upgrade:treasury-wallet
       - name: Upgrade transfer hook program
-        run: pnpm run --filter programs upgrade:transferhook:devnet
+        run: pnpm run --filter programs upgrade:transferhook
+  deploy-backend-to-cloud-run:
+    runs-on: ubuntu-latest
+    needs: [build-sdk-and-backend]
+    steps:
+      - uses: actions/checkout@v4
+      - id: "auth"
+        uses: "google-github-actions/auth@v2"
+        with:
+          credentials_json: "${{ secrets.GCP_CREDENTIALS }}"
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Authenticate Docker to Google Cloud
+        run: gcloud auth configure-docker europe-west6-docker.pkg.dev --quiet
+      - name: Build and Push Docker image to Artifact Registry
+        run: |
+          docker build -t europe-west6-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/staging/hackathon-backend:${{github.sha}} -f ./docker/backend/Dockerfile .
+          docker push europe-west6-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/staging/hackathon-backend:${{github.sha}}
+      - name: Update secrets
+        run: |
+          printf "${{secrets.ISSUER_SECRET_KEY}}" | gcloud secrets versions add ISSUER_SECRET_KEY --data-file=-
+          printf "${{secrets.SERVER_SECRET_KEY}}" | gcloud secrets versions add SERVER_SECRET_KEY --data-file=-
+      - name: Deploy to Google Cloud Run
+        run: |
+          gcloud run deploy hackathon-backend-service \
+            --image europe-west6-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/staging/hackathon-backend:${{github.sha}} \
+            --platform managed \
+            --region europe-west6 \
+            --set-env-vars PROVIDER_RPC_URL=https://rpc.ironforge.network/devnet\?apiKey\${{secrets.IRONFORGE_API_KEY}} \
+            --set-env-vars STRUCTURED_PRODUCT_PROGRAM_ID=${{secrets.STRUCTURED_PRODUCT_PROGRAM_ID}} \
+            --set-env-vars TREASURY_WALLET_PROGRAM_ID=${{secrets.TREASURY_WALLET_PROGRAM_ID}} \
+            --set-env-vars TRANSFER_HOOK_PROGRAM_ID=${{secrets.TRANSFER_HOOK_PROGRAM_ID}} \
+            --update-secrets=ISSUER_SECRET_KEY=ISSUER_SECRET_KEY:latest \
+            --update-secrets=SERVER_SECRET_KEY=SERVER_SECRET_KEY:latest \
+            --set-env-vars PAYMENT_TOKEN_MINT_ADDRESS=${{secrets.PAYMENT_TOKEN_MINT_ADDRESS}} \
