@@ -205,26 +205,17 @@ export default function Request2(props: {
     );
     const sdk = new StructuredNotesSdk(provider, program, treasuryWalletProgram, transferSnapshotHookProgram);
 
+    console.log("SIGNING");
     // Sign
     const [finalInitTx, finalIssueTx] = await provider.wallet.signAllTransactions(
       props.deploymentInfo.transactions.map(sdk.decodeV0Tx)
     );
 
     // Send "init" transaction
-    await sdk.provider.connection.simulateTransaction(finalInitTx, {
-      sigVerify: false,
-      replaceRecentBlockhash: true,
-    });
     const finalInitTxId = await provider.connection.sendTransaction(finalInitTx);
     await sdk.confirmTx(finalInitTxId);
 
-    console.log(
-      "Simulation: ",
-      await sdk.provider.connection.simulateTransaction(finalIssueTx, {
-        sigVerify: false,
-        replaceRecentBlockhash: true,
-      })
-    );
+    console.log("SENDING ISSUE");
     const issueTxid = await provider.connection.sendTransaction(finalIssueTx);
     await sdk.confirmTx(issueTxid);
 
