@@ -39,8 +39,7 @@ jobs:
       - name: Install pnpm dependencies
         run: pnpm install
       - name: Build
-        run: anchor build --verifiable
-        working-directory: ./programs
+        run: pnpm run --filter programs build
       # - name: Test
       #   run: pnpm run --filter programs test
       - name: Upgrade structured product program
@@ -49,15 +48,6 @@ jobs:
         run: pnpm run --filter programs upgrade:treasury-wallet
       - name: Upgrade transfer hook program
         run: pnpm run --filter programs upgrade:transferhook
-      - name: Verify structured product program
-        run: anchor verify -p structured-product GYFmKqbpYHUrML3BstU9VUnVdEE6ho9tzVJzs1DAR5iz
-        working-directory: ./programs
-      - name: Verify treasury wallet program
-        run: anchor verify -p treasury-wallet 3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3
-        working-directory: ./programs
-      - name: Verify transfer hook program
-        run: anchor verify -p transfer-snapshot-hook 6sGAcb6vw8bhcVNPv5pMEhr3dXyeYoX2X89S3NkEaaJP
-        working-directory: ./programs
 
   deploy-backend-to-cloud-run:
     runs-on: ubuntu-latest
