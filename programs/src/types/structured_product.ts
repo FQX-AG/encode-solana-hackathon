@@ -305,7 +305,20 @@ export type StructuredProduct = {
           "isSigner": false
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "symbol",
+          "type": "string"
+        },
+        {
+          "name": "uri",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "issue",
@@ -1111,7 +1124,20 @@ export const IDL: StructuredProduct = {
           "isSigner": false
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "symbol",
+          "type": "string"
+        },
+        {
+          "name": "uri",
+          "type": "string"
+        }
+      ]
     },
     {
       "name": "issue",

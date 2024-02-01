@@ -323,7 +323,12 @@ pub mod structured_product {
         Ok(())
     }
 
-    pub fn create_metadata(ctx: Context<CreateMetadata>) -> Result<()> {
+    pub fn create_metadata(
+        ctx: Context<CreateMetadata>,
+        name: String,
+        symbol: String,
+        uri: String,
+    ) -> Result<()> {
         require!(
             ctx.accounts.authority.key() == ctx.accounts.structured_product.authority.key(),
             StructuredProductError::Unauthorized
@@ -344,9 +349,9 @@ pub mod structured_product {
             &cpi_program,
             cpi_accounts,
             CreateV1InstructionArgs {
-                name: "Encode solana hackathon BTC BRC".to_string(),
-                symbol: "BRC".to_string(),
-                uri: "https://shdw-drive.genesysgo.net/3V2fxRdcz9wE2MHoQUBxEEsDLKuUj5Nu9ZhxcJ1DA4ZX/metadata.json".to_string(), // Replace with real uri
+                name,
+                symbol,
+                uri,
                 seller_fee_basis_points: 0,
                 creators: None,
                 primary_sale_happened: true,

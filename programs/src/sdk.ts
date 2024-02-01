@@ -856,7 +856,11 @@ export class StructuredNotesSdk {
     );
 
     const addMetadataIx = await this.program.methods
-      .createMetadata()
+      .createMetadata(
+        "Encode Demo BRC",
+        "eBRC",
+        "https://shdw-drive.genesysgo.net/3V2fxRdcz9wE2MHoQUBxEEsDLKuUj5Nu9ZhxcJ1DA4ZX/metadata.json"
+      )
       .accounts({
         mint: mint.publicKey,
         metadata: metadataPDA.publicKey,
