@@ -1,0 +1,31 @@
+{
+  "name": "Encode Hackathon BTC BRC",
+  "symbol": "eBRC",
+  "description": "",
+  "seller_fee_basis_points": 0,
+  "image": "https://shdw-drive.genesysgo.net/3V2fxRdcz9wE2MHoQUBxEEsDLKuUj5Nu9ZhxcJ1DA4ZX/Main%20Logo%20Mark%20RGB%20Dark.png",
+  "animation_url": "",
+  "external_url": "https://obligate.com",
+  "attributes": [
+    {
+      "trait_type": "web",
+      "value": "yes"
+    },
+    {
+      "trait_type": "mobile",
+      "value": "yes"
+    },
+    {
+      "trait_type": "extension",
+      "value": "yes"
+    }
+  ],
+  "properties": {
+    "files": [
+      {
+        "uri": "https://shdw-drive.genesysgo.net/3V2fxRdcz9wE2MHoQUBxEEsDLKuUj5Nu9ZhxcJ1DA4ZX/240131_Documentation_Structured%20Product_v2.9_Solana.pdf",
+        "type": "application/pdf"
+      }
+    ]
+  }
+}

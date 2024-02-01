@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::metadata::Metadata;
 use anchor_spl::token_2022::Token2022;
 use anchor_spl::token_interface::{Mint, TokenAccount};
 use spl_token_2022::instruction::TokenInstruction;
@@ -41,6 +42,10 @@ pub enum StructuredProductError {
 
 #[program]
 pub mod structured_product {
+    use anchor_spl::metadata::mpl_token_metadata::instructions::{
+        CreateV1Cpi, CreateV1CpiAccounts, CreateV1InstructionArgs,
+    };
+    use anchor_spl::metadata::mpl_token_metadata::types::TokenStandard::Fungible;
     use anchor_spl::token_2022;
     use solana_program::instruction::Instruction;
     use spl_token_2022::check_spl_token_program_account;
@@ -315,6 +320,52 @@ pub mod structured_product {
 
         let structured_product = &mut ctx.accounts.structured_product;
         structured_product.paid = true;
+        Ok(())
+    }
+
+    pub fn create_metadata(ctx: Context<CreateMetadata>) -> Result<()> {
+        require!(
+            ctx.accounts.authority.key() == ctx.accounts.structured_product.authority.key(),
+            StructuredProductError::Unauthorized
+        );
+        let cpi_program = ctx.accounts.metadata_program.to_account_info();
+        let cpi_accounts = CreateV1CpiAccounts {
+            metadata: &ctx.accounts.metadata.to_account_info(),
+            master_edition: None,
+            sysvar_instructions: &ctx.accounts.sys_var.to_account_info(),
+            spl_token_program: &ctx.accounts.token_program.to_account_info(),
+            update_authority: (&ctx.accounts.structured_product.to_account_info(), true),
+            mint: (&ctx.accounts.mint.to_account_info(), false),
+            payer: &ctx.accounts.authority.to_account_info(),
+            system_program: &ctx.accounts.system_program.to_account_info(),
+            authority: &ctx.accounts.structured_product.to_account_info(),
+        };
+        let create_v1_cpi = CreateV1Cpi::new(
+            &cpi_program,
+            cpi_accounts,
+            CreateV1InstructionArgs {
+                name: "Encode solana hackathon BTC BRC".to_string(),
+                symbol: "BRC".to_string(),
+                uri: "https://shdw-drive.genesysgo.net/3V2fxRdcz9wE2MHoQUBxEEsDLKuUj5Nu9ZhxcJ1DA4ZX/metadata.json".to_string(), // Replace with real uri
+                seller_fee_basis_points: 0,
+                creators: None,
+                primary_sale_happened: true,
+                is_mutable: false,
+                token_standard: Fungible,
+                collection: None,
+                decimals: Some(0),
+                collection_details: None,
+                print_supply: None,
+                rule_set: None,
+                uses: None,
+            },
+        );
+
+        let mint_key = ctx.accounts.mint.key();
+        let signer_seeds = &[mint_key.as_ref(), &[ctx.accounts.structured_product.bump]];
+
+        create_v1_cpi.invoke_signed(&[&signer_seeds[..]])?;
+
         Ok(())
     }
 
@@ -765,6 +816,21 @@ pub struct PayIssuance<'info> {
     pub token_program: Program<'info, Token2022>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct CreateMetadata<'info> {
+    pub authority: Signer<'info>,
+    pub mint: InterfaceAccount<'info, Mint>,
+    /// CHECK: account checked by metadata program
+    #[account(mut, seeds=[b"metadata", metadata_program.key().as_ref(), mint.key().as_ref()], bump, seeds::program=metadata_program)]
+    pub metadata: AccountInfo<'info>,
+    #[account(seeds=[mint.key().as_ref()], bump=structured_product.bump)]
+    pub structured_product: Account<'info, StructuredProduct>,
+    pub metadata_program: Program<'info, Metadata>,
+    pub token_program: Program<'info, Token2022>,
+    pub system_program: Program<'info, System>,
+    pub sys_var: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]

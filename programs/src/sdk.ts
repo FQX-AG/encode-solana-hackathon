@@ -29,6 +29,10 @@ import { getPdaWithSeeds } from "./utils";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import { TreasuryWallet } from "./types/treasury_wallet";
 import { TransferSnapshotHook } from "./types/transfer_snapshot_hook";
+import {
+  findMetadataPda,
+  MPL_TOKEN_METADATA_PROGRAM_ID,
+} from "@metaplex-foundation/mpl-token-metadata";
 
 export type InitializeStructuredProductInstructionAccounts = {
   investor: PublicKey;
@@ -842,6 +846,29 @@ export class StructuredNotesSdk {
       })
       .instruction();
 
+    const metadataPDA = getPdaWithSeeds(
+      [
+        Buffer.from("metadata"),
+        new PublicKey(MPL_TOKEN_METADATA_PROGRAM_ID.toString()).toBuffer(),
+        mint.publicKey.toBuffer(),
+      ],
+      new PublicKey(MPL_TOKEN_METADATA_PROGRAM_ID.toString())
+    );
+
+    const addMetadataIx = await this.program.methods
+      .createMetadata()
+      .accounts({
+        mint: mint.publicKey,
+        metadata: metadataPDA.publicKey,
+        authority: this.provider.publicKey,
+        structuredProduct: structuredProductPDA.publicKey,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+        sysVar: SYSVAR_RENT_PUBKEY,
+      })
+      .instruction();
+
     // const lookupTableAddress = await this.createLookupTable([
     //   this.program.programId,
     //   this.transferSnapshotHookProgram.programId,
@@ -869,6 +896,7 @@ export class StructuredNotesSdk {
         advanceIx,
         createMintAccountIx,
         initIx,
+        addMetadataIx,
         ...paymentIxs,
         addAuthorizationIx,
       ],
