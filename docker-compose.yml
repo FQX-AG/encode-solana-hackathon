@@ -14,7 +14,7 @@ services:
         - action: rebuild
           path: ./rpc-proxy/package.json
     ports:
-      - "3002:3000"
+      - "3002:8080"
     command: pnpm --filter ./rpc-proxy start:dev
 
     networks:
