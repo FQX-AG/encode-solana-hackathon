@@ -219,16 +219,17 @@ export default function Page() {
 
     const initSimulation = await sdk.provider.connection.simulateTransaction(finalInitTx, {
       sigVerify: false,
-      replaceRecentBlockhash: true,
+      replaceRecentBlockhash: false,
     });
 
-    console.log(initSimulation);
+    console.log("initSimulation", initSimulation);
     const finalInitTxId = await provider.connection.sendTransaction(finalInitTx);
     await sdk.confirmTx(finalInitTxId);
-    await sdk.provider.connection.simulateTransaction(finalIssueTx, {
+    const issueSimulation = await sdk.provider.connection.simulateTransaction(finalIssueTx, {
       sigVerify: false,
       replaceRecentBlockhash: true,
     });
+    console.log("issueSimulation", issueSimulation);
     const issueTxid = await provider.connection.sendTransaction(finalIssueTx);
     await sdk.confirmTx(issueTxid);
 

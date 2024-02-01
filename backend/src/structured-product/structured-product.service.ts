@@ -182,7 +182,7 @@ export class StructuredProductService {
         issuerTreasuryWallet: treasuryWalletPublicKey,
         mint: mint.publicKey,
         paymentMint: paymentMint,
-        issuanceProceedsBeneficiary: new PublicKey(investorPublicKey),
+        issuanceProceedsBeneficiary: treasuryWalletATA,
       },
       nonce2.publicKey,
     );
