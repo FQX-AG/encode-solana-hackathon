@@ -23,3 +23,8 @@ wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "pnpm ts-mocha -p ./tsconfig.json -t 1000000 tests/structured-product.ts"
+
+[test]
+[[test.genesis]]
+address='metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
+program='./tests/programs/metadata.so'

@@ -223,11 +223,14 @@ describe("structured-product", () => {
     const nonce2 = Keypair.generate();
 
     const [nonce1Ixs, nonce2Ixs] = await Promise.all([
-      sdk.createDurableNonceAccountInstructions(nonce1),
-      sdk.createDurableNonceAccountInstructions(nonce2),
+      issuerSdk.createDurableNonceAccountInstructions(nonce1),
+      issuerSdk.createDurableNonceAccountInstructions(nonce2),
     ]);
 
-    await sdk.sendAndConfirmV0Tx([...nonce1Ixs, ...nonce2Ixs]);
+    await issuerSdk.sendAndConfirmV0Tx(
+      [...nonce1Ixs, ...nonce2Ixs],
+      [nonce1, nonce2]
+    );
 
     const encodedInitSPTx = await issuerSdk.signStructuredProductInitOffline(
       config,
@@ -259,6 +262,13 @@ describe("structured-product", () => {
         issuerSignedInitSPtx,
         issuerSignedIssueSPTx,
       ]);
+
+    console.log(
+      "Simulation: ",
+      await provider.connection.simulateTransaction(finalInitTx, {
+        replaceRecentBlockhash: true,
+      })
+    );
 
     console.log("Sending final init tx... ");
     const finalInitTxId = await provider.connection.sendTransaction(
@@ -364,13 +374,6 @@ describe("structured-product", () => {
     console.log("Simulation result: ", simulationResult);
 
     await provider.sendAndConfirm(pullPaymentTx);
-
-    const paymentTokenAccount = await sdk.getPaymentTokenAccount(
-      mint.publicKey,
-      paymentMint.publicKey,
-      true,
-      config.payments[2].paymentDateOffsetSeconds
-    );
 
     const settlePaymentTx = await sdk.createV0Tx([
       await sdk.createSettlePaymentInstruction(

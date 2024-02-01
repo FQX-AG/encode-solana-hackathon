@@ -1,10 +1,31 @@
 version: "3.8"
 services:
+  rpc-proxy:
+    build:
+      context: .
+      dockerfile: docker/rpc-proxy/Dockerfile
+    develop:
+      watch:
+        - action: sync
+          path: ./rpc-proxy/
+          target: /usr/src/app/rpc-proxy/
+        - action: rebuild
+          path: ./package.json
+        - action: rebuild
+          path: ./rpc-proxy/package.json
+    ports:
+      - "3002:3000"
+    command: pnpm --filter ./rpc-proxy start:dev
+
+    networks:
+      - default
   redis:
     hostname: redis
     image: redis:7.2.4-alpine
     ports:
       - "6379:6379"
+    env_file:
+      - ./rpc-proxy/.env
     networks:
       - default
   backend:
@@ -57,5 +78,7 @@ services:
     command: pnpm --filter ./frontend dev
     networks:
       - default
+    depends_on:
+      - rpc-proxy
 networks:
   default:
