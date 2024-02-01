@@ -7,7 +7,7 @@ type NoteQrCodeProps = {
 };
 
 export function NoteQrCode(props: NoteQrCodeProps) {
-  const url = `https://solscan.io/token/${props.address}`;
+  const url = `https://solscan.io/account/${props.address}?cluster=devnet`;
 
   return (
     <Stack

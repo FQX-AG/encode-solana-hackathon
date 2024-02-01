@@ -6,6 +6,8 @@ import { Info } from "@/components/Info";
 import { formatDate, formatDateUTC, formatDecimal } from "@/formatters";
 import { differenceInMilliseconds, isFuture } from "date-fns";
 import { Divider, Stack } from "@mui/material";
+import * as _ from "lodash-es";
+import React from "react";
 
 type Payment = {
   type: "coupon" | "principal";
@@ -19,11 +21,11 @@ type PaymentScheduleTimelineProps = {
   maturityDate: Date | string;
   payments: Payment[];
   highlightedPaymentIndex: number;
+  now: Date | null;
 };
 
 export function PaymentScheduleTimeline(props: PaymentScheduleTimelineProps) {
   const [dotHoverTarget, setDotHoverTarget] = useState<number>();
-  const [now, setNow] = useState(new Date());
   const values = useMemo(() => {
     const end = new Date(props.maturityDate);
     const start = new Date(props.issuanceDate);
@@ -33,21 +35,26 @@ export function PaymentScheduleTimeline(props: PaymentScheduleTimelineProps) {
 
       return { ...p, position };
     });
-    const [unpaidCouponPayments, unpaidPrincipalPayments] = partition(
-      payments.filter((p) => isFuture(p.scheduledAt)),
-      { type: "coupon" }
-    );
+    const groupedPayments = _.groupBy(payments, (payment) => payment.position);
+    const [couponPayments, principalPayments] = partition(payments, { type: "coupon" });
+    const unpaidCouponPayments = couponPayments.filter((p) => isFuture(p.scheduledAt));
+    const unpaidPrincipalPayments = principalPayments.filter((p) => isFuture(p.scheduledAt));
     const nextPayment = unpaidCouponPayments[0];
-    const nowPosition = differenceInMilliseconds(now, start);
+    const nowPosition = props.now ? differenceInMilliseconds(props.now, start) : undefined;
 
-    return { start, end, range, payments, nowPosition, unpaidCouponPayments, unpaidPrincipalPayments, nextPayment };
-  }, [now, props.issuanceDate, props.maturityDate, props.payments]);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => setNow(new Date()), 1000);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
+    return {
+      start,
+      end,
+      range,
+      payments,
+      groupedPayments,
+      nowPosition,
+      couponPayments,
+      unpaidCouponPayments,
+      unpaidPrincipalPayments,
+      nextPayment,
+    };
+  }, [props.now, props.issuanceDate, props.maturityDate, props.payments]);
 
   const labelParts = [];
   if (values.unpaidCouponPayments.length > 0) {
@@ -61,20 +68,22 @@ export function PaymentScheduleTimeline(props: PaymentScheduleTimelineProps) {
     labelParts.push(<Fragment key="principal">principal</Fragment>);
   }
 
-  const bars: Bar[] = [
-    {
-      start: (100 * values.nowPosition) / values.range,
-      stop: 100,
-      color: "#3F3F76",
-      zIndex: 0,
-    },
-    values.nextPayment && {
-      start: (100 * values.nowPosition) / values.range,
-      stop: (100 * values.nextPayment.position) / values.range,
-      color: "#00B2FF80",
-      zIndex: 0,
-    },
-  ];
+  const bars: Bar[] = values.nowPosition
+    ? [
+        {
+          start: (100 * values.nowPosition) / values.range,
+          stop: 100,
+          color: "#3F3F76",
+          zIndex: 0,
+        },
+        values.nextPayment && {
+          start: (100 * values.nowPosition) / values.range,
+          stop: (100 * values.nextPayment.position) / values.range,
+          color: "#00B2FF80",
+          zIndex: 0,
+        },
+      ]
+    : [];
   const tickers: (Ticker | undefined)[] = [
     {
       position: 0,
@@ -116,13 +125,15 @@ export function PaymentScheduleTimeline(props: PaymentScheduleTimelineProps) {
       labelAlignment: "center",
       color: "transparent",
     },
-    {
-      position: (100 * values.nowPosition) / values.range,
-      label: "Today",
-      value: <Text variant="400|16px|21px">{formatDate(now, false)}</Text>,
-      color: "#00B2FF80",
-      isAtBottom: true,
-    },
+    props.now && values.nowPosition
+      ? {
+          position: (100 * values.nowPosition) / values.range,
+          label: "Today",
+          value: <Text variant="400|16px|21px">{formatDate(props.now, false)}</Text>,
+          color: "#00B2FF80",
+          isAtBottom: true,
+        }
+      : undefined,
   ];
   const dots: (Dot | undefined)[] = [
     {
@@ -131,59 +142,66 @@ export function PaymentScheduleTimeline(props: PaymentScheduleTimelineProps) {
       variant: "small",
       highlighted: false,
     },
-    ...values.payments.map(
-      (p, index, array) =>
-        ({
-          id: index,
-          position: (100 * p.position) / values.range,
-          variant: "big",
-          highlighted: dotHoverTarget === index || props.highlightedPaymentIndex === index,
-          popper: (
-            <Stack spacing={2} sx={{ background: "#15163A", borderRadius: "10px", padding: "16px", mt: 4 }}>
-              <Text variant="400|16px|21px">{formatDate(p.scheduledAt, false)}</Text>
-              <Divider />
-              <Stack spacing={1}>
-                {(p.type === "coupon" || p === array.at(-1)) && (
-                  <>
-                    {p.currency && p.amount ? (
-                      <>
+    ...Object.entries(values.groupedPayments).map(([position, payments], groupIndex) => {
+      return {
+        id: groupIndex,
+        position: (100 * Number(position)) / values.range,
+        variant: "big",
+        highlighted:
+          dotHoverTarget === groupIndex ||
+          payments.some((p) => values.payments.indexOf(p) === props.highlightedPaymentIndex),
+        popper: (
+          <Stack spacing={2} sx={{ background: "#15163A", borderRadius: "10px", padding: "16px", mt: 4 }}>
+            <Text variant="400|16px|21px">{formatDate(payments[0].scheduledAt, false)}</Text>
+            <Divider />
+            <Stack spacing={1}>
+              {payments.map((p, paymentIndex) => {
+                if (p.type === "coupon") {
+                  return (
+                    <React.Fragment key={paymentIndex}>
+                      {p.currency && p.amount ? (
+                        <>
+                          <Text variant="500|14px|18px" color="oxfordBlue500">
+                            Coupon payment ({values.payments.indexOf(p) + 1}/{values.payments.length - 1}):
+                          </Text>
+                          <Text variant="400|16px|21px">
+                            {p.currency} {formatDecimal(p.amount)}
+                          </Text>
+                        </>
+                      ) : (
                         <Text variant="500|14px|18px" color="oxfordBlue500">
-                          Coupon payment ({p === array.at(-1) ? index : index + 1}/{values.payments.length - 1}):
+                          Coupon payment ({values.payments.indexOf(p) + 1}/{values.payments.length - 1})
                         </Text>
-                        <Text variant="400|16px|21px">
-                          {p.currency} {formatDecimal(p.amount)}
-                        </Text>
-                      </>
-                    ) : (
-                      <Text variant="500|14px|18px" color="oxfordBlue500">
-                        Coupon payment ({p === array.at(-1) ? index : index + 1}/{values.payments.length - 1})
-                      </Text>
-                    )}
-                  </>
-                )}
-                {(p.type === "principal" || p === array.at(-2)) && (
-                  <>
-                    {p.currency && p.amount ? (
-                      <>
+                      )}
+                    </React.Fragment>
+                  );
+                }
+                if (p.type === "principal") {
+                  return (
+                    <React.Fragment key={paymentIndex}>
+                      {p.currency && p.amount ? (
+                        <>
+                          <Text variant="500|14px|18px" color="oxfordBlue500">
+                            Principal payment:
+                          </Text>
+                          <Text variant="400|16px|21px">
+                            {p.currency} {formatDecimal(p.amount)}
+                          </Text>
+                        </>
+                      ) : (
                         <Text variant="500|14px|18px" color="oxfordBlue500">
-                          Principal payment:
+                          Principal payment
                         </Text>
-                        <Text variant="400|16px|21px">
-                          {p.currency} {formatDecimal(p.amount)}
-                        </Text>
-                      </>
-                    ) : (
-                      <Text variant="500|14px|18px" color="oxfordBlue500">
-                        Principal payment
-                      </Text>
-                    )}
-                  </>
-                )}
-              </Stack>
+                      )}
+                    </React.Fragment>
+                  );
+                }
+              })}
             </Stack>
-          ),
-        } satisfies Dot)
-    ),
+          </Stack>
+        ),
+      } satisfies Dot;
+    }),
   ];
 
   return (
@@ -191,7 +209,7 @@ export function PaymentScheduleTimeline(props: PaymentScheduleTimelineProps) {
       bars={bars}
       tickers={tickers}
       dots={dots}
-      bottomTickersContainerStyle={{ minHeight: 180 }}
+      bottomTickersContainerStyle={{ minHeight: 220 }}
       onDotHoverTargetChange={setDotHoverTarget}
     />
   );

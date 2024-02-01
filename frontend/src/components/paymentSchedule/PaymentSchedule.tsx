@@ -7,6 +7,7 @@ import { PaymentScheduleControls } from "@/components/paymentSchedule/PaymentSch
 type Payment = {
   type: "coupon" | "principal";
   scheduledAt: Date;
+  status: "scheduled" | "open" | "settled";
   currency?: string;
   amount?: number;
 };
@@ -15,6 +16,7 @@ type PaymentScheduleProps = {
   issuanceDate: Date | string;
   maturityDate: Date | string;
   payments: Payment[];
+  now: Date | null;
 };
 
 export function PaymentSchedule(props: PaymentScheduleProps) {
@@ -27,6 +29,7 @@ export function PaymentSchedule(props: PaymentScheduleProps) {
         maturityDate={props.maturityDate}
         payments={props.payments}
         highlightedPaymentIndex={paymentIndex}
+        now={props.now}
       />
       <Divider />
       <PaymentScheduleControls

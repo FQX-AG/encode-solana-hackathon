@@ -1,47 +1,40 @@
-import { Box, Button, Divider, Stack, Theme } from "@mui/material";
-import { Panel } from "@/components/Panel";
-import { Section } from "@/components/Section";
-import { Column, List } from "@/components/list/List";
-import { Flag } from "@/components/Flag";
-import { formatDate, formatDateUTC, formatDecimal, formatPercentage } from "@/formatters";
-import { Chip } from "@/components/Chip";
-import { SxProps } from "@mui/material/styles";
-import { validationSchema } from "@/schemas/newIssuance";
+import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
+import { Connection, PublicKey } from "@solana/web3.js";
+import { useReport } from "@/hooks/useReport";
 import { useMemo, useState } from "react";
-import { useRouter } from "next/router";
-import { Property } from "@/components/Property";
+import { Decimal } from "decimal.js";
+import { differenceInMonths } from "date-fns";
+import * as anchor from "@coral-xyz/anchor";
+import { ensure } from "@/utils";
+import { StructuredNotesSdk, StructuredProductIDL, TransferSnapshotHookIDL, TreasuryWalletIDL } from "@fqx/programs";
 import {
-  API_URL,
   COUPON_FREQUENCY_NAMES,
   STRUCTURED_PRODUCT_PROGRAM_ID,
   StructuredProductType,
   TRANSFER_SNAPSHOT_HOOK_PROGRAM_ID,
   TREASURY_WALLET_PROGRAM_ID,
 } from "@/constants";
+import { Box, Button, Divider, Stack, Theme } from "@mui/material";
+import { Section } from "@/components/Section";
+import { Property } from "@/components/Property";
+import { formatDate, formatDateUTC, formatDecimal, formatPercentage } from "@/formatters";
 import { Info } from "@/components/Info";
+import { Tooltip } from "@/components/Tooltip";
+import { Column, List } from "@/components/list/List";
 import { GlowingPanel } from "@/components/GlowingPanel";
-import { Decimal } from "decimal.js";
 import { Text } from "@/components/Text";
 import { ArrowForward, ChevronRight } from "@mui/icons-material";
-import { differenceInMonths } from "date-fns";
-import { useReport } from "@/hooks/useReport";
-import { BRC } from "@/components/graphs/BRC";
-import { StructuredNotesSdk, StructuredProductIDL, TransferSnapshotHookIDL, TreasuryWalletIDL } from "@fqx/programs";
-import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
-import * as anchor from "@coral-xyz/anchor";
-import { ensure } from "@/utils";
 import { SignDialog } from "@/components/SignDialog";
-import { Tooltip } from "@/components/Tooltip";
-import { Connection } from "@solana/web3.js";
+import { Panel } from "@/components/Panel";
+import { Values } from "@/schemas/newIssuance";
+import { DeploymentInfo, QuoteInfo } from "@/types";
+import { SxProps } from "@mui/material/styles";
+import { Flag } from "@/components/Flag";
+import { Chip } from "@/components/Chip";
+import { BRC } from "@/components/graphs/BRC";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 
-type DeploymentInfo = {
-  transactions: string[];
-  mint: string;
-};
-
-type Tag = "bestOffer";
-
-const TAG_PROPS: Record<Tag, { children: string; sx: SxProps<Theme> }> = {
+const TAG_PROPS: Record<string, { children: string; sx: SxProps<Theme> }> = {
   bestOffer: {
     children: "Best offer",
     sx: (theme) => ({ color: theme.palette.warning.main, borderColor: theme.palette.warning.light }),
@@ -54,7 +47,7 @@ type QuoteInternal = {
   issuerName: string;
   initialFixingPrice: { currency: string; amount: number };
   yield: number;
-  tags?: Tag[];
+  tags?: string[];
 };
 
 type QuoteInternalEnhanced = QuoteInternal & {
@@ -62,52 +55,6 @@ type QuoteInternalEnhanced = QuoteInternal & {
   absoluteCouponRate: number;
   totalRepayment: number;
 };
-
-const data: QuoteInternal[] = [
-  {
-    id: "1",
-    issuerCountryCode: "FR",
-    issuerName: "France Company",
-    initialFixingPrice: { currency: "USDC", amount: 43000 },
-    yield: 0.36,
-    tags: ["bestOffer"],
-  },
-  {
-    id: "2",
-    issuerCountryCode: "DE",
-    issuerName: "Germany Company",
-    initialFixingPrice: { currency: "USDC", amount: 40987 },
-    yield: 0.3,
-  },
-  {
-    id: "3",
-    issuerCountryCode: "AT",
-    issuerName: "Austria Company",
-    initialFixingPrice: { currency: "USDC", amount: 35321 },
-    yield: 0.2,
-  },
-  {
-    id: "4",
-    issuerCountryCode: "CH",
-    issuerName: "Swiss Company",
-    initialFixingPrice: { currency: "USDC", amount: 33345 },
-    yield: 0.18,
-  },
-  {
-    id: "5",
-    issuerCountryCode: "PL",
-    issuerName: "Web 3 Company",
-    initialFixingPrice: { currency: "USDC", amount: 20765 },
-    yield: 0.05,
-  },
-  {
-    id: "6",
-    issuerCountryCode: "JM",
-    issuerName: "Waganda Company",
-    initialFixingPrice: { currency: "USDC", amount: 15456 },
-    yield: 0.05,
-  },
-];
 
 const columns: Column<QuoteInternal>[] = [
   {
@@ -155,55 +102,98 @@ const columns: Column<QuoteInternal>[] = [
 
 const itemKey = (item: QuoteInternal) => item.id;
 
-export default function Page() {
-  const wallet = useWallet();
+export default function Request2(props: {
+  values: Values;
+  deploymentInfo: DeploymentInfo;
+  onNext: (payload: {
+    values: Values;
+    deploymentInfo: DeploymentInfo;
+    issuanceDate: Date;
+    quote: QuoteInfo;
+    investorATA: PublicKey;
+  }) => void;
+}) {
   const anchorWallet = useAnchorWallet();
   const { connection }: { connection: Connection } = useConnection();
   const report = useReport();
   const issuanceDate = useMemo(() => new Date(), []);
-  const [selection, setSelection] = useState<string>(data[0].id);
   const [confirmationPayload, setConfirmationPayload] = useState<QuoteInternalEnhanced>();
-  const router = useRouter();
-  const values = useMemo(
-    () => (router.query.payload ? validationSchema.cast(JSON.parse(atob(router.query.payload as string))) : undefined),
-    [router.query.payload]
-  );
-  const quote = useMemo<QuoteInternalEnhanced | undefined>(() => {
-    if (!values) return undefined;
+  const data = useMemo<QuoteInternal[]>(() => {
+    const y = new Decimal(props.deploymentInfo.yieldValue).div(props.values.totalIssuanceAmount).times(12).div(2);
+    const rand = () => new Decimal(Math.random()).clamp(0.1, 0.9).toNumber();
 
+    return [
+      {
+        id: "1",
+        issuerCountryCode: "FR",
+        issuerName: "France Company",
+        initialFixingPrice: { currency: "USDC", amount: 43000 },
+        yield: y.toNumber(),
+        tags: ["bestOffer"],
+      },
+      {
+        id: "2",
+        issuerCountryCode: "DE",
+        issuerName: "Germany Company",
+        initialFixingPrice: { currency: "USDC", amount: 40987 },
+        yield: y.times(rand()).toNumber(),
+      },
+      {
+        id: "3",
+        issuerCountryCode: "AT",
+        issuerName: "Austria Company",
+        initialFixingPrice: { currency: "USDC", amount: 35321 },
+        yield: y.times(rand()).toNumber(),
+      },
+      {
+        id: "4",
+        issuerCountryCode: "CH",
+        issuerName: "Swiss Company",
+        initialFixingPrice: { currency: "USDC", amount: 33345 },
+        yield: y.times(rand()).toNumber(),
+      },
+      {
+        id: "5",
+        issuerCountryCode: "PL",
+        issuerName: "Web 3 Company",
+        initialFixingPrice: { currency: "USDC", amount: 20765 },
+        yield: y.times(rand()).toNumber(),
+      },
+      {
+        id: "6",
+        issuerCountryCode: "JM",
+        issuerName: "Waganda Company",
+        initialFixingPrice: { currency: "USDC", amount: 15456 },
+        yield: y.times(rand()).toNumber(),
+      },
+    ].sort((a, b) => {
+      if (a.yield === b.yield) return 0;
+      return a.yield > b.yield ? -1 : 1;
+    });
+  }, [props.values, props.deploymentInfo]);
+  const [selection, setSelection] = useState<string>(data[0].id);
+  const quote = useMemo<QuoteInternalEnhanced | undefined>(() => {
     const quote = selection ? data.find((item) => item.id === selection) : undefined;
     if (quote) {
-      const totalCouponPayment = new Decimal(values.totalIssuanceAmount).times(quote.yield).toNumber();
-      const maturity = differenceInMonths(values.maturityDate, issuanceDate);
+      const totalCouponPayment = new Decimal(props.values.totalIssuanceAmount).times(quote.yield).toNumber();
+      const maturity = differenceInMonths(props.values.maturityDate, issuanceDate);
       const absoluteCouponRate = new Decimal(quote.yield).times(maturity).div(12).toNumber();
-      const totalRepayment = new Decimal(totalCouponPayment).plus(values.totalIssuanceAmount).toNumber();
-
+      const totalRepayment = new Decimal(totalCouponPayment).plus(props.values.totalIssuanceAmount).toNumber();
       return { ...quote, totalCouponPayment, absoluteCouponRate, totalRepayment };
     }
 
     return undefined;
-  }, [values, selection]);
-
-  if (values === undefined) return null;
+  }, [props.values, data, selection]);
 
   const handleClose = () => setConfirmationPayload(undefined);
 
-  const handleBeforeSign = async (): Promise<DeploymentInfo> => {
-    const { publicKey: walletPublicKey } = ensure(wallet, "Wallet is unavailable. Is it connected?");
-    const response = await fetch(`${API_URL}/structured-product`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ investorPublicKey: walletPublicKey }),
-    });
-    return await response.json();
+  const handleBeforeSign = async (): Promise<QuoteInfo> => {
+    return ensure(quote, "No quote is selected");
   };
 
-  const handleSign = async (deploymentInfo: DeploymentInfo): Promise<DeploymentInfo> => {
-    const provider = new anchor.AnchorProvider(
-      connection,
-      ensure(anchorWallet, "Wallet is unavailable. Is it connected?"),
-      { commitment: "confirmed" }
-    );
+  const handleSign = async (quote: QuoteInfo): Promise<{ quote: QuoteInfo; investorATA: PublicKey }> => {
+    const wallet = ensure(anchorWallet, "Wallet is unavailable. Is it connected?");
+    const provider = new anchor.AnchorProvider(connection, wallet, { commitment: "confirmed" });
     const program = new anchor.Program(StructuredProductIDL, STRUCTURED_PRODUCT_PROGRAM_ID, provider);
     const treasuryWalletProgram = new anchor.Program(TreasuryWalletIDL, TREASURY_WALLET_PROGRAM_ID, provider);
     const transferSnapshotHookProgram = new anchor.Program(
@@ -213,31 +203,43 @@ export default function Page() {
     );
     const sdk = new StructuredNotesSdk(provider, program, treasuryWalletProgram, transferSnapshotHookProgram);
 
+    // Sign
     const [finalInitTx, finalIssueTx] = await provider.wallet.signAllTransactions(
-      deploymentInfo.transactions.map(sdk.decodeV0Tx)
+      props.deploymentInfo.transactions.map(sdk.decodeV0Tx)
     );
 
-    const initSimulation = await sdk.provider.connection.simulateTransaction(finalInitTx, {
-      sigVerify: false,
-      replaceRecentBlockhash: false,
-    });
-
-    console.log("initSimulation", initSimulation);
-    const finalInitTxId = await provider.connection.sendTransaction(finalInitTx);
-    await sdk.confirmTx(finalInitTxId);
-    const issueSimulation = await sdk.provider.connection.simulateTransaction(finalIssueTx, {
+    // Send "init" transaction
+    await sdk.provider.connection.simulateTransaction(finalInitTx, {
       sigVerify: false,
       replaceRecentBlockhash: true,
     });
-    console.log("issueSimulation", issueSimulation);
+    const finalInitTxId = await provider.connection.sendTransaction(finalInitTx);
+    await sdk.confirmTx(finalInitTxId);
+
+    console.log(
+      "Simulation: ",
+      await sdk.provider.connection.simulateTransaction(finalIssueTx, {
+        sigVerify: false,
+        replaceRecentBlockhash: true,
+      })
+    );
     const issueTxid = await provider.connection.sendTransaction(finalIssueTx);
     await sdk.confirmTx(issueTxid);
 
-    return deploymentInfo;
+    const mintPublicKey = new PublicKey(props.deploymentInfo.mint);
+    const investorATA = getAssociatedTokenAddressSync(
+      mintPublicKey,
+      wallet.publicKey,
+      false,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    return { quote, investorATA };
   };
 
-  const handleAfterSign = async (deploymentInfo: DeploymentInfo) => {
-    await router.push(`/token/${deploymentInfo.mint}`);
+  const handleAfterSign = async ({ quote, investorATA }: { quote: QuoteInfo; investorATA: PublicKey }) => {
+    props.onNext({ values: props.values, deploymentInfo: props.deploymentInfo, issuanceDate, quote, investorATA });
     report.success("Success!");
   };
 
@@ -255,19 +257,22 @@ export default function Page() {
               gap: 2,
             }}
           >
-            <Property k="Type" v={`${values.type}-${values.underlyingAsset}`} />
-            {values.type === StructuredProductType.BRC && (
+            <Property k="Type" v={`${props.values.type}-${props.values.underlyingAsset}`} />
+            {props.values.type === StructuredProductType.BRC && (
               <Property
                 k="Barrier"
-                v={`${formatPercentage(values.brcDetails.level / 100)} ${values.brcDetails.type}`}
+                v={`${formatPercentage(props.values.brcDetails.level / 100)} ${props.values.brcDetails.type}`}
               />
             )}
-            <Property k="Issuance amount" v={`${values.currency} ${formatDecimal(values.totalIssuanceAmount)}`} />
+            <Property
+              k="Issuance amount"
+              v={`${props.values.currency} ${formatDecimal(props.values.totalIssuanceAmount)}`}
+            />
             <Property
               k="Maturity date"
               v={
-                <Info tooltip={formatDateUTC(values.maturityDate, true, true)}>
-                  {formatDate(values.maturityDate, false)}
+                <Info tooltip={formatDateUTC(props.values.maturityDate, true, true)}>
+                  {formatDate(props.values.maturityDate, false)}
                 </Info>
               }
             />
@@ -276,7 +281,7 @@ export default function Page() {
               v={
                 <Tooltip title="For demonstration purposes, the coupon frequency is set to 2 payments in this issuance.">
                   <Box sx={{ display: "inline-block", borderBottom: "1px solid #fff", cursor: "help" }}>
-                    {COUPON_FREQUENCY_NAMES[values.couponFrequency]}
+                    {COUPON_FREQUENCY_NAMES[props.values.couponFrequency]}
                   </Box>
                 </Tooltip>
               }
@@ -315,7 +320,7 @@ export default function Page() {
               <Property
                 horizontal
                 k="Total coupon payment"
-                v={`${values.currency} ${formatDecimal(quote.totalCouponPayment)}`}
+                v={`${props.values.currency} ${formatDecimal(quote.totalCouponPayment)}`}
               />
               <Property
                 horizontal
@@ -326,22 +331,22 @@ export default function Page() {
                       <Text component="span" variant="400|12px|16px" color="oxfordBlue500" sx={{ mr: "1ch" }}>
                         Up to
                       </Text>{" "}
-                      {`${values.currency} ${formatDecimal(quote.totalRepayment)}`}
+                      {`${props.values.currency} ${formatDecimal(quote.totalRepayment)}`}
                     </Box>
                   </Tooltip>
                 }
               />
             </Stack>
-            {values.type === StructuredProductType.BRC && (
+            {props.values.type === StructuredProductType.BRC && (
               <>
                 <Divider />
                 <BRC
-                  type={values.brcDetails.type}
-                  barrier={values.brcDetails.level}
+                  type={props.values.brcDetails.type}
+                  barrier={props.values.brcDetails.level}
                   coupon={quote.absoluteCouponRate * 100}
-                  underlyingAsset={values.underlyingAsset}
-                  currency={values.currency}
-                  issuanceAmount={values.totalIssuanceAmount}
+                  underlyingAsset={props.values.underlyingAsset}
+                  currency={props.values.currency}
+                  issuanceAmount={props.values.totalIssuanceAmount}
                   initialFixingPrice={quote.initialFixingPrice.amount}
                 />
               </>
@@ -374,9 +379,9 @@ export default function Page() {
               k="Investment amount"
               v={
                 <>
-                  {values.currency}{" "}
+                  {props.values.currency}{" "}
                   <Text component="span" variant="500|18px|23px">
-                    {formatDecimal(values.totalIssuanceAmount)}
+                    {formatDecimal(props.values.totalIssuanceAmount)}
                   </Text>
                 </>
               }
@@ -387,7 +392,7 @@ export default function Page() {
             <Property
               horizontal
               k="Total coupon payment"
-              v={`${values.currency} ${formatDecimal(confirmationPayload.totalCouponPayment)}`}
+              v={`${props.values.currency} ${formatDecimal(confirmationPayload.totalCouponPayment)}`}
             />
             <Property
               horizontal
@@ -397,7 +402,7 @@ export default function Page() {
                   <Text component="span" variant="400|12px|16px" color="oxfordBlue500" sx={{ mr: "1ch" }}>
                     Up to
                   </Text>{" "}
-                  {`${values.currency} ${formatDecimal(confirmationPayload.totalRepayment)}`}
+                  {`${props.values.currency} ${formatDecimal(confirmationPayload.totalRepayment)}`}
                 </>
               }
             />

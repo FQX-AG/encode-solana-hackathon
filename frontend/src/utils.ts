@@ -1,7 +1,7 @@
 import { CouponFrequency } from "@/constants";
 
-export function ensure<T>(value: T | undefined, error: string): T {
-  if (value === undefined) throw new Error(error);
+export function ensure<T>(value: T | undefined | null, error: string): T {
+  if (value === undefined || value === null) throw new Error(error);
 
   return value;
 }

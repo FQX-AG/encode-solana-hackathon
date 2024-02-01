@@ -3,7 +3,7 @@ import Stack from "@mui/material/Stack";
 import { styled, SxProps, Theme } from "@mui/material/styles";
 import { clamp, inRange } from "lodash-es";
 import * as React from "react";
-import { CSSProperties, ReactNode, useMemo, useState } from "react";
+import { CSSProperties, ReactNode, Ref, RefObject, useMemo, useRef, useState } from "react";
 
 import { Tooltip } from "@/components/Tooltip";
 import { Text } from "@/components/Text";
@@ -161,13 +161,11 @@ const DotComponent = (
   props: Dot & {
     onMouseEnter?: React.MouseEventHandler<SVGSVGElement>;
     onMouseLeave?: React.MouseEventHandler<SVGSVGElement>;
+    boundaryElement: HTMLDivElement;
   }
 ) => {
   const [anchorEl, setAnchorEl] = useState<SVGSVGElement | null>(null);
   const popperProps = useMemo<Partial<PopperProps>>(() => {
-    if (typeof window === "undefined") return {};
-    const boundaryElement = window.document.querySelector("[data-tooltip-boundary]");
-
     return {
       modifiers: [
         {
@@ -178,13 +176,13 @@ const DotComponent = (
           name: "preventOverflow",
           enabled: true,
           options: {
-            boundary: boundaryElement,
+            boundary: props.boundaryElement,
             rootBoundary: "document",
           },
         },
       ],
     };
-  }, []);
+  }, [props.boundaryElement]);
 
   let size, strokeWidth;
   switch (props.variant) {
@@ -269,6 +267,7 @@ type ProgressBarProps = {
 };
 
 export function ProgressBar(props: ProgressBarProps) {
+  const [boundaryElement, setBoundaryElement] = useState<HTMLDivElement | null>(null);
   const bars = useMemo(() => {
     return props.bars
       ?.filter<Bar>((bar): bar is Bar => !!bar)
@@ -295,7 +294,10 @@ export function ProgressBar(props: ProgressBarProps) {
   }, [props.dots]);
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", ...props.sx }}>
+    <Box
+      ref={(element) => setBoundaryElement(element instanceof HTMLDivElement ? element : null)}
+      sx={{ display: "flex", flexDirection: "column", ...props.sx }}
+    >
       <Box sx={{ display: "flex", alignItems: "flex-end" }}>
         {topTickers?.map((ticker, index) => (
           <TopTicker key={index} marginBottom={bars?.some((bar) => bar.secondaryLabel) ? 10 : 0} {...ticker} />
@@ -360,14 +362,16 @@ export function ProgressBar(props: ProgressBarProps) {
             }}
           />
         ))}
-        {dots?.map((dot, index) => (
-          <DotComponent
-            key={index}
-            {...dot}
-            onMouseEnter={props.onDotHoverTargetChange && (() => props.onDotHoverTargetChange?.(dot.id))}
-            onMouseLeave={props.onDotHoverTargetChange && (() => props.onDotHoverTargetChange?.(undefined))}
-          />
-        ))}
+        {boundaryElement &&
+          dots?.map((dot, index) => (
+            <DotComponent
+              key={index}
+              {...dot}
+              onMouseEnter={props.onDotHoverTargetChange && (() => props.onDotHoverTargetChange?.(dot.id))}
+              onMouseLeave={props.onDotHoverTargetChange && (() => props.onDotHoverTargetChange?.(undefined))}
+              boundaryElement={boundaryElement}
+            />
+          ))}
       </Box>
 
       {bars && bars.some((bar) => bar.label) && (
@@ -418,9 +422,8 @@ export function ProgressBar(props: ProgressBarProps) {
       )}
 
       <Box
-        sx={{ display: "flex", alignItems: "flex-start" }}
+        sx={{ display: "flex", alignItems: "flex-start", overflow: "hidden" }}
         style={props.bottomTickersContainerStyle}
-        data-tooltip-boundary
       >
         {bottomTickers?.map((ticker, index) => (
           <BottomTicker key={index} {...ticker} />

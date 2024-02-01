@@ -11,6 +11,7 @@ import { PaymentSchedule } from "@/components/paymentSchedule/PaymentSchedule";
 type Item = {
   type: "coupon" | "principal";
   scheduledAt: Date;
+  status: "scheduled" | "open" | "settled";
 };
 
 type NewIssuance2InnerProps = {
@@ -28,13 +29,21 @@ function NewIssuance2Inner(props: NewIssuance2InnerProps) {
       items.push({
         type: "coupon",
         scheduledAt: addMilliseconds(issuanceDate, timeStepInMilliseconds * (i + 1)),
+        status: "scheduled",
       });
     }
-    items.push({ type: "principal", scheduledAt: props.maturityDate });
+    items.push({ type: "principal", scheduledAt: props.maturityDate, status: "scheduled" });
     return items;
   }, [issuanceDate, props.couponsCount, props.maturityDate]);
 
-  return <PaymentSchedule issuanceDate={issuanceDate} maturityDate={props.maturityDate} payments={paymentsPreview} />;
+  return (
+    <PaymentSchedule
+      issuanceDate={issuanceDate}
+      maturityDate={props.maturityDate}
+      payments={paymentsPreview}
+      now={null}
+    />
+  );
 }
 
 export function NewIssuance2() {

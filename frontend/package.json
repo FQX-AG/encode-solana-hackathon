@@ -28,6 +28,7 @@
     "@solana/wallet-adapter-wallets": "^0.19.25",
     "@solana/web3.js": "1.89.1",
     "@vercel/analytics": "^1.1.2",
+    "axios": "^1.6.7",
     "chart.js": "^4.4.1",
     "chartjs-plugin-datalabels": "^2.2.0",
     "country-flag-icons": "^1.5.9",
