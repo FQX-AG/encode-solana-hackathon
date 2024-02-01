@@ -846,33 +846,6 @@ export class StructuredNotesSdk {
       })
       .instruction();
 
-    const metadataPDA = getPdaWithSeeds(
-      [
-        Buffer.from("metadata"),
-        new PublicKey(MPL_TOKEN_METADATA_PROGRAM_ID.toString()).toBuffer(),
-        mint.publicKey.toBuffer(),
-      ],
-      new PublicKey(MPL_TOKEN_METADATA_PROGRAM_ID.toString())
-    );
-
-    const addMetadataIx = await this.program.methods
-      .createMetadata(
-        "Encode Demo BRC",
-        "eBRC",
-        "https://shdw-drive.genesysgo.net/3V2fxRdcz9wE2MHoQUBxEEsDLKuUj5Nu9ZhxcJ1DA4ZX/metadata.json"
-      )
-      .accounts({
-        mint: mint.publicKey,
-        metadata: metadataPDA.publicKey,
-        authority: this.provider.publicKey,
-        structuredProduct: structuredProductPDA.publicKey,
-        systemProgram: SystemProgram.programId,
-        tokenProgram: TOKEN_2022_PROGRAM_ID,
-        metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
-        sysVar: SYSVAR_RENT_PUBKEY,
-      })
-      .instruction();
-
     // const lookupTableAddress = await this.createLookupTable([
     //   this.program.programId,
     //   this.transferSnapshotHookProgram.programId,
@@ -900,7 +873,6 @@ export class StructuredNotesSdk {
         advanceIx,
         createMintAccountIx,
         initIx,
-        addMetadataIx,
         ...paymentIxs,
         addAuthorizationIx,
       ],
@@ -927,6 +899,37 @@ export class StructuredNotesSdk {
       authorizedPubkey: this.provider.publicKey,
     });
 
+    const structuredProductPDA = getPdaWithSeeds(
+      [accounts.mint.toBuffer()],
+      this.program.programId
+    );
+    const metadataPDA = getPdaWithSeeds(
+      [
+        Buffer.from("metadata"),
+        new PublicKey(MPL_TOKEN_METADATA_PROGRAM_ID.toString()).toBuffer(),
+        accounts.mint.toBuffer(),
+      ],
+      new PublicKey(MPL_TOKEN_METADATA_PROGRAM_ID.toString())
+    );
+
+    const addMetadataIx = await this.program.methods
+      .createMetadata(
+        "Encode Demo BRC",
+        "eBRC",
+        "https://shdw-drive.genesysgo.net/3V2fxRdcz9wE2MHoQUBxEEsDLKuUj5Nu9ZhxcJ1DA4ZX/metadata.json"
+      )
+      .accounts({
+        mint: accounts.mint,
+        metadata: metadataPDA.publicKey,
+        authority: this.provider.publicKey,
+        structuredProduct: structuredProductPDA.publicKey,
+        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+        sysVar: SYSVAR_RENT_PUBKEY,
+      })
+      .instruction();
+
     const payIssuanceIx = await this.createPayIssuanceInstruction({
       mint: accounts.mint,
       paymentMint: accounts.paymentMint,
@@ -949,7 +952,13 @@ export class StructuredNotesSdk {
       });
 
     const signedIssueTx = await this.createAndSignV0Tx(
-      [advanceIx, payIssuanceIx, issueIx, withdrawIssuanceProceedsIx],
+      [
+        advanceIx,
+        addMetadataIx,
+        payIssuanceIx,
+        issueIx,
+        withdrawIssuanceProceedsIx,
+      ],
       [],
       nonceAccount.nonce
     );
