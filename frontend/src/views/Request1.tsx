@@ -27,7 +27,7 @@ export default function Request1(props: {
       try {
         const values = await validationSchema.validate(formValues, { stripUnknown: true });
         const walletPublicKey = ensure(wallet.publicKey, "Wallet public key is unavailable. Is your wallet connected?");
-        const { data: deploymentInfo } = await axios.post<DeploymentInfo>(`${API_URL}/structured-product`, {
+        const { data: deploymentInfo } = await axios.post<DeploymentInfo>(`${API_URL}/mock-issuer`, {
           investorPublicKey: walletPublicKey,
         });
 

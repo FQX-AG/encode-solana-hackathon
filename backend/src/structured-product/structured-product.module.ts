@@ -6,21 +6,21 @@ import { StructuredProductService } from './structured-product.service';
 import { BullModule } from '@nestjs/bull';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
-import { SchedulePaymentProcessor } from './processors/schedule-payment.processor';
+import { HandlePaymentProcessor } from './processors/handle-payment.processor';
 
 @Module({
   imports: [
     BullModule.registerQueue({
-      name: 'schedule-payment',
+      name: 'handle-payment',
     }),
     BullBoardModule.forFeature({
-      name: 'schedule-payment',
+      name: 'handle-payment',
       adapter: BullMQAdapter,
     }),
     SolanaClientModule,
     ConfigModule,
   ],
   controllers: [StructuredProductController],
-  providers: [StructuredProductService, SchedulePaymentProcessor],
+  providers: [StructuredProductService, HandlePaymentProcessor],
 })
 export class StructuredProductModule {}

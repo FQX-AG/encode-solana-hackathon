@@ -345,6 +345,11 @@ pub mod structured_product {
             system_program: &ctx.accounts.system_program.to_account_info(),
             authority: &ctx.accounts.structured_product.to_account_info(),
         };
+
+        msg!("Creating metadata");
+        msg!("Name: {}", name);
+        msg!("Symbol: {}", symbol);
+        msg!("Uri: {}", uri);
         let create_v1_cpi = CreateV1Cpi::new(
             &cpi_program,
             cpi_accounts,

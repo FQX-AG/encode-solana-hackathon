@@ -8,6 +8,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { ensure } from "@/utils";
 import { StructuredNotesSdk, StructuredProductIDL, TransferSnapshotHookIDL, TreasuryWalletIDL } from "@fqx/programs";
 import {
+  API_URL,
   COUPON_FREQUENCY_NAMES,
   STRUCTURED_PRODUCT_PROGRAM_ID,
   StructuredProductType,
@@ -33,6 +34,7 @@ import { Flag } from "@/components/Flag";
 import { Chip } from "@/components/Chip";
 import { BRC } from "@/components/graphs/BRC";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+import axios from "axios";
 
 const TAG_PROPS: Record<string, { children: string; sx: SxProps<Theme> }> = {
   bestOffer: {
@@ -234,6 +236,12 @@ export default function Request2(props: {
       TOKEN_2022_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID
     );
+
+    await axios.post(`${API_URL}/confirm-issuance`, {
+      mint: mintPublicKey.toBase58(),
+      txId: issueTxid,
+      investor: provider.publicKey.toBase58(),
+    });
 
     return { quote, investorATA };
   };

@@ -1,5 +1,5 @@
 import { AnchorProvider } from '@coral-xyz/anchor';
-import { getPdaWithSeeds } from '@fqx/programs';
+import { getPdaWithSeeds, StructuredNotesSdk } from '@fqx/programs';
 import { InjectQueue } from '@nestjs/bull';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -18,27 +18,54 @@ import { randomInt } from 'crypto';
 import { SdkFactory } from 'src/solana-client/sdk-factory';
 import { SOLANA_PROVIDER } from '../solana-client/contants';
 import { StructuredProductDeployDto } from './dtos/structured-product-deploy.dto';
+import { HandlePaymentJob } from './processors/handle-payment.processor';
+
+export const DefaultTaskConfig = {
+  attempts: 15,
+  backoff: { type: 'fixed', delay: 2000 },
+  removeOnComplete: 10000,
+  removeOnFail: 10000,
+  timeout: 180000,
+};
+
+export const getOneShotTaskConfigForDate = (
+  dueDate: Date | string | number,
+) => {
+  return {
+    ...DefaultTaskConfig,
+    delay: new Date(dueDate).getTime() - Date.now(),
+  };
+};
 
 @Injectable()
 export class StructuredProductService {
+  private issuerSdk: StructuredNotesSdk;
+  private serverSdk: StructuredNotesSdk;
+
   constructor(
     @Inject(SOLANA_PROVIDER)
     private readonly provider: AnchorProvider,
     private configService: ConfigService,
     private sdkFactory: SdkFactory,
-    @InjectQueue('schedule-payment')
-    private schedulePaymentQueue: Queue,
-  ) {}
-
-  async deploy(structuredProductDeployDto: StructuredProductDeployDto) {
-    const { investorPublicKey } = structuredProductDeployDto;
-
+    @InjectQueue('handle-payment')
+    private handlePaymentQueue: Queue<HandlePaymentJob>,
+  ) {
     const issuerSecretKey = Uint8Array.from(
       JSON.parse(this.configService.get<string>('ISSUER_SECRET_KEY')),
     );
     const issuer = Keypair.fromSecretKey(issuerSecretKey);
 
-    const issuerSdk = this.sdkFactory.getSdkForSigner(issuer);
+    const serverSecretKey = Uint8Array.from(
+      JSON.parse(this.configService.get<string>('SERVER_SECRET_KEY')),
+    );
+    const serverKeypair = Keypair.fromSecretKey(serverSecretKey);
+
+    this.issuerSdk = this.sdkFactory.getSdkForSigner(issuer);
+    this.serverSdk = this.sdkFactory.getSdkForSigner(serverKeypair);
+  }
+
+  async deploy(structuredProductDeployDto: StructuredProductDeployDto) {
+    const { investorPublicKey } = structuredProductDeployDto;
 
     const paymentMint = new PublicKey(
       this.configService.get<string>('PAYMENT_TOKEN_MINT_ADDRESS'),
@@ -57,7 +84,7 @@ export class StructuredProductService {
     console.log('Investor ATA', investorATA.toBase58());
 
     const investorTokenAccountInfo =
-      await issuerSdk.provider.connection.getAccountInfo(investorATA);
+      await this.issuerSdk.provider.connection.getAccountInfo(investorATA);
 
     const ixs: TransactionInstruction[] = [];
     let investorTokenAccount = null;
@@ -78,7 +105,7 @@ export class StructuredProductService {
       if (investorTokenAccountInfo === null) {
         console.log('Creating investor ATA');
         const createInvestorATAIx = createAssociatedTokenAccountInstruction(
-          issuer.publicKey,
+          this.issuerSdk.provider.publicKey,
           investorATA,
           new PublicKey(investorPublicKey),
           paymentMint,
@@ -108,7 +135,7 @@ export class StructuredProductService {
 
     const treasuryWalletAuthorityPDA = getPdaWithSeeds(
       [treasuryWalletPublicKey.toBuffer()],
-      issuerSdk.treasuryWalletProgram.programId,
+      this.issuerSdk.treasuryWalletProgram.programId,
     );
 
     console.log(
@@ -133,8 +160,8 @@ export class StructuredProductService {
     const nonce2 = Keypair.generate();
 
     const [nonce1Ixs, nonce2Ixs] = await Promise.all([
-      issuerSdk.createDurableNonceAccountInstructions(nonce1),
-      issuerSdk.createDurableNonceAccountInstructions(nonce2),
+      this.issuerSdk.createDurableNonceAccountInstructions(nonce1),
+      this.issuerSdk.createDurableNonceAccountInstructions(nonce2),
     ]);
 
     ixs.push(...nonce1Ixs, ...nonce2Ixs);
@@ -145,45 +172,47 @@ export class StructuredProductService {
       signers.map((s) => s.publicKey.toBase58()),
     );
 
-    await issuerSdk.sendAndConfirmV0Tx(ixs, signers);
+    await this.issuerSdk.sendAndConfirmV0Tx(ixs, signers);
 
-    const encodedInitSPTx = await issuerSdk.signStructuredProductInitOffline(
-      {
-        investor: new PublicKey(investorPublicKey),
-        issuer: issuer.publicKey,
-        issuerTreasuryWallet: treasuryWalletPublicKey,
-        paymentMint: paymentMint,
-        issuancePricePerUnit: new BN(1000),
-        supply: new BN(1000),
-        payments: [
-          {
-            principal: false,
-            amount: new BN(1000),
-            paymentDateOffsetSeconds: new BN(1),
-            paymentMint: paymentMint,
-          },
-          {
-            principal: true,
-            paymentDateOffsetSeconds: new BN(1),
-            paymentMint: paymentMint,
-            priceAuthority: this.provider.publicKey,
-          },
-        ],
-      },
-      mint,
-      nonce1.publicKey,
-    );
-    const encodedIssueSPTx = await issuerSdk.signStructuredProductIssueOffline(
-      {
-        investor: new PublicKey(investorPublicKey),
-        issuer: issuer.publicKey,
-        issuerTreasuryWallet: treasuryWalletPublicKey,
-        mint: mint.publicKey,
-        paymentMint: paymentMint,
-        issuanceProceedsBeneficiary: treasuryWalletATA,
-      },
-      nonce2.publicKey,
-    );
+    const encodedInitSPTx =
+      await this.issuerSdk.signStructuredProductInitOffline(
+        {
+          investor: new PublicKey(investorPublicKey),
+          issuer: this.issuerSdk.provider.publicKey,
+          issuerTreasuryWallet: treasuryWalletPublicKey,
+          paymentMint: paymentMint,
+          issuancePricePerUnit: new BN(1000),
+          supply: new BN(1000),
+          payments: [
+            {
+              principal: false,
+              amount: new BN(1000),
+              paymentDateOffsetSeconds: new BN(1),
+              paymentMint: paymentMint,
+            },
+            {
+              principal: true,
+              paymentDateOffsetSeconds: new BN(1),
+              paymentMint: paymentMint,
+              priceAuthority: this.serverSdk.provider.publicKey,
+            },
+          ],
+        },
+        mint,
+        nonce1.publicKey,
+      );
+    const encodedIssueSPTx =
+      await this.issuerSdk.signStructuredProductIssueOffline(
+        {
+          investor: new PublicKey(investorPublicKey),
+          issuer: this.issuerSdk.provider.publicKey,
+          issuerTreasuryWallet: treasuryWalletPublicKey,
+          mint: mint.publicKey,
+          paymentMint: paymentMint,
+          issuanceProceedsBeneficiary: treasuryWalletATA,
+        },
+        nonce2.publicKey,
+      );
 
     return {
       transactions: [encodedInitSPTx, encodedIssueSPTx],
@@ -214,11 +243,85 @@ export class StructuredProductService {
     );
   }
 
-  async schedulePayment(schedulePaymentDto: any) {
-    const { mintPublicKey } = schedulePaymentDto;
-    const job = await this.schedulePaymentQueue.add({
-      mintPublicKey,
-    });
-    return job;
+  async schedulePayment(schedulePaymentDto: {
+    mint: string;
+    investor: string;
+  }) {
+    const { mint: mintPubkeyString, investor } = schedulePaymentDto;
+    const mint = new PublicKey(mintPubkeyString);
+
+    const snapshotConfigPDA = getPdaWithSeeds(
+      [Buffer.from('snapshots'), mint.toBuffer()],
+      this.serverSdk.transferSnapshotHookProgram.programId,
+    );
+
+    const snapshotConfig =
+      await this.serverSdk.transferSnapshotHookProgram.account.snapshotConfig.fetch(
+        snapshotConfigPDA.publicKey,
+      );
+
+    const { snapshots, activatedDate } = snapshotConfig;
+
+    const paymentsToSchedule: HandlePaymentJob[] = [];
+    const beneficiary = new PublicKey(investor);
+
+    const beneficiarySPATA = getAssociatedTokenAddressSync(
+      mint,
+      beneficiary,
+      false,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+    );
+
+    const paymentMint = new PublicKey(
+      this.configService.get<string>('PAYMENT_TOKEN_MINT_ADDRESS'),
+    );
+
+    const beneficiaryPaymentTokenATA = getAssociatedTokenAddressSync(
+      paymentMint,
+      beneficiary,
+      false,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+    );
+
+    for (let i = 0; i < snapshots.length; i++) {
+      const snapshot = snapshots[i];
+      const paymentDate = new Date(
+        activatedDate.add(snapshot).toNumber() * 1000,
+      );
+      console.log('paymentTimestamp', paymentDate.toString());
+
+      paymentsToSchedule.push({
+        beneficiary: beneficiary.toBase58(),
+        beneficiaryPaymentTokenAccount: beneficiaryPaymentTokenATA.toBase58(),
+        beneficiaryTokenAccount: beneficiarySPATA.toBase58(),
+        paymentDate: paymentDate,
+        mint: mint.toBase58(),
+        snapshotOffset: snapshot.toNumber(),
+        principal: false,
+      });
+
+      if (i === snapshots.length - 1) {
+        paymentsToSchedule.push({
+          beneficiary: beneficiary.toBase58(),
+          beneficiaryPaymentTokenAccount: beneficiaryPaymentTokenATA.toBase58(),
+          beneficiaryTokenAccount: beneficiarySPATA.toBase58(),
+          paymentDate: paymentDate,
+          mint: mint.toBase58(),
+          snapshotOffset: snapshot.toNumber(),
+          principal: true,
+        });
+      }
+    }
+
+    await Promise.all(
+      paymentsToSchedule.map((payment) =>
+        this.handlePaymentQueue.add(
+          payment,
+          getOneShotTaskConfigForDate(payment.paymentDate),
+        ),
+      ),
+    );
   }
 }
