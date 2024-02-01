@@ -2,5 +2,6 @@ packages:
   - "backend"
   - "frontend"
   - "programs"
+  - "rpc-proxy"
   # exclude packages that are inside test directories
   - "!**/test/**"
