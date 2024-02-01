@@ -1,27 +1,23 @@
 import { AnchorProvider } from '@coral-xyz/anchor';
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { getPdaWithSeeds } from '@fqx/programs';
+import { InjectQueue } from '@nestjs/bull';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
   createAssociatedTokenAccountInstruction,
   createMintToCheckedInstruction,
   getAssociatedTokenAddressSync,
-  TOKEN_2022_PROGRAM_ID,
   unpackAccount,
 } from '@solana/spl-token';
-import {
-  Keypair,
-  PublicKey,
-  SystemProgram,
-  SYSVAR_RENT_PUBKEY,
-  TransactionInstruction,
-} from '@solana/web3.js';
+import { Keypair, PublicKey, TransactionInstruction } from '@solana/web3.js';
 import * as BN from 'bn.js';
+import { Queue } from 'bull';
 import { randomInt } from 'crypto';
 import { SdkFactory } from 'src/solana-client/sdk-factory';
 import { SOLANA_PROVIDER } from '../solana-client/contants';
 import { StructuredProductDeployDto } from './dtos/structured-product-deploy.dto';
-import { getPdaWithSeeds } from '@fqx/programs';
 
 @Injectable()
 export class StructuredProductService {
@@ -30,6 +26,8 @@ export class StructuredProductService {
     private readonly provider: AnchorProvider,
     private configService: ConfigService,
     private sdkFactory: SdkFactory,
+    @InjectQueue('schedule-payment')
+    private schedulePaymentQueue: Queue,
   ) {}
 
   async deploy(structuredProductDeployDto: StructuredProductDeployDto) {
@@ -214,5 +212,13 @@ export class StructuredProductService {
       [],
       TOKEN_2022_PROGRAM_ID,
     );
+  }
+
+  async schedulePayment(schedulePaymentDto: any) {
+    const { mintPublicKey } = schedulePaymentDto;
+    const job = await this.schedulePaymentQueue.add({
+      mintPublicKey,
+    });
+    return job;
   }
 }
