@@ -7,6 +7,15 @@ import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, TOKEN_2022_
 import { Payment } from "@/types";
 import { BN } from "@coral-xyz/anchor";
 
+export type BRCAccount = {
+  initialPrincipal: number;
+  initialFixingPrice: number;
+  barrier: number; // absolute
+  finalPrincipal?: number;
+  finalFixingPrice?: number;
+  finalFixingDate?: Date;
+};
+
 export type TokenInfo = {
   payments: Payment[];
   balance: number;
@@ -14,15 +23,18 @@ export type TokenInfo = {
   principal: number;
   issuanceDate: Date;
   mint: PublicKey;
+  currentUnderlyingPrice: number;
+  brcAccount: BRCAccount;
 };
 
 export async function getTokenInfo(provider: anchor.AnchorProvider, mint: web3.PublicKey): Promise<TokenInfo> {
   const sdk = createSDK(provider);
 
   // structuredProduct
-  const { value: mintAccountInfo } = await sdk.provider.connection.getParsedAccountInfo(mint);
-  const mintAuthority = new PublicKey((mintAccountInfo!.data as ParsedAccountData).parsed.info.mintAuthority);
-  const structuredProduct = await sdk.program.account.structuredProductConfig.fetch(mintAuthority);
+  const structuredProductPda = await getPdaWithSeeds([mint.toBuffer()], sdk.program.programId);
+  const structuredProductPubKey = structuredProductPda.publicKey;
+  const structuredProduct = await sdk.program.account.structuredProductConfig.fetch(structuredProductPubKey);
+  console.log("STRUCTURED PRODUCT", structuredProduct);
 
   // payments
   const snapshotConfigPDA = await getPdaWithSeeds(
@@ -93,6 +105,18 @@ export async function getTokenInfo(provider: anchor.AnchorProvider, mint: web3.P
   const firstScheduledPayment = payments.find((payment) => payment.status === "scheduled");
   if (firstScheduledPayment) firstScheduledPayment.status = "open";
 
+  const { currentPrice } = await sdk.getCurrentPriceFromDummyOracle(
+    "CRZYBTC",
+    new PublicKey("HTDGotJ2EukPM8HsTgRroFXPStkUgszDB8MJf5Paf4c8")
+  );
+  const brcPDA = await getPdaWithSeeds([structuredProductPubKey.toBuffer()], sdk.brcProgram.programId);
+  console.log("BRCPDA", brcPDA.publicKey.toBase58());
+  const brcAccountInfo = await sdk.provider.connection.getAccountInfo(brcPDA.publicKey);
+  console.log("BRC ACCOUNT INFO", brcAccountInfo);
+  // TODO: I DON'T KNOW WHY THIS ACCOUNT DISCRIMINATOR IS WRONG!! ????
+  const brcAccount = await sdk.brcProgram.account.brcInfo.fetch(brcPDA.publicKey);
+  console.log(brcAccount);
+
   return {
     payments,
     balance: balance!,
@@ -100,5 +124,16 @@ export async function getTokenInfo(provider: anchor.AnchorProvider, mint: web3.P
     principal: structuredProduct.issuancePaymentAmountPerUnit.toNumber(),
     issuanceDate: new Date(structuredProduct.issuanceDate!.toNumber() * 1000),
     mint: mint,
+    currentUnderlyingPrice: currentPrice.toNumber(),
+    brcAccount: {
+      initialPrincipal: brcAccount.initialPrincipal.toNumber(),
+      initialFixingPrice: brcAccount.initialFixingPrice.toNumber(),
+      barrier: brcAccount.barrier.toNumber(),
+      finalFixingDate: brcAccount.finalFixingDate ? new Date(brcAccount.finalFixingDate.toNumber() * 1000) : undefined,
+      finalFixingPrice: brcAccount.finalUnderlyingFixingPrice
+        ? brcAccount.finalUnderlyingFixingPrice.toNumber()
+        : undefined,
+      finalPrincipal: brcAccount.finalPrincipal ? brcAccount.finalPrincipal.toNumber() : undefined,
+    },
   };
 }

@@ -26,7 +26,7 @@ export class OracleService {
       this.configService.get<string>('PAYMENT_TOKEN_MINT_ADDRESS'),
     );
   }
-  @Interval(100000)
+  @Interval(5000)
   async updatePricing() {
     const oldPrice = await this.serverSdk.getCurrentPriceFromDummyOracle(
       'CRZYBTC',

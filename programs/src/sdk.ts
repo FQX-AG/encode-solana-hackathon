@@ -340,6 +340,8 @@ export class StructuredNotesSdk {
       this.brcProgram.programId
     );
 
+    console.log("brcPDA", brcPDA.publicKey.toBase58());
+
     return this.brcProgram.methods
       .initialize(
         underlyingSymbol,
@@ -448,8 +450,6 @@ export class StructuredNotesSdk {
       principal,
       paymentTimestamp
     );
-
-    console.log("paymentPDA", paymentPDA.publicKey.toBase58());
 
     const snapshotConfigPDA = getPdaWithSeeds(
       [Buffer.from("snapshots"), accounts.structuredProductMint.toBuffer()],
@@ -626,6 +626,8 @@ export class StructuredNotesSdk {
       [structuredProductPDA.publicKey.toBuffer()],
       this.brcProgram.programId
     );
+
+    console.log("brcPDA", brcPDA.publicKey.toBase58());
 
     return await this.brcProgram.methods
       .setFinalFixingPrice(underlyingSymbol, paymentDateOffsetSeconds)

@@ -11,9 +11,16 @@ import { Text } from "@/components/Text";
 import { BRCType } from "@/constants";
 import { BRC } from "@/components/graphs/BRC";
 import { Decimal } from "decimal.js";
+import { BRCAccount } from "@/web3/token";
 
-export function Token2(props: { note: ENoteInfo; payments: Payment[]; now: Date; balance: number }) {
-  const underlyingAssetValue = 42_264;
+export function Token2(props: {
+  note: ENoteInfo;
+  payments: Payment[];
+  now: Date;
+  balance: number;
+  currentUnderlyingPrice: number;
+  brcAccount: BRCAccount;
+}) {
   const initialFixingPrice = 43_000;
   const barrierLevel = 80;
 
@@ -39,10 +46,22 @@ export function Token2(props: { note: ENoteInfo; payments: Payment[]; now: Date;
                 k={
                   <Stack direction="row" spacing={1} alignItems="center">
                     {`${props.note.structuredProductDetails.underlyingAsset} / ${props.note.currency}`}
-                    <Chip sx={{ color: (theme) => theme.palette.info.main }}>Live</Chip>
+                    {props.brcAccount.finalFixingDate ? (
+                      <Chip sx={{ color: (theme) => theme.palette.primary.main }}>Final</Chip>
+                    ) : (
+                      <Chip sx={{ color: (theme) => theme.palette.info.main }}>Live</Chip>
+                    )}
                   </Stack>
                 }
-                v={<Text variant="500|32px|35px">{formatDecimal(underlyingAssetValue)}</Text>}
+                v={
+                  <Text variant="500|32px|35px">
+                    {formatDecimal(
+                      props.brcAccount.finalFixingPrice
+                        ? props.brcAccount.finalFixingPrice
+                        : props.currentUnderlyingPrice
+                    )}
+                  </Text>
+                }
               />
               <Property
                 horizontal

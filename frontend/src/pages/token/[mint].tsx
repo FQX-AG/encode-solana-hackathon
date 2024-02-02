@@ -4,7 +4,7 @@ import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import * as anchor from "@coral-xyz/anchor";
 import * as web3 from "@solana/web3.js";
 import { PublicKey } from "@solana/web3.js";
-import { getTokenInfo, TokenInfo } from "@/web3/token";
+import { BRCAccount, getTokenInfo, TokenInfo } from "@/web3/token";
 import { ENoteInfo, Payment } from "@/types";
 import { StructuredProductType, StructuredProductUnderlyingAsset } from "@/constants";
 import { Decimal } from "decimal.js";
@@ -15,6 +15,8 @@ import { generateENoteName } from "@/utils";
 import { addSeconds, isSameSecond, isWithinInterval } from "date-fns";
 
 function PageInner(props: {
+  currentUnderlyingPrice: number;
+  brcAccount: BRCAccount;
   issuanceDate: Date;
   principal: number;
   balance: number;
@@ -53,7 +55,14 @@ function PageInner(props: {
   return (
     <Stack spacing={6}>
       <Token1 note={note} units={props.balance} signer={signer} />
-      <Token2 note={note} payments={props.payments} now={props.now} balance={props.balance} />
+      <Token2
+        note={note}
+        payments={props.payments}
+        now={props.now}
+        balance={props.balance}
+        currentUnderlyingPrice={props.currentUnderlyingPrice}
+        brcAccount={props.brcAccount}
+      />
     </Stack>
   );
 }
@@ -107,11 +116,13 @@ export default function Page(props: PageProps) {
 
   return (
     <PageInner
+      currentUnderlyingPrice={tokenInfo.currentUnderlyingPrice}
       issuanceDate={tokenInfo.issuanceDate}
       principal={tokenInfo.principal}
       balance={tokenInfo.balance}
       payments={tokenInfo.payments}
       mint={tokenInfo.mint}
+      brcAccount={tokenInfo.brcAccount}
       now={now}
     />
   );

@@ -41,22 +41,24 @@ pub mod brc_price_authority {
         initial_fixing_price: u64,
         barrier_in_basis_points: u64,
     ) -> Result<()> {
-        let brc_config = &mut ctx.accounts.brc;
+        msg!("Initializing BRC at {}", ctx.accounts.brc.key().clone());
+        let brc = &mut ctx.accounts.brc;
 
-        brc_config.authority = *ctx.accounts.authority.key;
-        brc_config.underlying_symbol = underlying_symbol;
-        brc_config.initial_principal = initial_principal;
-        brc_config.initial_fixing_price = initial_fixing_price;
+        brc.authority = *ctx.accounts.authority.key;
+        brc.underlying_symbol = underlying_symbol;
+        brc.initial_principal = initial_principal;
+        brc.initial_fixing_price = initial_fixing_price;
         // initial fixing prices scaled by the barrier_in_basis_points
-        brc_config.barrier = initial_fixing_price * barrier_in_basis_points / 10000;
-        brc_config.target_payment = ctx.accounts.payment.key();
-        brc_config.dummy_oracle = ctx.accounts.dummy_oracle.key();
+        brc.barrier = initial_fixing_price * barrier_in_basis_points / 10000;
+        brc.target_payment = ctx.accounts.payment.key();
+        brc.dummy_oracle = ctx.accounts.dummy_oracle.key();
         // to be set by the final fixing price
-        brc_config.final_principal = None;
-        brc_config.final_underlying_fixing_price = None;
-        brc_config.final_fixing_date = None;
+        brc.final_principal = None;
+        brc.final_underlying_fixing_price = None;
+        brc.final_fixing_date = None;
 
-        brc_config.bump = ctx.bumps.brc;
+        brc.bump = ctx.bumps.brc;
+        msg!("Brc: {:?}", brc);
 
         Ok(())
     }
@@ -84,6 +86,7 @@ pub mod brc_price_authority {
             final_underlying_fixing_price,
         );
 
+        msg!("Finalizing brc at {}", ctx.accounts.brc.key());
         msg!("Initial principal: {}, initial_fixing_price: {}, barrier: {}, final_fixing_price: {}, Final principal: {}", 
             initial_principal, initial_fixing_price, barrier, final_underlying_fixing_price, final_principal);
 
@@ -127,8 +130,8 @@ pub struct Initialize<'info> {
     seeds::program=structured_product_program)]
     pub payment: AccountInfo<'info>,
     // TODO: space calc
-    #[account(init, seeds=[structured_product.key().as_ref()], bump, payer=authority, space=200)]
-    pub brc: Account<'info, BRC>,
+    #[account(init, seeds=[structured_product.key().as_ref()], bump, payer=authority, space=500)]
+    pub brc: Account<'info, BRCInfo>,
     #[account(seeds=[authority.key().as_ref(), underlying_symbol.as_bytes()], bump=dummy_oracle.bump, seeds::program=dummy_oracle_program)]
     pub dummy_oracle: Account<'info, DummyOracleAccount>,
     pub dummy_oracle_program: Program<'info, DummyOracle>,
@@ -140,7 +143,7 @@ pub struct Initialize<'info> {
 pub struct SetFinalFixingPrice<'info> {
     pub payer: Signer<'info>,
     #[account(mut, seeds=[structured_product.key().as_ref()], bump=brc.bump)]
-    pub brc: Account<'info, BRC>,
+    pub brc: Account<'info, BRCInfo>,
     pub structured_product: Account<'info, StructuredProductConfig>,
     pub payment: Account<'info, Payment>,
     pub dummy_oracle: Account<'info, DummyOracleAccount>,
@@ -149,7 +152,8 @@ pub struct SetFinalFixingPrice<'info> {
 }
 
 #[account]
-pub struct BRC {
+#[derive(Debug)]
+pub struct BRCInfo {
     pub authority: Pubkey,
     pub underlying_symbol: String,
     pub initial_principal: u64,

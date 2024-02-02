@@ -12,7 +12,7 @@ export class StructuredProductController {
   }
 
   @Post('confirm-issuance') // TODO: Rename
-  async schedulePayment(
+  async confirmIssuance(
     @Body()
     schedulePaymentDto: {
       mint: string;
@@ -20,6 +20,6 @@ export class StructuredProductController {
       investor: string;
     },
   ) {
-    return this.structuredProductService.schedulePayment(schedulePaymentDto);
+    return this.structuredProductService.confirmIssuance(schedulePaymentDto);
   }
 }

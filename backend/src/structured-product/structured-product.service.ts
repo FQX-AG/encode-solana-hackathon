@@ -76,11 +76,6 @@ export class StructuredProductService {
       this.configService.get<string>('PAYMENT_TOKEN_MINT_ADDRESS'),
     );
 
-    this.logger.log(
-      'Investor public key',
-      structuredProductDeployDto.investorPublicKey,
-    );
-
     const investorATA = getAssociatedTokenAddressSync(
       paymentMint,
       new PublicKey(structuredProductDeployDto.investorPublicKey),
@@ -88,8 +83,6 @@ export class StructuredProductService {
       TOKEN_2022_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID,
     );
-
-    this.logger.log('Investor ATA', investorATA.toBase58());
 
     const investorTokenAccountInfo =
       await this.issuerSdk.provider.connection.getAccountInfo(investorATA);
@@ -111,7 +104,6 @@ export class StructuredProductService {
       (investorTokenAccount && investorTokenAccount.amount === 0n)
     ) {
       if (investorTokenAccountInfo === null) {
-        this.logger.log('Creating investor ATA');
         const createInvestorATAIx = createAssociatedTokenAccountInstruction(
           this.issuerSdk.provider.publicKey,
           investorATA,
@@ -122,7 +114,6 @@ export class StructuredProductService {
         );
         ixs.push(createInvestorATAIx);
       }
-      this.logger.log('Minting payment token to investor');
       ixs.push(this.createMintPaymentTokenIx(investorATA, 1000000000000000n));
       const serverSecretKey = Uint8Array.from(
         JSON.parse(this.configService.get<string>('SERVER_SECRET_KEY')),
@@ -136,19 +127,9 @@ export class StructuredProductService {
       this.configService.get<string>('TREASURY_WALLET_PUBLIC_KEY'),
     );
 
-    this.logger.log(
-      'Treasury wallet public key',
-      treasuryWalletPublicKey.toBase58(),
-    );
-
     const treasuryWalletAuthorityPDA = getPdaWithSeeds(
       [treasuryWalletPublicKey.toBuffer()],
       this.issuerSdk.treasuryWalletProgram.programId,
-    );
-
-    this.logger.log(
-      'Treasury wallet authority PDA',
-      treasuryWalletAuthorityPDA.publicKey.toBase58(),
     );
 
     const treasuryWalletATA = getAssociatedTokenAddressSync(
@@ -158,8 +139,6 @@ export class StructuredProductService {
       TOKEN_2022_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID,
     );
-
-    this.logger.log('Treasury wallet ATA', treasuryWalletATA.toBase58());
 
     const mint = Keypair.generate();
 
@@ -173,11 +152,6 @@ export class StructuredProductService {
 
     ixs.push(...nonce1Ixs, ...nonce2Ixs);
     signers.push(nonce1, nonce2);
-
-    this.logger.log(
-      'Signers',
-      signers.map((s) => s.publicKey.toBase58()),
-    );
 
     await this.issuerSdk.sendAndConfirmV0Tx(ixs, signers);
 
@@ -292,7 +266,7 @@ export class StructuredProductService {
     );
   }
 
-  async schedulePayment(schedulePaymentDto: {
+  async confirmIssuance(schedulePaymentDto: {
     mint: string;
     investor: string;
   }) {
@@ -333,13 +307,30 @@ export class StructuredProductService {
       TOKEN_2022_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID,
     );
+    //
+    // const structProductPDA = getPdaWithSeeds(
+    //   [mint.toBuffer()],
+    //   this.serverSdk.program.programId,
+    // );
+    //
+    // const brcPDA = getPdaWithSeeds(
+    //   [structProductPDA.publicKey.toBuffer()],
+    //   this.serverSdk.brcProgram.programId,
+    // );
+    //
+    // console.log('brcPDA', brcPDA.publicKey.toBase58());
+    //
+    // const brcAccount = await this.serverSdk.brcProgram.account.brc.fetch(
+    //   brcPDA.publicKey,
+    // );
+
+    // console.log('brcAccount', brcAccount);
 
     for (let i = 0; i < snapshots.length; i++) {
       const snapshot = snapshots[i];
       const paymentDate = new Date(
         activatedDate.add(snapshot).toNumber() * 1000,
       );
-      this.logger.log('paymentTimestamp', paymentDate.toString());
 
       paymentsToSchedule.push({
         beneficiary: beneficiary.toBase58(),

@@ -364,6 +364,21 @@ describe("structured-product", () => {
     await sdk.confirmTx(issueTxid);
     console.log("Confirmed issue tx!", issueTxid);
 
+    const structuredProductPDA = await getPdaWithSeeds(
+      [mint.publicKey.toBuffer()],
+      structuredProductProgram.programId
+    );
+    const brcPDA = await getPdaWithSeeds(
+      [structuredProductPDA.publicKey.toBuffer()],
+      brcProgram.programId
+    );
+    console.log("BRC PDA: ", brcPDA.publicKey.toBase58());
+    const brcAccount = await sdk.brcProgram.account.brcInfo.fetch(
+      brcPDA.publicKey
+    );
+
+    console.log("BRC Account: ", brcAccount);
+
     /***------------------ Issuance success screen ------------------***/
 
     console.log("Getting investor token account...");
@@ -460,8 +475,6 @@ describe("structured-product", () => {
     const simulationResult2 = await provider.connection.simulateTransaction(
       settlePaymentTx
     );
-
-    console.log("Simulation result: ", simulationResult2);
 
     const investorTokenAccountInfo2 = await provider.connection.getAccountInfo(
       investorPaymentATA
