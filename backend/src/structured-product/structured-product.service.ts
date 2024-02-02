@@ -1,7 +1,7 @@
 import { AnchorProvider } from '@coral-xyz/anchor';
 import { getPdaWithSeeds, StructuredNotesSdk } from '@fqx/programs';
 import { InjectQueue } from '@nestjs/bull';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -42,6 +42,7 @@ export const getOneShotTaskConfigForDate = (
 export class StructuredProductService {
   private issuerSdk: StructuredNotesSdk;
   private serverSdk: StructuredNotesSdk;
+  private readonly logger = new Logger(StructuredProductService.name);
 
   constructor(
     @Inject(SOLANA_PROVIDER)
@@ -70,10 +71,7 @@ export class StructuredProductService {
       this.configService.get<string>('PAYMENT_TOKEN_MINT_ADDRESS'),
     );
 
-    console.log(
-      'Investor public key',
-      structuredProductDeployDto.investorPublicKey,
-    );
+    this.logger.log('Investor public key', structuredProductDeployDto.investorPublicKey);
 
     const investorATA = getAssociatedTokenAddressSync(
       paymentMint,
@@ -83,7 +81,7 @@ export class StructuredProductService {
       ASSOCIATED_TOKEN_PROGRAM_ID,
     );
 
-    console.log('Investor ATA', investorATA.toBase58());
+    this.logger.log('Investor ATA', investorATA.toBase58());
 
     const investorTokenAccountInfo =
       await this.issuerSdk.provider.connection.getAccountInfo(investorATA);
@@ -105,7 +103,7 @@ export class StructuredProductService {
       (investorTokenAccount && investorTokenAccount.amount === 0n)
     ) {
       if (investorTokenAccountInfo === null) {
-        console.log('Creating investor ATA');
+        this.logger.log('Creating investor ATA');
         const createInvestorATAIx = createAssociatedTokenAccountInstruction(
           this.issuerSdk.provider.publicKey,
           investorATA,
@@ -116,7 +114,7 @@ export class StructuredProductService {
         );
         ixs.push(createInvestorATAIx);
       }
-      console.log('Minting payment token to investor');
+      this.logger.log('Minting payment token to investor');
       ixs.push(this.createMintPaymentTokenIx(investorATA, 1000000000000000n));
       const serverSecretKey = Uint8Array.from(
         JSON.parse(this.configService.get<string>('SERVER_SECRET_KEY')),
@@ -130,7 +128,7 @@ export class StructuredProductService {
       this.configService.get<string>('TREASURY_WALLET_PUBLIC_KEY'),
     );
 
-    console.log(
+    this.logger.log(
       'Treasury wallet public key',
       treasuryWalletPublicKey.toBase58(),
     );
@@ -140,7 +138,7 @@ export class StructuredProductService {
       this.issuerSdk.treasuryWalletProgram.programId,
     );
 
-    console.log(
+    this.logger.log(
       'Treasury wallet authority PDA',
       treasuryWalletAuthorityPDA.publicKey.toBase58(),
     );
@@ -153,7 +151,7 @@ export class StructuredProductService {
       ASSOCIATED_TOKEN_PROGRAM_ID,
     );
 
-    console.log('Treasury wallet ATA', treasuryWalletATA.toBase58());
+    this.logger.log('Treasury wallet ATA', treasuryWalletATA.toBase58());
 
     const mint = Keypair.generate();
 
@@ -168,7 +166,7 @@ export class StructuredProductService {
     ixs.push(...nonce1Ixs, ...nonce2Ixs);
     signers.push(nonce1, nonce2);
 
-    console.log(
+    this.logger.log(
       'Signers',
       signers.map((s) => s.publicKey.toBase58()),
     );
@@ -311,7 +309,7 @@ export class StructuredProductService {
       const paymentDate = new Date(
         activatedDate.add(snapshot).toNumber() * 1000,
       );
-      console.log('paymentTimestamp', paymentDate.toString());
+      this.logger.log('paymentTimestamp', paymentDate.toString());
 
       paymentsToSchedule.push({
         beneficiary: beneficiary.toBase58(),

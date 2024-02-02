@@ -7,6 +7,7 @@ import { BullModule } from '@nestjs/bull';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { HandlePaymentProcessor } from './processors/handle-payment.processor';
+import { OracleService } from './oracle.service';
 
 @Module({
   imports: [
@@ -21,6 +22,6 @@ import { HandlePaymentProcessor } from './processors/handle-payment.processor';
     ConfigModule,
   ],
   controllers: [StructuredProductController],
-  providers: [StructuredProductService, HandlePaymentProcessor],
+  providers: [StructuredProductService, HandlePaymentProcessor, OracleService],
 })
 export class StructuredProductModule {}
