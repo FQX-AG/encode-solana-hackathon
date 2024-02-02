@@ -83,6 +83,9 @@ pub mod brc_price_authority {
             final_underlying_fixing_price,
         );
 
+        msg!("Initial principal: {}, initial_fixing_price: {}, barrier: {}, final_fixing_price: {}, Final principal: {}", 
+            initial_principal, initial_fixing_price, barrier, final_underlying_fixing_price, final_principal);
+
         let cpi_program = ctx.accounts.structured_product_program.to_account_info();
 
         let cpi_accounts = SetPaymentPrice {
@@ -117,10 +120,11 @@ pub struct Initialize<'info> {
     pub authority: Signer<'info>,
     #[account()]
     pub structured_product: Account<'info, StructuredProductConfig>,
+    /// CHECK:
     #[account(seeds=[structured_product.key().as_ref(), &[true.into()], &payment_date_offset.to_le_bytes()],
-    bump=payment.bump,
+    bump,
     seeds::program=structured_product_program)]
-    pub payment: Account<'info, Payment>,
+    pub payment: AccountInfo<'info>,
     // TODO: space calc
     #[account(init, seeds=[structured_product.key().as_ref()], bump, payer=authority, space=200)]
     pub brc: Account<'info, BRC>,

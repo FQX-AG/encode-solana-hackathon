@@ -11,6 +11,11 @@ export type DummyOracle = {
           "isSigner": true
         },
         {
+          "name": "quoteCurrencyMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "dummyOracle",
           "isMut": true,
           "isSigner": false
@@ -29,10 +34,6 @@ export type DummyOracle = {
         {
           "name": "initialPrice",
           "type": "u64"
-        },
-        {
-          "name": "quoteCurrencyMint",
-          "type": "publicKey"
         }
       ]
     },
@@ -111,6 +112,11 @@ export const IDL: DummyOracle = {
           "isSigner": true
         },
         {
+          "name": "quoteCurrencyMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "dummyOracle",
           "isMut": true,
           "isSigner": false
@@ -129,10 +135,6 @@ export const IDL: DummyOracle = {
         {
           "name": "initialPrice",
           "type": "u64"
-        },
-        {
-          "name": "quoteCurrencyMint",
-          "type": "publicKey"
         }
       ]
     },

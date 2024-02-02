@@ -403,6 +403,8 @@ impl SnapshotTokenAccountBalances {
     // There could still be a balance at the earlier snapshot, so we need to check that.
     // If there is a balance at the earlier snapshot, we return that balance.
     // If there is no balance at any earlier snapshot, we return 0.
+    // TODO: Expose as a getter function with return value don't know how to do that yet
+    // TODO: Add tests
     pub fn balance_at_snapshot(&self, snapshot_index: usize) -> u64 {
         let snapshot_balance = self.snapshot_balances[snapshot_index];
         match snapshot_balance {

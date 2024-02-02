@@ -3,6 +3,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { AnchorProvider, Program } from "@coral-xyz/anchor";
 import { StructuredProduct } from "../src/types/structured_product";
 import {
+  AddressLookupTableAccount,
   Keypair,
   PublicKey,
   SystemProgram,
@@ -24,6 +25,7 @@ import {
 import BN from "bn.js";
 import { expect } from "chai";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
+import { BrcPriceAuthority } from "../src/types/brc_price_authority";
 
 // prevent console.log truncating arrays
 util.inspect.defaultOptions.maxArrayLength = null;
@@ -40,6 +42,9 @@ describe("structured-product", () => {
 
   const dummyOracleProgram = anchor.workspace
     .DummyOracle as Program<DummyOracle>;
+
+  const brcProgram = anchor.workspace
+    .BrcPriceAuthority as Program<BrcPriceAuthority>;
 
   anchor.setProvider(anchor.AnchorProvider.env());
 
@@ -58,6 +63,18 @@ describe("structured-product", () => {
 
   let sdk: StructuredNotesSdk;
 
+  let dummyOraclePDA: PDA;
+
+  let programLookupTableAddress: PublicKey;
+  let programLookupTable: AddressLookupTableAccount;
+
+  const supply: BN = new BN(1);
+  const initialPrincipal: BN = new BN(100000);
+  const initialFixingPrice: BN = new BN(42000);
+  const barrierInBasisPoints: BN = new BN(8000);
+  const finalFixingPrice: BN = new BN(33600);
+  const expectedFinalPrincipal: BN = new BN(80000);
+
   beforeEach(async () => {
     investor = provider.publicKey;
     issuer = await newAccountWithLamports(provider.connection);
@@ -67,13 +84,29 @@ describe("structured-product", () => {
       structuredProductProgram,
       treasuryWalletProgram,
       transferSnapshotHookProgram,
-      dummyOracleProgram
+      dummyOracleProgram,
+      brcProgram
     );
     treasuryWallet = anchor.web3.Keypair.generate();
     treasuryWalletAuthorityPda = await getPdaWithSeeds(
       [treasuryWallet.publicKey.toBuffer()],
       treasuryWalletProgram.programId
     );
+
+    programLookupTableAddress = await sdk.createLookupTable([
+      sdk.program.programId,
+      sdk.transferSnapshotHookProgram.programId,
+      sdk.dummyOracleProgram.programId,
+      sdk.treasuryWalletProgram.programId,
+      sdk.brcProgram.programId,
+      TOKEN_2022_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      SystemProgram.programId,
+    ]);
+
+    programLookupTable = (
+      await provider.connection.getAddressLookupTable(programLookupTableAddress)
+    ).value;
 
     const initTreasuryWalletIx = await treasuryWalletProgram.methods
       .initialize()
@@ -158,10 +191,26 @@ describe("structured-product", () => {
       TOKEN_2022_PROGRAM_ID
     );
 
+    dummyOraclePDA = await getPdaWithSeeds(
+      [issuer.publicKey.toBuffer(), Buffer.from("BTC")],
+      dummyOracleProgram.programId
+    );
+
+    const initDummyOracleIx = await dummyOracleProgram.methods
+      .initialize("BTC", initialFixingPrice)
+      .accounts({
+        authority: issuer.publicKey,
+        dummyOracle: dummyOraclePDA.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+        quoteCurrencyMint: paymentMint.publicKey,
+      })
+      .instruction();
+
     const tx = new Transaction()
       .add(initTreasuryWalletIx)
       .add(createPaymentMintAccountIx)
       .add(initPaymentMintIx)
+      .add(initDummyOracleIx)
       .add(treasuryWalletATAInitIx)
       .add(createPayerATAIx)
       .add(createMintToInvestorWalletIx);
@@ -187,7 +236,8 @@ describe("structured-product", () => {
       structuredProductProgram,
       treasuryWalletProgram,
       transferSnapshotHookProgram,
-      dummyOracleProgram
+      dummyOracleProgram,
+      brcProgram
     );
 
     console.log("Investor: ", sdk.provider.publicKey.toBase58());
@@ -197,6 +247,9 @@ describe("structured-product", () => {
       investor: investor,
       issuer: issuer.publicKey,
       issuerTreasuryWallet: treasuryWallet.publicKey,
+      dummyOracle: dummyOraclePDA.publicKey,
+      underlyingSymbol: "BTC",
+      barrierInBasisPoints,
       payments: [
         {
           principal: false,
@@ -218,8 +271,8 @@ describe("structured-product", () => {
         },
       ],
       paymentMint: paymentMint.publicKey,
-      issuancePricePerUnit: new BN(1000000),
-      supply: new BN(1000),
+      initialPrincipal,
+      supply,
     };
     /*** ----------------- BACKEND ----------------- ***/
     // Inputs assumed to be given by investor and random yield provided by backend
@@ -240,7 +293,8 @@ describe("structured-product", () => {
     const encodedInitSPTx = await issuerSdk.signStructuredProductInitOffline(
       config,
       mint,
-      nonce1.publicKey
+      nonce1.publicKey,
+      [programLookupTable]
     );
 
     const encodedIssueSPTx = await issuerSdk.signStructuredProductIssueOffline(
@@ -324,7 +378,7 @@ describe("structured-product", () => {
       TOKEN_2022_PROGRAM_ID
     );
     console.log("Investor token account: ", investorTokenAccount);
-    expect(investorTokenAccount.amount).to.equal(1000n);
+    expect(investorTokenAccount.amount).to.equal(BigInt(supply.toNumber()));
 
     const investorTokenSnapshotBalancesPDA = await getPdaWithSeeds(
       [mint.publicKey.toBuffer(), investorATA.toBuffer()],
@@ -343,7 +397,7 @@ describe("structured-product", () => {
       )
     );
 
-    expect(investorTokenSnapshotBalancesAccount.snapshotBalances[0].eqn(1000));
+    expect(investorTokenSnapshotBalancesAccount.snapshotBalances[0].eq(supply));
 
     console.log("Sleeping for 2 seconds...");
     await sleep(2001);
@@ -351,10 +405,19 @@ describe("structured-product", () => {
     console.log("Creating set payment price instruction...");
 
     /*** ----------------------- BACKEND ----------------------- ***/
+
+    const setOraclePriceIx =
+      await issuerSdk.createSetPriceDummyOracleInstruction(
+        "BTC",
+        finalFixingPrice
+      );
+
+    await issuerSdk.sendAndConfirmV0Tx([setOraclePriceIx]);
+
     const setPaymentIx = await sdk.createSetPaymentPriceInstruction(
+      "BTC",
       mint.publicKey,
-      true,
-      new BN(100),
+      dummyOraclePDA.publicKey,
       config.payments[2].paymentDateOffsetSeconds
     );
 
@@ -423,7 +486,8 @@ describe("structured-product", () => {
     );
 
     expect(investorTokenAccount3.amount).to.equal(
-      investorTokenAccount2.amount + 100000n
+      investorTokenAccount2.amount +
+        BigInt(expectedFinalPrincipal.toNumber()) * BigInt(supply.toNumber())
     );
   });
 });

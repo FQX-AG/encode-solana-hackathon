@@ -601,9 +601,10 @@ pub mod structured_product {
 
         let current_time = Clock::get()?.unix_timestamp;
         msg!(
-            "Payment date: {}, current time: {}",
+            "Payment date: {}, current time: {} price: {}",
             _payment_date_offset,
-            current_time
+            current_time,
+            price_per_unit
         );
 
         require!(
