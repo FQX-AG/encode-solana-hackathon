@@ -19,13 +19,13 @@
     "test": "anchor test",
     "test-debug": "DEBUG=true BLUEBIRD_LONG_STACK_TRACES=1 anchor test",
     "upgrade:structured-product": "solana program deploy --program-id=GYFmKqbpYHUrML3BstU9VUnVdEE6ho9tzVJzs1DAR5iz ./target/deploy/structured_product.so",
-    "upgrade:treasury-wallet": "solana program deploy --program-id=3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3 ./target/deploy/treasury_wallet.so",
     "upgrade:transferhook": "solana program deploy --program-id=6sGAcb6vw8bhcVNPv5pMEhr3dXyeYoX2X89S3NkEaaJP ./target/deploy/transfer_snapshot_hook.so",
+    "upgrade:treasury-wallet": "solana program deploy --program-id=3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3 ./target/deploy/treasury_wallet.so",
     "upgrade:dummy-oracle": "solana program deploy --program-id=BZuknSg2JQVQFt4d6a5eHsoeivEMVp4tvSnkas8yoxgY ./target/deploy/dummy_oracle.so",
-    "init:structured-product": "anchor idl init -f programs/target/idl/structured_product.json",
-    "init:transferhook": "anchor idl init -f programs/target/idl/transfer_snapshot_hook.json",
-    "init:treasury-wallet": "anchor idl init -f programs/target/idl/treasury_wallet.json",
-    "init:dummy-oracle": "anchor idl init -f programs/target/idl/dummy_oracle.json"
+    "init:structured-product": "anchor idl init -f programs/target/idl/structured_product.json --program-id=GYFmKqbpYHUrML3BstU9VUnVdEE6ho9tzVJzs1DAR5iz",
+    "init:transferhook": "anchor idl init -f programs/target/idl/transfer_snapshot_hook.json --program-id=6sGAcb6vw8bhcVNPv5pMEhr3dXyeYoX2X89S3NkEaaJP",
+    "init:treasury-wallet": "anchor idl init -f programs/target/idl/treasury_wallet.json --program-id=3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4Sa",
+    "init:dummy-oracle": "anchor idl init -f programs/target/idl/dummy_oracle.json --program-id=BZuknSg2JQVQFt4d6a5eHsoeivEMVp4tvSnkas8yoxgY"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.29.0",
