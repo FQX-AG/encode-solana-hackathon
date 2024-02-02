@@ -71,7 +71,7 @@ export async function getTokenInfo(provider: anchor.AnchorProvider, mint: web3.P
       type: "coupon",
       status: data ? "settled" : "scheduled",
       scheduledAt,
-      amount: snapshotBalances[i]!.toNumber(),
+      amount: snapshotBalances[0]!.toNumber(),
       currency: "USDC",
     });
 
@@ -85,7 +85,14 @@ export async function getTokenInfo(provider: anchor.AnchorProvider, mint: web3.P
       });
     }
   }
-
+  console.log({
+    payments,
+    balance: balance!,
+    supply: structuredProduct.supply.toNumber(),
+    principal: structuredProduct.issuancePaymentAmountPerUnit.toNumber(),
+    issuanceDate: new Date(structuredProduct.issuanceDate!.toNumber() * 1000),
+    investorATA: investorATA,
+  });
   return {
     payments,
     balance: balance!,

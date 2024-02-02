@@ -19,6 +19,7 @@ import { SdkFactory } from 'src/solana-client/sdk-factory';
 import { SOLANA_PROVIDER } from '../solana-client/contants';
 import { StructuredProductDeployDto } from './dtos/structured-product-deploy.dto';
 import { HandlePaymentJob } from './processors/handle-payment.processor';
+import { differenceInSeconds } from 'date-fns';
 
 export const DefaultTaskConfig = {
   attempts: 15,
@@ -65,17 +66,18 @@ export class StructuredProductService {
   }
 
   async deploy(structuredProductDeployDto: StructuredProductDeployDto) {
-    const { investorPublicKey } = structuredProductDeployDto;
-
     const paymentMint = new PublicKey(
       this.configService.get<string>('PAYMENT_TOKEN_MINT_ADDRESS'),
     );
 
-    console.log('Investor public key', investorPublicKey);
+    console.log(
+      'Investor public key',
+      structuredProductDeployDto.investorPublicKey,
+    );
 
     const investorATA = getAssociatedTokenAddressSync(
       paymentMint,
-      new PublicKey(investorPublicKey),
+      new PublicKey(structuredProductDeployDto.investorPublicKey),
       false,
       TOKEN_2022_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -107,7 +109,7 @@ export class StructuredProductService {
         const createInvestorATAIx = createAssociatedTokenAccountInstruction(
           this.issuerSdk.provider.publicKey,
           investorATA,
-          new PublicKey(investorPublicKey),
+          new PublicKey(structuredProductDeployDto.investorPublicKey),
           paymentMint,
           TOKEN_2022_PROGRAM_ID,
           ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -154,7 +156,6 @@ export class StructuredProductService {
     console.log('Treasury wallet ATA', treasuryWalletATA.toBase58());
 
     const mint = Keypair.generate();
-    const yieldValue = randomInt(1, 400000);
 
     const nonce1 = Keypair.generate();
     const nonce2 = Keypair.generate();
@@ -174,25 +175,46 @@ export class StructuredProductService {
 
     await this.issuerSdk.sendAndConfirmV0Tx(ixs, signers);
 
+    const issuanceDate = new Date();
+    const yieldValue = new BN(randomInt(0.2 * 10000, 0.4 * 10000));
+    const couponPaymentAmount = new BN(structuredProductDeployDto.principal)
+      .mul(yieldValue)
+      .divn(10000)
+      .divn(2);
+    console.log({ yieldValue, couponPaymentAmount });
+    const paymentDateOffsetSeconds = new BN(
+      differenceInSeconds(
+        new Date(structuredProductDeployDto.maturityDate),
+        new Date(issuanceDate),
+      ),
+    ).divn(2);
     const encodedInitSPTx =
       await this.issuerSdk.signStructuredProductInitOffline(
         {
-          investor: new PublicKey(investorPublicKey),
+          investor: new PublicKey(structuredProductDeployDto.investorPublicKey),
           issuer: this.issuerSdk.provider.publicKey,
           issuerTreasuryWallet: treasuryWalletPublicKey,
           paymentMint: paymentMint,
-          issuancePricePerUnit: new BN(1000),
-          supply: new BN(1000),
+          issuancePricePerUnit: new BN(structuredProductDeployDto.principal),
+          supply: new BN(structuredProductDeployDto.totalIssuanceAmount).divn(
+            structuredProductDeployDto.principal,
+          ),
           payments: [
             {
               principal: false,
-              amount: new BN(1000),
-              paymentDateOffsetSeconds: new BN(1),
+              amount: couponPaymentAmount,
+              paymentDateOffsetSeconds: paymentDateOffsetSeconds,
+              paymentMint: paymentMint,
+            },
+            {
+              principal: false,
+              amount: couponPaymentAmount,
+              paymentDateOffsetSeconds: paymentDateOffsetSeconds.muln(2),
               paymentMint: paymentMint,
             },
             {
               principal: true,
-              paymentDateOffsetSeconds: new BN(1),
+              paymentDateOffsetSeconds: paymentDateOffsetSeconds.muln(2),
               paymentMint: paymentMint,
               priceAuthority: this.serverSdk.provider.publicKey,
             },
@@ -204,7 +226,7 @@ export class StructuredProductService {
     const encodedIssueSPTx =
       await this.issuerSdk.signStructuredProductIssueOffline(
         {
-          investor: new PublicKey(investorPublicKey),
+          investor: new PublicKey(structuredProductDeployDto.investorPublicKey),
           issuer: this.issuerSdk.provider.publicKey,
           issuerTreasuryWallet: treasuryWalletPublicKey,
           mint: mint.publicKey,
@@ -217,8 +239,7 @@ export class StructuredProductService {
     return {
       transactions: [encodedInitSPTx, encodedIssueSPTx],
       mint: mint.publicKey,
-      ...structuredProductDeployDto,
-      yieldValue,
+      yieldValue: yieldValue.toNumber() / 10000,
     };
   }
 

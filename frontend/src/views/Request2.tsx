@@ -3,7 +3,6 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { useReport } from "@/hooks/useReport";
 import { useMemo, useState } from "react";
 import { Decimal } from "decimal.js";
-import { differenceInMonths } from "date-fns";
 import * as anchor from "@coral-xyz/anchor";
 import { ensure } from "@/utils";
 import {
@@ -119,7 +118,8 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
   const issuanceDate = useMemo(() => new Date(), []);
   const [confirmationPayload, setConfirmationPayload] = useState<QuoteInternalEnhanced>();
   const data = useMemo<QuoteInternal[]>(() => {
-    const y = new Decimal(props.deploymentInfo.yieldValue).div(props.values.totalIssuanceAmount).times(12).div(2);
+    const y = new Decimal(props.deploymentInfo.yieldValue);
+    console.log(y);
     const rand = () => new Decimal(Math.random()).clamp(0.1, 0.9).toNumber();
 
     return [
@@ -176,8 +176,7 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
     const quote = selection ? data.find((item) => item.id === selection) : undefined;
     if (quote) {
       const totalCouponPayment = new Decimal(props.values.totalIssuanceAmount).times(quote.yield).toNumber();
-      const maturity = differenceInMonths(props.values.maturityDate, issuanceDate);
-      const absoluteCouponRate = new Decimal(quote.yield).times(maturity).div(12).toNumber();
+      const absoluteCouponRate = new Decimal(quote.yield).times(2).div(12).toNumber();
       const totalRepayment = new Decimal(totalCouponPayment).plus(props.values.totalIssuanceAmount).toNumber();
       return { ...quote, totalCouponPayment, absoluteCouponRate, totalRepayment };
     }

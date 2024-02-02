@@ -29,6 +29,9 @@ export default function Request1(props: {
         const walletPublicKey = ensure(wallet.publicKey, "Wallet public key is unavailable. Is your wallet connected?");
         const { data: deploymentInfo } = await axios.post<DeploymentInfo>(`${API_URL}/mock-issuer`, {
           investorPublicKey: walletPublicKey,
+          maturityDate: values.maturityDate,
+          principal: values.principal,
+          totalIssuanceAmount: values.totalIssuanceAmount,
         });
 
         props.onNext({ values, deploymentInfo });

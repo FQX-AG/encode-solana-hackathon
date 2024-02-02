@@ -52,6 +52,9 @@ importers:
       bull:
         specifier: ^4.12.2
         version: 4.12.2
+      date-fns:
+        specifier: ^2.30.0
+        version: 2.30.0
       express-basic-auth:
         specifier: ^1.2.1
         version: 1.2.1
@@ -71,6 +74,9 @@ importers:
       '@nestjs/testing':
         specifier: ^9.0.0
         version: 9.4.3(@nestjs/common@9.4.3)(@nestjs/core@9.4.3)(@nestjs/platform-express@9.4.3)
+      '@types/bn.js':
+        specifier: ^5.1.0
+        version: 5.1.5
       '@types/express':
         specifier: ^4.17.13
         version: 4.17.21
