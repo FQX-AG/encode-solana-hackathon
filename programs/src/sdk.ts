@@ -748,6 +748,20 @@ export class StructuredNotesSdk {
       })
       .instruction();
   }
+
+  async getCurrentPriceFromDummyOracle(
+    assetSymbol: string,
+    authority: PublicKey
+  ) {
+    const dummyOraclePda = getPdaWithSeeds(
+      [authority.toBuffer(), Buffer.from(assetSymbol)],
+      this.dummyOracleProgram.programId
+    );
+
+    return await this.dummyOracleProgram.account.dummyOracle.fetch(
+      dummyOraclePda.publicKey
+    );
+  }
   async waitForNewBlock(targetHeight: number) {
     console.log(`Waiting for new block with target height ${targetHeight}`);
 
