@@ -6,6 +6,7 @@ import { Decimal } from "decimal.js";
 import * as anchor from "@coral-xyz/anchor";
 import { ensure } from "@/utils";
 import {
+  BrcPriceAuthorityIDL,
   DummyOracleIDL,
   StructuredNotesSdk,
   StructuredProductIDL,
@@ -14,6 +15,7 @@ import {
 } from "@fqx/programs";
 import {
   API_URL,
+  BRC_PRICE_AUTHORITY_PROGRAM_ID,
   COUPON_FREQUENCY_NAMES,
   DUMMY_ORACLE_PROGRAM_ID,
   STRUCTURED_PRODUCT_PROGRAM_ID,
@@ -202,12 +204,14 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
     );
 
     const dummyOracleProgram = new anchor.Program(DummyOracleIDL, DUMMY_ORACLE_PROGRAM_ID, provider);
+    const brcPriceAuthority = new anchor.Program(BrcPriceAuthorityIDL, BRC_PRICE_AUTHORITY_PROGRAM_ID, provider);
     const sdk = new StructuredNotesSdk(
       provider,
       program,
       treasuryWalletProgram,
       transferSnapshotHookProgram,
-      dummyOracleProgram
+      dummyOracleProgram,
+      brcPriceAuthority
     );
 
     console.log("SIGNING");

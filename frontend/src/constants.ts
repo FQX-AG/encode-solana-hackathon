@@ -74,6 +74,14 @@ export const STRUCTURED_PRODUCT_PROGRAM_ID = new PublicKey(
 export const TREASURY_WALLET_PROGRAM_ID = new PublicKey(
   ensure(process.env.NEXT_PUBLIC_TREASURY_WALLET_PROGRAM_ID, "NEXT_PUBLIC_TREASURY_WALLET_PROGRAM_ID is undefined")
 );
+
+export const BRC_PRICE_AUTHORITY_PROGRAM_ID = new PublicKey(
+  ensure(
+    process.env.NEXT_PUBLIC_BRC_PRICE_AUTHORITY_PROGRAM_ID,
+    "NEXT_PUBLIC_BRC_PRICE_AUTHORITY_PROGRAM_ID is undefined"
+  )
+);
+
 export const TRANSFER_SNAPSHOT_HOOK_PROGRAM_ID = new PublicKey(
   ensure(
     process.env.NEXT_PUBLIC_TRANSFER_SNAPSHOT_HOOK_PROGRAM_ID,

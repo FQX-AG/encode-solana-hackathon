@@ -32,6 +32,8 @@ export default function Request1(props: {
           maturityDate: values.maturityDate,
           principal: values.principal,
           totalIssuanceAmount: values.totalIssuanceAmount,
+          // TODO:
+          // barrierLevel: values.brcDetails.level,
         });
 
         props.onNext({ values, deploymentInfo });

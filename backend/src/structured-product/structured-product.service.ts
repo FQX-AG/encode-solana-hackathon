@@ -181,8 +181,8 @@ export class StructuredProductService {
 
     await this.issuerSdk.sendAndConfirmV0Tx(ixs, signers);
 
-    const brcPriceAuthorityProgramId = new PublicKey(
-      this.configService.get<string>('BRC_PRICE_AUTHORITY_PROGRAM_ID'),
+    const dummyOracleProgramId = new PublicKey(
+      this.configService.get<string>('DUMMY_ORACLE_PROGRAM_ID'),
     );
 
     const programLookupTableAddress = new PublicKey(
@@ -201,7 +201,7 @@ export class StructuredProductService {
       .mul(yieldValue)
       .divn(10000)
       .divn(2);
-    console.log({ yieldValue, couponPaymentAmount });
+    this.logger.log({ yieldValue, couponPaymentAmount });
     const paymentDateOffsetSeconds = new BN(
       differenceInSeconds(
         new Date(structuredProductDeployDto.maturityDate),
@@ -233,11 +233,11 @@ export class StructuredProductService {
               paymentMint: paymentMint,
             },
           ],
-          dummyOracle: brcPriceAuthorityProgramId,
+          dummyOracle: dummyOracleProgramId,
           underlyingSymbol: 'CRZYBTC',
           paymentMint: paymentMint,
           initialPrincipal: new BN(structuredProductDeployDto.principal),
-          barrierInBasisPoints: new BN(10),
+          barrierInBasisPoints: new BN(structuredProductDeployDto.barrierLevel),
           supply: new BN(structuredProductDeployDto.totalIssuanceAmount).divn(
             structuredProductDeployDto.principal,
           ),
