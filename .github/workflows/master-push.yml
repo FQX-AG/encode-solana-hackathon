@@ -50,12 +50,6 @@ jobs:
         run: pnpm run --filter programs upgrade:transferhook
       - name: Upgrade dummy oracle program
         run: pnpm run --filter programs upgrade:dummy-oracle
-      - name: Anchor idl init
-        run: |
-          pnpm run --filter programs init:structured-product
-          pnpm run --filter programs init:transferhook
-          pnpm run --filter programs init:treasury-wallet
-          pnpm run --filter programs init:dummy-oracle
 
   deploy-backend-to-cloud-run:
     runs-on: ubuntu-latest
