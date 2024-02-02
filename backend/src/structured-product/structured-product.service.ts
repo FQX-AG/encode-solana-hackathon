@@ -237,7 +237,9 @@ export class StructuredProductService {
           underlyingSymbol: 'CRZYBTC',
           paymentMint: paymentMint,
           initialPrincipal: new BN(structuredProductDeployDto.principal),
-          barrierInBasisPoints: new BN(structuredProductDeployDto.barrierLevel),
+          barrierInBasisPoints: new BN(
+            Math.round(structuredProductDeployDto.barrierLevel * 100), // convert to basis points
+          ),
           supply: new BN(structuredProductDeployDto.totalIssuanceAmount).divn(
             structuredProductDeployDto.principal,
           ),

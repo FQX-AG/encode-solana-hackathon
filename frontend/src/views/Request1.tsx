@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { FormValues, getInitialValues, validationSchema, Values } from "@/schemas/newIssuance";
 import { useFormikWithLazyValidation } from "@/hooks/useFormikWithLazyValidation";
 import { ensure } from "@/utils";
-import { API_URL } from "@/constants";
+import { API_URL, StructuredProductType } from "@/constants";
 import { DeploymentInfo } from "@/types";
 import { Form, FormikProvider } from "formik";
 import { Stack } from "@mui/material";
@@ -27,17 +27,20 @@ export default function Request1(props: {
       try {
         const values = await validationSchema.validate(formValues, { stripUnknown: true });
         const walletPublicKey = ensure(wallet.publicKey, "Wallet public key is unavailable. Is your wallet connected?");
-        const { data: deploymentInfo } = await axios.post<DeploymentInfo>(`${API_URL}/mock-issuer`, {
-          investorPublicKey: walletPublicKey,
-          maturityDate: values.maturityDate,
-          principal: values.principal,
-          totalIssuanceAmount: values.totalIssuanceAmount,
-          // TODO:
-          // barrierLevel: values.brcDetails.level,
-        });
 
-        props.onNext({ values, deploymentInfo });
-        report.success("Success!");
+        if (values.type == StructuredProductType.BRC) {
+          const { data: deploymentInfo } = await axios.post<DeploymentInfo>(`${API_URL}/mock-issuer`, {
+            investorPublicKey: walletPublicKey,
+            maturityDate: values.maturityDate,
+            principal: values.principal,
+            totalIssuanceAmount: values.totalIssuanceAmount,
+            barrierLevel: values.brcDetails.level,
+          });
+          props.onNext({ values, deploymentInfo });
+          report.success("Success!");
+        } else {
+          throw new Error("Unsupported structured product type");
+        }
       } catch (e) {
         report.error(e);
       }

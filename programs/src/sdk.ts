@@ -131,12 +131,6 @@ export class StructuredNotesSdk {
     recentBlockHash?: string,
     lookupTables?: AddressLookupTableAccount[]
   ) {
-    if (recentBlockHash) {
-      console.log(
-        "Received recentBlockHash presumably a durable nonce: ",
-        recentBlockHash
-      );
-    }
     const recentBlockhash =
       recentBlockHash ??
       (await this.provider.connection.getLatestBlockhash("finalized"))
