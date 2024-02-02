@@ -31,8 +31,8 @@ export type DummyOracle = {
           "type": "u64"
         },
         {
-          "name": "decimals",
-          "type": "u8"
+          "name": "quoteCurrencyMint",
+          "type": "publicKey"
         }
       ]
     },
@@ -64,7 +64,7 @@ export type DummyOracle = {
   ],
   "accounts": [
     {
-      "name": "dummyOracle",
+      "name": "dummyOracleAccount",
       "type": {
         "kind": "struct",
         "fields": [
@@ -81,8 +81,8 @@ export type DummyOracle = {
             "type": "u64"
           },
           {
-            "name": "decimals",
-            "type": "u8"
+            "name": "quoteCurrencyMint",
+            "type": "publicKey"
           },
           {
             "name": "lastUpdate",
@@ -131,8 +131,8 @@ export const IDL: DummyOracle = {
           "type": "u64"
         },
         {
-          "name": "decimals",
-          "type": "u8"
+          "name": "quoteCurrencyMint",
+          "type": "publicKey"
         }
       ]
     },
@@ -164,7 +164,7 @@ export const IDL: DummyOracle = {
   ],
   "accounts": [
     {
-      "name": "dummyOracle",
+      "name": "dummyOracleAccount",
       "type": {
         "kind": "struct",
         "fields": [
@@ -181,8 +181,8 @@ export const IDL: DummyOracle = {
             "type": "u64"
           },
           {
-            "name": "decimals",
-            "type": "u8"
+            "name": "quoteCurrencyMint",
+            "type": "publicKey"
           },
           {
             "name": "lastUpdate",

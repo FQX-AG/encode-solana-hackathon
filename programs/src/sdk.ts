@@ -717,7 +717,7 @@ export class StructuredNotesSdk {
   async createInitDummyOracleInstruction(
     assetSymbol: string,
     price: BN,
-    decimals: number
+    quoteCurrencyMint: PublicKey // payment mint
   ) {
     const dummyOraclePda = getPdaWithSeeds(
       [this.provider.publicKey.toBuffer(), Buffer.from(assetSymbol)],
@@ -725,7 +725,7 @@ export class StructuredNotesSdk {
     );
 
     return await this.dummyOracleProgram.methods
-      .initialize(assetSymbol, price, decimals)
+      .initialize(assetSymbol, price, quoteCurrencyMint)
       .accounts({
         dummyOracle: dummyOraclePda.publicKey,
         authority: this.provider.publicKey,
@@ -758,7 +758,7 @@ export class StructuredNotesSdk {
       this.dummyOracleProgram.programId
     );
 
-    return await this.dummyOracleProgram.account.dummyOracle.fetch(
+    return await this.dummyOracleProgram.account.dummyOracleAccount.fetch(
       dummyOraclePda.publicKey
     );
   }
