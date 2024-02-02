@@ -5,38 +5,28 @@ import { Property } from "@/components/Property";
 import { Chip } from "@/components/Chip";
 import { formatDecimal } from "@/formatters";
 import React from "react";
-import { ENoteInfo, Payment, QuoteInfo } from "@/types";
+import { ENoteInfo, Payment } from "@/types";
 import { PaymentSchedule } from "@/components/paymentSchedule/PaymentSchedule";
 import { Text } from "@/components/Text";
-import { StructuredProductType } from "@/constants";
+import { BRCType } from "@/constants";
 import { BRC } from "@/components/graphs/BRC";
-import { Values } from "@/schemas/newIssuance";
+import { Decimal } from "decimal.js";
 
-export function Token2({
-  note,
-  values,
-  quote,
-  payments,
-  underlyingAssetValue,
-  now,
-}: {
-  note: ENoteInfo;
-  values: Values;
-  quote: QuoteInfo;
-  payments: Payment[];
-  underlyingAssetValue: number;
-  now: Date;
-}) {
+export function Token2(props: { note: ENoteInfo; payments: Payment[]; now: Date; balance: number }) {
+  const underlyingAssetValue = 42_264;
+  const initialFixingPrice = 20_000;
+  const barrierLevel = 0.8;
+
   return (
     <Section title="Payment schedule">
       <Box display="grid" flex="1 1 auto" gridTemplateColumns="repeat(12, 1fr)" gap={6}>
         <Box gridColumn={{ xs: "span 12", xl: "span 8" }}>
           <Panel spacing={5}>
             <PaymentSchedule
-              issuanceDate={note.issuanceDate}
-              maturityDate={note.maturityDate}
-              payments={payments}
-              now={now}
+              issuanceDate={props.note.issuanceDate}
+              maturityDate={props.note.maturityDate}
+              payments={props.payments}
+              now={props.now}
             />
             <div />
           </Panel>
@@ -48,34 +38,38 @@ export function Token2({
                 horizontal
                 k={
                   <Stack direction="row" spacing={1} alignItems="center">
-                    {`${note.structuredProductDetails.underlyingAsset} / ${note.currency}`}
+                    {`${props.note.structuredProductDetails.underlyingAsset} / ${props.note.currency}`}
                     <Chip sx={{ color: (theme) => theme.palette.info.main }}>Live</Chip>
                   </Stack>
                 }
                 v={<Text variant="500|32px|35px">{formatDecimal(underlyingAssetValue)}</Text>}
               />
-              <Property horizontal k="Updated principal" v={`${note.currency} ${formatDecimal(note.principal)}`} />
-              <Property horizontal k="Total coupon payment" v={`${note.currency} ${formatDecimal(note.coupon)}`} />
+              <Property
+                horizontal
+                k="Updated principal"
+                v={`${props.note.currency} ${formatDecimal(props.note.principal)}`}
+              />
+              <Property
+                horizontal
+                k="Total coupon payment"
+                v={`${props.note.currency} ${formatDecimal(props.note.coupon)}`}
+              />
               <Property
                 horizontal
                 k="Total repayment"
-                v={`${note.currency} ${formatDecimal(note.principal + note.coupon)}`}
+                v={`${props.note.currency} ${formatDecimal(props.note.principal + props.note.coupon)}`}
               />
             </Stack>
-            {values.type === StructuredProductType.BRC && (
-              <>
-                <Divider />
-                <BRC
-                  type={values.brcDetails.type}
-                  barrier={values.brcDetails.level}
-                  coupon={quote.absoluteCouponRate * 100}
-                  underlyingAsset={values.underlyingAsset}
-                  currency={values.currency}
-                  issuanceAmount={values.totalIssuanceAmount}
-                  initialFixingPrice={quote.initialFixingPrice.amount}
-                />
-              </>
-            )}
+            <Divider />
+            <BRC
+              type={BRCType.European}
+              barrier={barrierLevel}
+              coupon={props.note.interestRate * 100}
+              underlyingAsset={props.note.structuredProductDetails.underlyingAsset}
+              currency={props.note.currency}
+              issuanceAmount={new Decimal(props.note.principal).times(props.balance).toNumber()}
+              initialFixingPrice={initialFixingPrice}
+            />
           </Panel>
         </Box>
       </Box>

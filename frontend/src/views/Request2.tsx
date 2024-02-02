@@ -28,13 +28,13 @@ import { ArrowForward, ChevronRight } from "@mui/icons-material";
 import { SignDialog } from "@/components/SignDialog";
 import { Panel } from "@/components/Panel";
 import { Values } from "@/schemas/newIssuance";
-import { DeploymentInfo, QuoteInfo } from "@/types";
+import { DeploymentInfo } from "@/types";
 import { SxProps } from "@mui/material/styles";
 import { Flag } from "@/components/Flag";
 import { Chip } from "@/components/Chip";
 import { BRC } from "@/components/graphs/BRC";
-import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import axios from "axios";
+import { useRouter } from "next/router";
 
 const TAG_PROPS: Record<string, { children: string; sx: SxProps<Theme> }> = {
   bestOffer: {
@@ -104,19 +104,10 @@ const columns: Column<QuoteInternal>[] = [
 
 const itemKey = (item: QuoteInternal) => item.id;
 
-export default function Request2(props: {
-  values: Values;
-  deploymentInfo: DeploymentInfo;
-  onNext: (payload: {
-    values: Values;
-    deploymentInfo: DeploymentInfo;
-    issuanceDate: Date;
-    quote: QuoteInfo;
-    investorATA: PublicKey;
-  }) => void;
-}) {
+export default function Request2(props: { values: Values; deploymentInfo: DeploymentInfo }) {
   const anchorWallet = useAnchorWallet();
   const { connection }: { connection: Connection } = useConnection();
+  const router = useRouter();
   const report = useReport();
   const issuanceDate = useMemo(() => new Date(), []);
   const [confirmationPayload, setConfirmationPayload] = useState<QuoteInternalEnhanced>();
@@ -189,11 +180,11 @@ export default function Request2(props: {
 
   const handleClose = () => setConfirmationPayload(undefined);
 
-  const handleBeforeSign = async (): Promise<QuoteInfo> => {
-    return ensure(quote, "No quote is selected");
+  const handleBeforeSign = async (): Promise<void> => {
+    // Nothing to do here.
   };
 
-  const handleSign = async (quote: QuoteInfo): Promise<{ quote: QuoteInfo; investorATA: PublicKey }> => {
+  const handleSign = async (): Promise<PublicKey> => {
     const wallet = ensure(anchorWallet, "Wallet is unavailable. Is it connected?");
     const provider = new anchor.AnchorProvider(connection, wallet, { commitment: "confirmed" });
     const program = new anchor.Program(StructuredProductIDL, STRUCTURED_PRODUCT_PROGRAM_ID, provider);
@@ -227,15 +218,7 @@ export default function Request2(props: {
     );
     const issueTxid = await provider.connection.sendTransaction(finalIssueTx);
     await sdk.confirmTx(issueTxid);
-
     const mintPublicKey = new PublicKey(props.deploymentInfo.mint);
-    const investorATA = getAssociatedTokenAddressSync(
-      mintPublicKey,
-      wallet.publicKey,
-      false,
-      TOKEN_2022_PROGRAM_ID,
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    );
 
     await axios.post(`${API_URL}/confirm-issuance`, {
       mint: mintPublicKey.toBase58(),
@@ -243,11 +226,11 @@ export default function Request2(props: {
       investor: provider.publicKey.toBase58(),
     });
 
-    return { quote, investorATA };
+    return mintPublicKey;
   };
 
-  const handleAfterSign = async ({ quote, investorATA }: { quote: QuoteInfo; investorATA: PublicKey }) => {
-    props.onNext({ values: props.values, deploymentInfo: props.deploymentInfo, issuanceDate, quote, investorATA });
+  const handleAfterSign = async (mint: PublicKey) => {
+    await router.push(`/token/${mint.toBase58()}`);
     report.success("Success!");
   };
 
