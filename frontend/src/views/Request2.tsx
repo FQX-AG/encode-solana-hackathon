@@ -120,8 +120,9 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
   const issuanceDate = useMemo(() => new Date(), []);
   const [confirmationPayload, setConfirmationPayload] = useState<QuoteInternalEnhanced>();
   const data = useMemo<QuoteInternal[]>(() => {
-    const y = new Decimal(props.deploymentInfo.yieldValue);
-    console.log(y);
+    const yieldAbsolute = new Decimal(props.deploymentInfo.coupon).div(props.values.principal);
+    const yieldPerAnnum = yieldAbsolute.mul(12).div(2);
+    console.debug({ yieldAbsolute, yieldPerAnnum });
     const rand = () => new Decimal(Math.random()).clamp(0.1, 0.9).toNumber();
 
     return [
@@ -130,7 +131,7 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
         issuerCountryCode: "FR",
         issuerName: "France Company",
         initialFixingPrice: { currency: "USDC", amount: 43000 },
-        yield: y.toNumber(),
+        yield: yieldPerAnnum.toNumber(),
         tags: ["bestOffer"],
       },
       {
@@ -138,35 +139,35 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
         issuerCountryCode: "DE",
         issuerName: "Germany Company",
         initialFixingPrice: { currency: "USDC", amount: 40987 },
-        yield: y.times(rand()).toNumber(),
+        yield: yieldPerAnnum.times(rand()).toNumber(),
       },
       {
         id: "3",
         issuerCountryCode: "AT",
         issuerName: "Austria Company",
         initialFixingPrice: { currency: "USDC", amount: 35321 },
-        yield: y.times(rand()).toNumber(),
+        yield: yieldPerAnnum.times(rand()).toNumber(),
       },
       {
         id: "4",
         issuerCountryCode: "CH",
         issuerName: "Swiss Company",
         initialFixingPrice: { currency: "USDC", amount: 33345 },
-        yield: y.times(rand()).toNumber(),
+        yield: yieldPerAnnum.times(rand()).toNumber(),
       },
       {
         id: "5",
         issuerCountryCode: "PL",
         issuerName: "Web 3 Company",
         initialFixingPrice: { currency: "USDC", amount: 20765 },
-        yield: y.times(rand()).toNumber(),
+        yield: yieldPerAnnum.times(rand()).toNumber(),
       },
       {
         id: "6",
         issuerCountryCode: "JM",
         issuerName: "Waganda Company",
         initialFixingPrice: { currency: "USDC", amount: 15456 },
-        yield: y.times(rand()).toNumber(),
+        yield: yieldPerAnnum.times(rand()).toNumber(),
       },
     ].sort((a, b) => {
       if (a.yield === b.yield) return 0;
@@ -219,6 +220,9 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
     const [finalInitTx, finalIssueTx] = await provider.wallet.signAllTransactions(
       props.deploymentInfo.transactions.map(sdk.decodeV0Tx)
     );
+
+    console.log("Simulation", await provider.connection.simulateTransaction(finalInitTx));
+    console.log("Simulation", await provider.connection.simulateTransaction(finalIssueTx));
 
     // Send "init" transaction
     const finalInitTxId = await provider.connection.sendTransaction(finalInitTx);

@@ -181,9 +181,12 @@ export class StructuredProductService {
 
     await this.issuerSdk.sendAndConfirmV0Tx(ixs, signers);
 
-    const dummyOracleProgramId = new PublicKey(
-      this.configService.get<string>('DUMMY_ORACLE_PROGRAM_ID'),
+    const dummyOraclePDA = getPdaWithSeeds(
+      [this.serverSdk.provider.publicKey.toBuffer(), Buffer.from('CRZYBTC')],
+      this.serverSdk.dummyOracleProgram.programId,
     );
+
+    this.logger.log({ dummyORACLE: dummyOraclePDA.publicKey.toBase58() });
 
     const programLookupTableAddress = new PublicKey(
       this.configService.get<string>('PROGRAM_LOOKUP_TABLE_ADDRESS'),
@@ -196,12 +199,12 @@ export class StructuredProductService {
     ).value;
 
     const issuanceDate = new Date();
-    const yieldValue = new BN(randomInt(0.2 * 10000, 0.4 * 10000));
-    const couponPaymentAmount = new BN(structuredProductDeployDto.principal)
-      .mul(yieldValue)
-      .divn(10000)
-      .divn(2);
-    this.logger.log({ yieldValue, couponPaymentAmount });
+    const coupon = new BN(
+      randomInt(
+        0.03 * structuredProductDeployDto.principal,
+        0.09 * structuredProductDeployDto.principal,
+      ),
+    );
     const paymentDateOffsetSeconds = new BN(
       differenceInSeconds(
         new Date(structuredProductDeployDto.maturityDate),
@@ -217,13 +220,13 @@ export class StructuredProductService {
           payments: [
             {
               principal: false,
-              amount: couponPaymentAmount,
+              amount: coupon.divn(2),
               paymentDateOffsetSeconds: paymentDateOffsetSeconds,
               paymentMint: paymentMint,
             },
             {
               principal: false,
-              amount: couponPaymentAmount,
+              amount: coupon.divn(2),
               paymentDateOffsetSeconds: paymentDateOffsetSeconds.muln(2),
               paymentMint: paymentMint,
             },
@@ -233,7 +236,7 @@ export class StructuredProductService {
               paymentMint: paymentMint,
             },
           ],
-          dummyOracle: dummyOracleProgramId,
+          dummyOracle: dummyOraclePDA.publicKey,
           underlyingSymbol: 'CRZYBTC',
           paymentMint: paymentMint,
           initialPrincipal: new BN(structuredProductDeployDto.principal),
@@ -264,7 +267,7 @@ export class StructuredProductService {
     return {
       transactions: [encodedInitSPTx, encodedIssueSPTx],
       mint: mint.publicKey,
-      yieldValue: yieldValue.toNumber() / 10000,
+      coupon: coupon.toNumber(),
     };
   }
 

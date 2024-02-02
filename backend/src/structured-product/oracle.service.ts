@@ -26,7 +26,7 @@ export class OracleService {
       this.configService.get<string>('PAYMENT_TOKEN_MINT_ADDRESS'),
     );
   }
-  @Interval(5000)
+  @Interval(100000)
   async updatePricing() {
     const oldPrice = await this.serverSdk.getCurrentPriceFromDummyOracle(
       'CRZYBTC',
@@ -43,8 +43,10 @@ export class OracleService {
         newPrice,
       );
     this.logger.log(`Setting new price: ${newPrice.toString()}`);
-    await this.serverSdk.sendAndConfirmV0Tx([setPriceIx]);
-    this.logger.log('Price updated');
+    const updatePriceTxId = await this.serverSdk.sendAndConfirmV0Tx([
+      setPriceIx,
+    ]);
+    this.logger.log(`Price updated: ${updatePriceTxId}`);
   }
 
   randomNegativeOrPositiveInRange(range: number) {

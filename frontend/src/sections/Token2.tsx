@@ -14,8 +14,8 @@ import { Decimal } from "decimal.js";
 
 export function Token2(props: { note: ENoteInfo; payments: Payment[]; now: Date; balance: number }) {
   const underlyingAssetValue = 42_264;
-  const initialFixingPrice = 20_000;
-  const barrierLevel = 0.8;
+  const initialFixingPrice = 43_000;
+  const barrierLevel = 80;
 
   return (
     <Section title="Payment schedule">
@@ -47,17 +47,19 @@ export function Token2(props: { note: ENoteInfo; payments: Payment[]; now: Date;
               <Property
                 horizontal
                 k="Updated principal"
-                v={`${props.note.currency} ${formatDecimal(props.note.principal)}`}
+                v={`${props.note.currency} ${formatDecimal(props.note.principal * props.balance)}`}
               />
               <Property
                 horizontal
                 k="Total coupon payment"
-                v={`${props.note.currency} ${formatDecimal(props.note.coupon)}`}
+                v={`${props.note.currency} ${formatDecimal(props.note.coupon * props.balance)}`}
               />
               <Property
                 horizontal
                 k="Total repayment"
-                v={`${props.note.currency} ${formatDecimal(props.note.principal + props.note.coupon)}`}
+                v={`${props.note.currency} ${formatDecimal(
+                  (props.note.principal + props.note.coupon) * props.balance
+                )}`}
               />
             </Stack>
             <Divider />

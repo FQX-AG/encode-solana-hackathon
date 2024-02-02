@@ -3,6 +3,7 @@ import {
   BrcPriceAuthorityIDL,
   DummyOracleIDL,
   StructuredNotesSdk,
+  StructuredProduct,
   StructuredProductIDL,
   TransferSnapshotHookIDL,
   TreasuryWalletIDL,
@@ -14,9 +15,14 @@ import {
   TRANSFER_SNAPSHOT_HOOK_PROGRAM_ID,
   TREASURY_WALLET_PROGRAM_ID,
 } from "@/constants";
+import { Program } from "@coral-xyz/anchor";
 
 export function createSDK(provider: anchor.AnchorProvider) {
-  const program = new anchor.Program(StructuredProductIDL, STRUCTURED_PRODUCT_PROGRAM_ID, provider);
+  const program = new anchor.Program(
+    StructuredProductIDL,
+    STRUCTURED_PRODUCT_PROGRAM_ID,
+    provider
+  ) as Program<StructuredProduct>;
   const treasuryWalletProgram = new anchor.Program(TreasuryWalletIDL, TREASURY_WALLET_PROGRAM_ID, provider);
   const transferSnapshotHookProgram = new anchor.Program(
     TransferSnapshotHookIDL,

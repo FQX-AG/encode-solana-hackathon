@@ -294,6 +294,9 @@ importers:
       '@solana/web3.js':
         specifier: 1.89.1
         version: 1.89.1
+      bn.js:
+        specifier: ^5.2.1
+        version: 5.2.1
       tslib:
         specifier: ^2.6.2
         version: 2.6.2

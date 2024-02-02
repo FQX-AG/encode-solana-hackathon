@@ -52,29 +52,6 @@ jobs:
         run: pnpm run --filter programs upgrade:dummy-oracle
       - name: Upgrade brc program
         run: pnpm run --filter programs upgrade:brc
-  deploy-rpc-proxy-to-cloud-run:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - id: "auth"
-        uses: "google-github-actions/auth@v2"
-        with:
-          credentials_json: "${{ secrets.GCP_CREDENTIALS }}"
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-      - name: Authenticate Docker to Google Cloud
-        run: gcloud auth configure-docker europe-west6-docker.pkg.dev --quiet
-      - name: Build and Push Docker image to Artifact Registry
-        run: |
-          docker build -t europe-west6-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/staging/hackathon-rpc-proxy:${{github.sha}} -f ./docker/rpc-proxy/Dockerfile .
-          docker push europe-west6-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/staging/hackathon-rpc-proxy:${{github.sha}}
-      - name: Deploy to Google Cloud Run
-        run: |
-          gcloud run deploy hackaton-rpc-proxy \
-            --image europe-west6-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/staging/hackathon-rpc-proxy:${{github.sha}} \
-            --platform managed \
-            --region europe-west6 \
-            --set-env-vars IRONFORGE_API_KEY=${{secrets.IRONFORGE_API_KEY}} \
 
   deploy-backend-to-cloud-run:
     runs-on: ubuntu-latest
@@ -114,6 +91,7 @@ jobs:
             --set-env-vars PAYMENT_TOKEN_MINT_ADDRESS=${{secrets.PAYMENT_TOKEN_MINT_ADDRESS}} \
             --set-env-vars TREASURY_WALLET_PUBLIC_KEY=${{secrets.TREASURY_WALLET_PUBLIC_KEY}} \
             --set-env-vars PROGRAM_LOOKUP_TABLE_ADDRESS=${{secrets.PROGRAM_LOOKUP_TABLE_ADDRESS}} \
+            --set-env-vars DUMMY_ORACLE_PROGRAM_ID=${{secrets.DUMMY_ORACLE_PROGRAM_ID}} \
             --set-env-vars REDIS_HOST=${{secrets.GCP_REDIS_HOST}} \
             --update-secrets=BULL_BOARD_PASSWORD=BULL_BOARD_PASSWORD:latest \
             --update-secrets=ISSUER_SECRET_KEY=ISSUER_SECRET_KEY:latest \
