@@ -51,6 +51,7 @@ jobs:
       - name: Upgrade dummy oracle program
         run: pnpm run --filter programs upgrade:dummy-oracle
       - name: Anchor idl init
+        working-directory: programs
         run: |
           anchor idl init -f programs/target/idl/structured_product.json
           anchor idl init -f programs/target/idl/transfer_snapshot_hook.json
