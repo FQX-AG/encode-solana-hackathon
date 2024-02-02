@@ -48,11 +48,36 @@ jobs:
         run: pnpm run --filter programs upgrade:treasury-wallet
       - name: Upgrade transfer hook program
         run: pnpm run --filter programs upgrade:transferhook
+      - name: Upgrade dummy oracle program
+        run: pnpm run --filter programs upgrade:dummy-oracle
       - name: Anchor idl init
         run: |
           anchor idl init -f programs/target/idl/structured_product.json
           anchor idl init -f programs/target/idl/transfer_snapshot_hook.json
           anchor idl init -f programs/target/idl/treasury_wallet.json
+  deploy-rpc-proxy-to-cloud-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: "auth"
+        uses: "google-github-actions/auth@v2"
+        with:
+          credentials_json: "${{ secrets.GCP_CREDENTIALS }}"
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Authenticate Docker to Google Cloud
+        run: gcloud auth configure-docker europe-west6-docker.pkg.dev --quiet
+      - name: Build and Push Docker image to Artifact Registry
+        run: |
+          docker build -t europe-west6-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/staging/hackathon-rpc-proxy:${{github.sha}} -f ./docker/rpc-proxy/Dockerfile .
+          docker push europe-west6-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/staging/hackathon-rpc-proxy:${{github.sha}}
+      - name: Deploy to Google Cloud Run
+        run: |
+          gcloud run deploy hackaton-rpc-proxy \
+            --image europe-west6-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/staging/hackathon-rpc-proxy:${{github.sha}} \
+            --platform managed \
+            --region europe-west6 \
+            --set-env-vars IRONFORGE_API_KEY=${{secrets.IRONFORGE_API_KEY}} \
 
   deploy-backend-to-cloud-run:
     runs-on: ubuntu-latest

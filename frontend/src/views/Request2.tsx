@@ -6,10 +6,17 @@ import { Decimal } from "decimal.js";
 import { differenceInMonths } from "date-fns";
 import * as anchor from "@coral-xyz/anchor";
 import { ensure } from "@/utils";
-import { StructuredNotesSdk, StructuredProductIDL, TransferSnapshotHookIDL, TreasuryWalletIDL } from "@fqx/programs";
+import {
+  DummyOracleIDL,
+  StructuredNotesSdk,
+  StructuredProductIDL,
+  TransferSnapshotHookIDL,
+  TreasuryWalletIDL,
+} from "@fqx/programs";
 import {
   API_URL,
   COUPON_FREQUENCY_NAMES,
+  DUMMY_ORACLE_PROGRAM_ID,
   STRUCTURED_PRODUCT_PROGRAM_ID,
   StructuredProductType,
   TRANSFER_SNAPSHOT_HOOK_PROGRAM_ID,
@@ -203,7 +210,15 @@ export default function Request2(props: {
       TRANSFER_SNAPSHOT_HOOK_PROGRAM_ID,
       provider
     );
-    const sdk = new StructuredNotesSdk(provider, program, treasuryWalletProgram, transferSnapshotHookProgram);
+
+    const dummyOracleProgram = new anchor.Program(DummyOracleIDL, DUMMY_ORACLE_PROGRAM_ID, provider);
+    const sdk = new StructuredNotesSdk(
+      provider,
+      program,
+      treasuryWalletProgram,
+      transferSnapshotHookProgram,
+      dummyOracleProgram
+    );
 
     console.log("SIGNING");
     // Sign
