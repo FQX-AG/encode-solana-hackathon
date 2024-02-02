@@ -27,12 +27,8 @@ import {
 } from "@solana/spl-token";
 import { getPdaWithSeeds } from "./utils";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
-import { TreasuryWallet } from "./types/treasury_wallet";
-import { TransferSnapshotHook } from "./types/transfer_snapshot_hook";
-import {
-  findMetadataPda,
-  MPL_TOKEN_METADATA_PROGRAM_ID,
-} from "@metaplex-foundation/mpl-token-metadata";
+import { DummyOracle, TransferSnapshotHook, TreasuryWallet } from "./types";
+import { MPL_TOKEN_METADATA_PROGRAM_ID } from "@metaplex-foundation/mpl-token-metadata";
 
 export type InitializeStructuredProductInstructionAccounts = {
   investor: PublicKey;
@@ -121,7 +117,8 @@ export class StructuredNotesSdk {
     readonly provider: AnchorProvider,
     readonly program: Program<StructuredProduct>,
     readonly treasuryWalletProgram: Program<TreasuryWallet>,
-    readonly transferSnapshotHookProgram: Program<TransferSnapshotHook>
+    readonly transferSnapshotHookProgram: Program<TransferSnapshotHook>,
+    readonly dummyOracleProgram: Program<DummyOracle>
   ) {}
 
   async createV0Tx(
@@ -713,6 +710,41 @@ export class StructuredNotesSdk {
         snapshotTransferHookProgram: this.transferSnapshotHookProgram.programId,
         tokenProgram: TOKEN_2022_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
+      })
+      .instruction();
+  }
+
+  async createInitDummyOracleInstruction(
+    assetSymbol: string,
+    price: BN,
+    decimals: number
+  ) {
+    const dummyOraclePda = getPdaWithSeeds(
+      [this.provider.publicKey.toBuffer(), Buffer.from(assetSymbol)],
+      this.dummyOracleProgram.programId
+    );
+
+    return await this.dummyOracleProgram.methods
+      .initialize(assetSymbol, price, decimals)
+      .accounts({
+        dummyOracle: dummyOraclePda.publicKey,
+        authority: this.provider.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .instruction();
+  }
+
+  async createSetPriceDummyOracleInstruction(assetSymbol: string, price: BN) {
+    const dummyOraclePda = getPdaWithSeeds(
+      [this.provider.publicKey.toBuffer(), Buffer.from(assetSymbol)],
+      this.dummyOracleProgram.programId
+    );
+
+    return await this.dummyOracleProgram.methods
+      .updatePrice(assetSymbol, price)
+      .accounts({
+        dummyOracle: dummyOraclePda.publicKey,
+        authority: this.provider.publicKey,
       })
       .instruction();
   }

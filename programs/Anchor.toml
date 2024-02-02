@@ -4,12 +4,13 @@
 seeds = false
 skip-lint = false
 
-[programs.localnet]
+[programs.devnet]
 structured-product = "GYFmKqbpYHUrML3BstU9VUnVdEE6ho9tzVJzs1DAR5iz"
 transferhook = "6sGAcb6vw8bhcVNPv5pMEhr3dXyeYoX2X89S3NkEaaJP"
 treasury-wallet = "3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3"
 
-[programs.devnet]
+[programs.localnet]
+dummy-oracle = "BZuknSg2JQVQFt4d6a5eHsoeivEMVp4tvSnkas8yoxgY"
 structured-product = "GYFmKqbpYHUrML3BstU9VUnVdEE6ho9tzVJzs1DAR5iz"
 transferhook = "6sGAcb6vw8bhcVNPv5pMEhr3dXyeYoX2X89S3NkEaaJP"
 treasury-wallet = "3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3"
@@ -19,12 +20,16 @@ url = "https://api.apr.dev"
 
 [provider]
 cluster = "Localnet"
-wallet = "~/.config/solana/id.json"
+wallet = "/Users/daniel/.config/solana/id.json"
 
 [scripts]
 test = "pnpm ts-mocha -p ./tsconfig.json -t 1000000 tests/structured-product.ts"
 
 [test]
+startup_wait = 5000
+shutdown_wait = 2000
+upgradeable = false
+
 [[test.genesis]]
-address='metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
-program='./tests/programs/metadata.so'
+address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+program = "./tests/programs/metadata.so"
