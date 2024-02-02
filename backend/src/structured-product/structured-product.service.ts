@@ -11,7 +11,12 @@ import {
   getAssociatedTokenAddressSync,
   unpackAccount,
 } from '@solana/spl-token';
-import { Keypair, PublicKey, TransactionInstruction } from '@solana/web3.js';
+import {
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  TransactionInstruction,
+} from '@solana/web3.js';
 import * as BN from 'bn.js';
 import { Queue } from 'bull';
 import { randomInt } from 'crypto';
@@ -71,7 +76,10 @@ export class StructuredProductService {
       this.configService.get<string>('PAYMENT_TOKEN_MINT_ADDRESS'),
     );
 
-    this.logger.log('Investor public key', structuredProductDeployDto.investorPublicKey);
+    this.logger.log(
+      'Investor public key',
+      structuredProductDeployDto.investorPublicKey,
+    );
 
     const investorATA = getAssociatedTokenAddressSync(
       paymentMint,
@@ -173,6 +181,20 @@ export class StructuredProductService {
 
     await this.issuerSdk.sendAndConfirmV0Tx(ixs, signers);
 
+    const brcPriceAuthorityProgramId = new PublicKey(
+      this.configService.get<string>('BRC_PRICE_AUTHORITY_PROGRAM_ID'),
+    );
+
+    const programLookupTableAddress = new PublicKey(
+      this.configService.get<string>('PROGRAM_LOOKUP_TABLE_ADDRESS'),
+    );
+
+    const programLookupTable = (
+      await this.serverSdk.provider.connection.getAddressLookupTable(
+        programLookupTableAddress,
+      )
+    ).value;
+
     const issuanceDate = new Date();
     const yieldValue = new BN(randomInt(0.2 * 10000, 0.4 * 10000));
     const couponPaymentAmount = new BN(structuredProductDeployDto.principal)
@@ -192,11 +214,6 @@ export class StructuredProductService {
           investor: new PublicKey(structuredProductDeployDto.investorPublicKey),
           issuer: this.issuerSdk.provider.publicKey,
           issuerTreasuryWallet: treasuryWalletPublicKey,
-          paymentMint: paymentMint,
-          issuancePricePerUnit: new BN(structuredProductDeployDto.principal),
-          supply: new BN(structuredProductDeployDto.totalIssuanceAmount).divn(
-            structuredProductDeployDto.principal,
-          ),
           payments: [
             {
               principal: false,
@@ -214,12 +231,20 @@ export class StructuredProductService {
               principal: true,
               paymentDateOffsetSeconds: paymentDateOffsetSeconds.muln(2),
               paymentMint: paymentMint,
-              priceAuthority: this.serverSdk.provider.publicKey,
             },
           ],
+          dummyOracle: brcPriceAuthorityProgramId,
+          underlyingSymbol: 'CRZYBTC',
+          paymentMint: paymentMint,
+          initialPrincipal: new BN(structuredProductDeployDto.principal),
+          barrierInBasisPoints: new BN(10),
+          supply: new BN(structuredProductDeployDto.totalIssuanceAmount).divn(
+            structuredProductDeployDto.principal,
+          ),
         },
         mint,
         nonce1.publicKey,
+        [programLookupTable],
       );
     const encodedIssueSPTx =
       await this.issuerSdk.signStructuredProductIssueOffline(

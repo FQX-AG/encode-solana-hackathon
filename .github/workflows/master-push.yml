@@ -110,8 +110,10 @@ jobs:
             --set-env-vars STRUCTURED_PRODUCT_PROGRAM_ID=${{secrets.STRUCTURED_PRODUCT_PROGRAM_ID}} \
             --set-env-vars TREASURY_WALLET_PROGRAM_ID=${{secrets.TREASURY_WALLET_PROGRAM_ID}} \
             --set-env-vars TRANSFER_HOOK_PROGRAM_ID=${{secrets.TRANSFER_HOOK_PROGRAM_ID}} \
+            --set-env-vars BRC_PRICE_AUTHORITY_PROGRAM_ID=${{secrets.BRC_PRICE_AUTHORITY_PROGRAM_ID}} \
             --set-env-vars PAYMENT_TOKEN_MINT_ADDRESS=${{secrets.PAYMENT_TOKEN_MINT_ADDRESS}} \
             --set-env-vars TREASURY_WALLET_PUBLIC_KEY=${{secrets.TREASURY_WALLET_PUBLIC_KEY}} \
+            --set-env-vars PROGRAM_LOOKUP_TABLE_ADDRESS=${{secrets.PROGRAM_LOOKUP_TABLE_ADDRESS}} \
             --set-env-vars REDIS_HOST=${{secrets.GCP_REDIS_HOST}} \
             --update-secrets=BULL_BOARD_PASSWORD=BULL_BOARD_PASSWORD:latest \
             --update-secrets=ISSUER_SECRET_KEY=ISSUER_SECRET_KEY:latest \

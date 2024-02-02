@@ -3,7 +3,7 @@ import { StructuredNotesSdk } from '@fqx/programs';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
-import { Keypair } from '@solana/web3.js';
+import { Keypair, PublicKey } from '@solana/web3.js';
 import { randomInt } from 'crypto';
 import { SdkFactory } from 'src/solana-client/sdk-factory';
 
@@ -11,6 +11,7 @@ import { SdkFactory } from 'src/solana-client/sdk-factory';
 export class OracleService {
   private serverSdk: StructuredNotesSdk;
   private readonly logger = new Logger(OracleService.name);
+  private paymentMint: PublicKey;
   constructor(
     private readonly sdkFactory: SdkFactory,
     private readonly configService: ConfigService,
@@ -20,15 +21,29 @@ export class OracleService {
     );
     const serverKeypair = Keypair.fromSecretKey(serverSecretKey);
     this.serverSdk = this.sdkFactory.getSdkForSigner(serverKeypair);
+
+    this.paymentMint = new PublicKey(
+      this.configService.get<string>('PAYMENT_TOKEN_MINT_ADDRESS'),
+    );
   }
   @Interval(10000)
   async updatePricing() {
     this.logger.log('Update pricing');
 
+    const oldPrice = await this.serverSdk.getCurrentPriceFromDummyOracle(
+      'CRZYBTC',
+      this.serverSdk.provider.publicKey,
+    );
+    console.log(oldPrice.currentPrice.toNumber());
+    const onePercentValue = oldPrice.currentPrice.divn(100).toNumber();
+    const newPriceDelta = new BN(
+      this.randomNegativeOrPositiveInRange(onePercentValue),
+    );
+    const newPrice = oldPrice.currentPrice.add(newPriceDelta);
     const setPriceIx =
       await this.serverSdk.createSetPriceDummyOracleInstruction(
-        'BTC',
-        this.randomBNInRange(15000, 250000),
+        'CRZYBTC',
+        newPrice,
       );
 
     const setPrixTx = await this.serverSdk.createAndSignV0Tx([setPriceIx]);
@@ -41,7 +56,8 @@ export class OracleService {
     return this.serverSdk.sendAndConfirmV0Tx([setPriceIx]);
   }
 
-  randomBNInRange(min: number, max: number) {
-    return new BN(min + randomInt(max - min));
+  randomNegativeOrPositiveInRange(range: number) {
+    const plusOrMinus = Math.round(Math.random()) * 2 - 1;
+    return new BN(randomInt(range) * plusOrMinus);
   }
 }

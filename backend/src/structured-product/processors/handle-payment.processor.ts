@@ -40,11 +40,15 @@ export class HandlePaymentProcessor {
 
     const ixs: TransactionInstruction[] = [];
 
+    const brcPriceAuthorityProgramId = new PublicKey(
+      this.configService.get<string>('BRC_PRICE_AUTHORITY_PROGRAM_ID'),
+    );
+
     if (job.data.principal) {
       const setPriceIx = await this.sdk.createSetPaymentPriceInstruction(
+        'CRZYBTC',
         mint,
-        true,
-        new BN(100000), // replace with actual price
+        brcPriceAuthorityProgramId,
         new BN(job.data.snapshotOffset),
       );
       ixs.push(setPriceIx);

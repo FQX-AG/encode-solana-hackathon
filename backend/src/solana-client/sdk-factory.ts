@@ -1,6 +1,7 @@
 import { AnchorProvider, Program } from '@coral-xyz/anchor';
 import NodeWallet from '@coral-xyz/anchor/dist/cjs/nodewallet';
 import {
+  BrcPriceAuthorityIDL,
   DummyOracleIDL,
   StructuredNotesSdk,
   StructuredProductIDL,
@@ -37,6 +38,10 @@ export class SdkFactory {
       this.configService.get<string>('DUMMY_ORACLE_PROGRAM_ID'),
     );
 
+    const brcPriceAuthorityProgramId = new PublicKey(
+      this.configService.get<string>('BRC_PRICE_AUTHORITY_PROGRAM_ID'),
+    );
+
     const structuredProductProgram = new Program(
       StructuredProductIDL,
       structuredProductProgramId,
@@ -61,12 +66,19 @@ export class SdkFactory {
       this.provider,
     );
 
+    const brcPriceAuthorityProgram = new Program(
+      BrcPriceAuthorityIDL,
+      brcPriceAuthorityProgramId,
+      this.provider,
+    );
+
     return new StructuredNotesSdk(
       this.provider,
       structuredProductProgram,
       treasuryWalletProgram,
       transferSnapshotHookProgram,
       dummyOracleProgram,
+      brcPriceAuthorityProgram,
     );
   };
 }
