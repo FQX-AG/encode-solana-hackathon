@@ -7,11 +7,15 @@ import { ExpressAdapter } from '@bull-board/express';
 import { ConfigModule } from '@nestjs/config';
 import { PaymentTokenModule } from './payment-token/payment-token.module';
 import * as basicAuth from 'express-basic-auth';
+import { ScheduleModule } from '@nestjs/schedule';
+import { LoggerModule } from 'nestjs-pino';
 
 @Module({
   imports: [
     StructuredProductModule,
     PaymentTokenModule,
+    LoggerModule.forRoot(),
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot(),
     BullModule.forRoot({
       redis: {

@@ -1,11 +1,12 @@
 import { AnchorProvider, BN } from '@coral-xyz/anchor';
 import { Process, Processor } from '@nestjs/bull';
-import { Inject } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Keypair, PublicKey, TransactionInstruction } from '@solana/web3.js';
 import { SOLANA_PROVIDER } from 'src/solana-client/contants';
 import { SdkFactory } from 'src/solana-client/sdk-factory';
 import { Job } from 'bull';
+import { StructuredNotesSdk } from '@fqx/programs';
 
 export type HandlePaymentJob = {
   mint: string;
@@ -19,26 +20,28 @@ export type HandlePaymentJob = {
 
 @Processor('handle-payment')
 export class HandlePaymentProcessor {
+  private readonly logger = new Logger(HandlePaymentProcessor.name);
+  private sdk: StructuredNotesSdk;
   constructor(
     @Inject(SOLANA_PROVIDER)
     private readonly provider: AnchorProvider,
     private readonly sdkFactory: SdkFactory,
     private configService: ConfigService,
-  ) {}
-  @Process()
-  async process(job: Job<HandlePaymentJob>) {
-    const mint = new PublicKey(job.data.mint);
-
+  ) {
     const serverSecretKey = Uint8Array.from(
       JSON.parse(this.configService.get<string>('SERVER_SECRET_KEY')),
     );
     const serverKeypair = Keypair.fromSecretKey(serverSecretKey);
-    const sdk = this.sdkFactory.getSdkForSigner(serverKeypair);
+    this.sdk = this.sdkFactory.getSdkForSigner(serverKeypair);
+  }
+  @Process()
+  async process(job: Job<HandlePaymentJob>) {
+    const mint = new PublicKey(job.data.mint);
 
     const ixs: TransactionInstruction[] = [];
 
     if (job.data.principal) {
-      const setPriceIx = await sdk.createSetPaymentPriceInstruction(
+      const setPriceIx = await this.sdk.createSetPaymentPriceInstruction(
         mint,
         true,
         new BN(100000), // replace with actual price
@@ -54,7 +57,7 @@ export class HandlePaymentProcessor {
     const treasuryWallet = new PublicKey(
       this.configService.get('TREASURY_WALLET_PUBLIC_KEY'),
     );
-    const pullPaymentIx = await sdk.createPullPaymentInstruction(
+    const pullPaymentIx = await this.sdk.createPullPaymentInstruction(
       {
         paymentMint,
         structuredProductMint: mint,
@@ -66,7 +69,7 @@ export class HandlePaymentProcessor {
 
     ixs.push(pullPaymentIx);
 
-    const settlePaymentIx = await sdk.createSettlePaymentInstruction(
+    const settlePaymentIx = await this.sdk.createSettlePaymentInstruction(
       {
         paymentMint,
         structuredProductMint: mint,
@@ -84,15 +87,15 @@ export class HandlePaymentProcessor {
 
     ixs.push(settlePaymentIx);
 
-    const settlePaymentX = await sdk.createAndSignV0Tx(ixs);
+    const settlePaymentX = await this.sdk.createAndSignV0Tx(ixs);
 
-    console.log(
+    this.logger.log(
       'Simulation: ',
-      await sdk.provider.connection.simulateTransaction(settlePaymentX, {
+      await this.sdk.provider.connection.simulateTransaction(settlePaymentX, {
         sigVerify: true,
       }),
     );
 
-    return await sdk.sendAndConfirmV0Tx(ixs);
+    return await this.sdk.sendAndConfirmV0Tx(ixs);
   }
 }
