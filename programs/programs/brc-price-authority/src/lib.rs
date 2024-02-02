@@ -38,11 +38,11 @@ pub mod brc_price_authority {
         underlying_symbol: String,
         _payment_date_offset: i64,
         initial_principal: u64,
+        initial_fixing_price: u64,
         barrier_in_basis_points: u64,
     ) -> Result<()> {
         let brc_config = &mut ctx.accounts.brc;
 
-        let initial_fixing_price = ctx.accounts.dummy_oracle.current_price;
         brc_config.authority = *ctx.accounts.authority.key;
         brc_config.underlying_symbol = underlying_symbol;
         brc_config.initial_principal = initial_principal;
@@ -50,6 +50,7 @@ pub mod brc_price_authority {
         // initial fixing prices scaled by the barrier_in_basis_points
         brc_config.barrier = initial_fixing_price * barrier_in_basis_points / 10000;
         brc_config.target_payment = ctx.accounts.payment.key();
+        brc_config.dummy_oracle = ctx.accounts.dummy_oracle.key();
         // to be set by the final fixing price
         brc_config.final_principal = None;
         brc_config.final_underlying_fixing_price = None;
@@ -136,14 +137,12 @@ pub struct Initialize<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(underlying_symbol: String)]
 pub struct SetFinalFixingPrice<'info> {
     pub payer: Signer<'info>,
     #[account(mut, seeds=[structured_product.key().as_ref()], bump=brc.bump)]
     pub brc: Account<'info, BRC>,
     pub structured_product: Account<'info, StructuredProductConfig>,
     pub payment: Account<'info, Payment>,
-    #[account(seeds=[dummy_oracle.authority.as_ref(), underlying_symbol.as_bytes()], bump=dummy_oracle.bump, seeds::program=dummy_oracle_program)]
     pub dummy_oracle: Account<'info, DummyOracleAccount>,
     pub dummy_oracle_program: Program<'info, DummyOracle>,
     pub structured_product_program: Program<'info, StructuredProduct>,
@@ -156,6 +155,7 @@ pub struct BRC {
     pub initial_principal: u64,
     pub initial_fixing_price: u64,
     pub barrier: u64,
+    pub dummy_oracle: Pubkey,
     pub final_underlying_fixing_price: Option<u64>,
     pub final_fixing_date: Option<i64>,
     pub final_principal: Option<u64>,

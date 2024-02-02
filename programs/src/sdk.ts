@@ -325,6 +325,11 @@ export class StructuredNotesSdk {
     barrierInBasisPoints: BN
   ) {
     const { mint, dummyOracle } = accounts;
+    const initialFixingPrice = (
+      await this.dummyOracleProgram.account.dummyOracleAccount.fetch(
+        dummyOracle
+      )
+    ).currentPrice;
     const paymentPda = await this.getPaymentPda(
       mint,
       true,
@@ -346,6 +351,7 @@ export class StructuredNotesSdk {
         underlyingSymbol,
         principalPaymentDateOffset,
         initialPrincipal,
+        initialFixingPrice,
         barrierInBasisPoints
       )
       .accounts({

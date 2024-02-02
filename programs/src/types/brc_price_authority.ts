@@ -60,6 +60,10 @@ export type BrcPriceAuthority = {
           "type": "u64"
         },
         {
+          "name": "initialFixingPrice",
+          "type": "u64"
+        },
+        {
           "name": "barrierInBasisPoints",
           "type": "u64"
         }
@@ -141,6 +145,10 @@ export type BrcPriceAuthority = {
           {
             "name": "barrier",
             "type": "u64"
+          },
+          {
+            "name": "dummyOracle",
+            "type": "publicKey"
           },
           {
             "name": "finalUnderlyingFixingPrice",
@@ -243,6 +251,10 @@ export const IDL: BrcPriceAuthority = {
           "type": "u64"
         },
         {
+          "name": "initialFixingPrice",
+          "type": "u64"
+        },
+        {
           "name": "barrierInBasisPoints",
           "type": "u64"
         }
@@ -324,6 +336,10 @@ export const IDL: BrcPriceAuthority = {
           {
             "name": "barrier",
             "type": "u64"
+          },
+          {
+            "name": "dummyOracle",
+            "type": "publicKey"
           },
           {
             "name": "finalUnderlyingFixingPrice",
