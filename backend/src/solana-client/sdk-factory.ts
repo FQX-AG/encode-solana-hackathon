@@ -1,6 +1,7 @@
 import { AnchorProvider, Program } from '@coral-xyz/anchor';
 import NodeWallet from '@coral-xyz/anchor/dist/cjs/nodewallet';
 import {
+  DummyOracleIDL,
   StructuredNotesSdk,
   StructuredProductIDL,
   TransferSnapshotHookIDL,
@@ -32,6 +33,10 @@ export class SdkFactory {
       this.configService.get<string>('TRANSFER_HOOK_PROGRAM_ID'),
     );
 
+    const dummyOracleProgramId = new PublicKey(
+      this.configService.get<string>('DUMMY_ORACLE_PROGRAM_ID'),
+    );
+
     const structuredProductProgram = new Program(
       StructuredProductIDL,
       structuredProductProgramId,
@@ -50,11 +55,18 @@ export class SdkFactory {
       this.provider,
     );
 
+    const dummyOracleProgram = new Program(
+      DummyOracleIDL,
+      dummyOracleProgramId,
+      this.provider,
+    );
+
     return new StructuredNotesSdk(
       this.provider,
       structuredProductProgram,
       treasuryWalletProgram,
       transferSnapshotHookProgram,
+      dummyOracleProgram,
     );
   };
 }

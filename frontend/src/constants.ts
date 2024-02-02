@@ -80,5 +80,9 @@ export const TRANSFER_SNAPSHOT_HOOK_PROGRAM_ID = new PublicKey(
     "NEXT_PUBLIC_TRANSFER_SNAPSHOT_HOOK_PROGRAM_ID is undefined"
   )
 );
+
+export const DUMMY_ORACLE_PROGRAM_ID = new PublicKey(
+  ensure(process.env.NEXT_PUBLIC_DUMMY_ORACLE_PROGRAM_ID, "NEXT_PUBLIC_DUMMY_ORACLE_PROGRAM_ID is undefined")
+);
 export const API_URL = ensure(process.env.NEXT_PUBLIC_API_URL, "NEXT_PUBLIC_API_URL is undefined");
 export const RPC_URL = ensure(process.env.NEXT_PUBLIC_RPC_URL, "NEXT_PUBLIC_RPC_URL is undefined");

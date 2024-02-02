@@ -48,6 +48,15 @@ jobs:
         run: pnpm run --filter programs upgrade:treasury-wallet
       - name: Upgrade transfer hook program
         run: pnpm run --filter programs upgrade:transferhook
+      - name: Upgrade dummy oracle program
+        run: pnpm run --filter programs upgrade:dummy-oracle
+      - name: Anchor idl init
+        working-directory: programs
+        run: |
+          anchor idl init -f programs/target/idl/structured_product.json
+          anchor idl init -f programs/target/idl/transfer_snapshot_hook.json
+          anchor idl init -f programs/target/idl/treasury_wallet.json
+          anchor idl init -f programs/target/idl/dummy_oracle.json
   deploy-rpc-proxy-to-cloud-run:
     runs-on: ubuntu-latest
     steps:

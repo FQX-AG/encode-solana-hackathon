@@ -11,7 +11,7 @@ import {
 import { getPdaWithSeeds, newAccountWithLamports, PDA, sleep } from "./utils";
 import { TransferSnapshotHook } from "../src/types/transfer_snapshot_hook";
 import { TreasuryWallet } from "../src/types/treasury_wallet";
-import { StructuredNotesSdk } from "../src";
+import { DummyOracle, StructuredNotesSdk } from "../src";
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountInstruction,
@@ -38,6 +38,9 @@ describe("structured-product", () => {
   const treasuryWalletProgram = anchor.workspace
     .TreasuryWallet as Program<TreasuryWallet>;
 
+  const dummyOracleProgram = anchor.workspace
+    .DummyOracle as Program<DummyOracle>;
+
   anchor.setProvider(anchor.AnchorProvider.env());
 
   const provider: AnchorProvider = anchor.getProvider() as AnchorProvider;
@@ -63,7 +66,8 @@ describe("structured-product", () => {
       provider,
       structuredProductProgram,
       treasuryWalletProgram,
-      transferSnapshotHookProgram
+      transferSnapshotHookProgram,
+      dummyOracleProgram
     );
     treasuryWallet = anchor.web3.Keypair.generate();
     treasuryWalletAuthorityPda = await getPdaWithSeeds(
@@ -182,7 +186,8 @@ describe("structured-product", () => {
       }),
       structuredProductProgram,
       treasuryWalletProgram,
-      transferSnapshotHookProgram
+      transferSnapshotHookProgram,
+      dummyOracleProgram
     );
 
     console.log("Investor: ", sdk.provider.publicKey.toBase58());
