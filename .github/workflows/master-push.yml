@@ -55,6 +55,7 @@ jobs:
           anchor idl init -f programs/target/idl/structured_product.json
           anchor idl init -f programs/target/idl/transfer_snapshot_hook.json
           anchor idl init -f programs/target/idl/treasury_wallet.json
+          anchor idl init -f programs/target/idl/dummy_oracle.json
   deploy-rpc-proxy-to-cloud-run:
     runs-on: ubuntu-latest
     steps:
