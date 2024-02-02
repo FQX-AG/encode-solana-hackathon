@@ -11,6 +11,11 @@ export type DummyOracle = {
           "isSigner": true
         },
         {
+          "name": "quoteCurrencyMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "dummyOracle",
           "isMut": true,
           "isSigner": false
@@ -29,10 +34,6 @@ export type DummyOracle = {
         {
           "name": "initialPrice",
           "type": "u64"
-        },
-        {
-          "name": "decimals",
-          "type": "u8"
         }
       ]
     },
@@ -64,7 +65,7 @@ export type DummyOracle = {
   ],
   "accounts": [
     {
-      "name": "dummyOracle",
+      "name": "dummyOracleAccount",
       "type": {
         "kind": "struct",
         "fields": [
@@ -81,8 +82,8 @@ export type DummyOracle = {
             "type": "u64"
           },
           {
-            "name": "decimals",
-            "type": "u8"
+            "name": "quoteCurrencyMint",
+            "type": "publicKey"
           },
           {
             "name": "lastUpdate",
@@ -111,6 +112,11 @@ export const IDL: DummyOracle = {
           "isSigner": true
         },
         {
+          "name": "quoteCurrencyMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "dummyOracle",
           "isMut": true,
           "isSigner": false
@@ -129,10 +135,6 @@ export const IDL: DummyOracle = {
         {
           "name": "initialPrice",
           "type": "u64"
-        },
-        {
-          "name": "decimals",
-          "type": "u8"
         }
       ]
     },
@@ -164,7 +166,7 @@ export const IDL: DummyOracle = {
   ],
   "accounts": [
     {
-      "name": "dummyOracle",
+      "name": "dummyOracleAccount",
       "type": {
         "kind": "struct",
         "fields": [
@@ -181,8 +183,8 @@ export const IDL: DummyOracle = {
             "type": "u64"
           },
           {
-            "name": "decimals",
-            "type": "u8"
+            "name": "quoteCurrencyMint",
+            "type": "publicKey"
           },
           {
             "name": "lastUpdate",

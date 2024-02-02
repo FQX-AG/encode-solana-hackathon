@@ -3,7 +3,7 @@ import { StructuredNotesSdk } from '@fqx/programs';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
-import { Keypair } from '@solana/web3.js';
+import { Keypair, PublicKey } from '@solana/web3.js';
 import { randomInt } from 'crypto';
 import { SdkFactory } from 'src/solana-client/sdk-factory';
 
@@ -11,6 +11,7 @@ import { SdkFactory } from 'src/solana-client/sdk-factory';
 export class OracleService {
   private serverSdk: StructuredNotesSdk;
   private readonly logger = new Logger(OracleService.name);
+  private paymentMint: PublicKey;
   constructor(
     private readonly sdkFactory: SdkFactory,
     private readonly configService: ConfigService,
@@ -20,28 +21,36 @@ export class OracleService {
     );
     const serverKeypair = Keypair.fromSecretKey(serverSecretKey);
     this.serverSdk = this.sdkFactory.getSdkForSigner(serverKeypair);
-  }
-  @Interval(10000)
-  async updatePricing() {
-    this.logger.log('Update pricing');
 
+    this.paymentMint = new PublicKey(
+      this.configService.get<string>('PAYMENT_TOKEN_MINT_ADDRESS'),
+    );
+  }
+  @Interval(100000)
+  async updatePricing() {
+    const oldPrice = await this.serverSdk.getCurrentPriceFromDummyOracle(
+      'CRZYBTC',
+      this.serverSdk.provider.publicKey,
+    );
+    const onePercentValue = oldPrice.currentPrice.divn(100).toNumber();
+    const newPriceDelta = new BN(
+      this.randomNegativeOrPositiveInRange(onePercentValue),
+    );
+    const newPrice = oldPrice.currentPrice.add(newPriceDelta);
     const setPriceIx =
       await this.serverSdk.createSetPriceDummyOracleInstruction(
-        'BTC',
-        this.randomBNInRange(15000, 250000),
+        'CRZYBTC',
+        newPrice,
       );
-
-    const setPrixTx = await this.serverSdk.createAndSignV0Tx([setPriceIx]);
-    this.logger.log(
-      'Simulation: ',
-      await this.serverSdk.provider.connection.simulateTransaction(setPrixTx, {
-        sigVerify: true,
-      }),
-    );
-    return this.serverSdk.sendAndConfirmV0Tx([setPriceIx]);
+    this.logger.log(`Setting new price: ${newPrice.toString()}`);
+    const updatePriceTxId = await this.serverSdk.sendAndConfirmV0Tx([
+      setPriceIx,
+    ]);
+    this.logger.log(`Price updated: ${updatePriceTxId}`);
   }
 
-  randomBNInRange(min: number, max: number) {
-    return new BN(min + randomInt(max - min));
+  randomNegativeOrPositiveInRange(range: number) {
+    const plusOrMinus = Math.round(Math.random()) * 2 - 1;
+    return new BN(randomInt(range) * plusOrMinus);
   }
 }

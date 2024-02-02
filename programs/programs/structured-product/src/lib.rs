@@ -601,9 +601,10 @@ pub mod structured_product {
 
         let current_time = Clock::get()?.unix_timestamp;
         msg!(
-            "Payment date: {}, current time: {}",
+            "Payment date: {}, current time: {} price: {}",
             _payment_date_offset,
-            current_time
+            current_time,
+            price_per_unit
         );
 
         require!(
@@ -746,7 +747,7 @@ pub struct Initialize<'info> {
     pub mint: Signer<'info>,
     // TODO: space calculation
     #[account(init, seeds=[mint.key().as_ref()], bump, payer=authority, space=200)]
-    pub structured_product: Account<'info, StructuredProduct>,
+    pub structured_product: Account<'info, StructuredProductConfig>,
     pub payment_mint: InterfaceAccount<'info, Mint>,
     /// CHECK: validated in initialize_extra_account_meta_list
     pub snapshot_config: AccountInfo<'info>,
@@ -768,7 +769,7 @@ pub struct AddStaticPayment<'info> {
     authority: Signer<'info>,
     mint: InterfaceAccount<'info, Mint>,
     #[account(mut, seeds=[mint.key().as_ref()], bump=structured_product.bump)]
-    structured_product: Account<'info, StructuredProduct>,
+    structured_product: Account<'info, StructuredProductConfig>,
     #[account(mut)]
     snapshot_config: Account<'info, SnapshotConfig>,
     // TODO: space calculation
@@ -790,7 +791,7 @@ pub struct AddVariablePayment<'info> {
     authority: Signer<'info>,
     mint: InterfaceAccount<'info, Mint>,
     #[account(mut, seeds=[mint.key().as_ref()], bump=structured_product.bump)]
-    structured_product: Account<'info, StructuredProduct>,
+    structured_product: Account<'info, StructuredProductConfig>,
     #[account(mut)]
     snapshot_config: Account<'info, SnapshotConfig>,
     // TODO: space calculation
@@ -802,6 +803,7 @@ pub struct AddVariablePayment<'info> {
     space=200)]
     payment: Account<'info, Payment>,
     payment_mint: InterfaceAccount<'info, Mint>,
+    /// TODO: this should be signed by price authority but omitted for time reasons
     /// CHECK: no checks just authority allowed to call set_payment_amount
     price_authority: AccountInfo<'info>,
     snapshot_transfer_hook_program: Program<'info, TransferSnapshotHook>,
@@ -815,7 +817,7 @@ pub struct PayIssuance<'info> {
     pub payer: Signer<'info>,
     pub mint: InterfaceAccount<'info, Mint>,
     #[account(mut, seeds=[mint.key().as_ref()], bump=structured_product.bump)]
-    pub structured_product: Account<'info, StructuredProduct>,
+    pub structured_product: Account<'info, StructuredProductConfig>,
     #[account(mut, token::mint=structured_product.issuance_payment_mint, token::authority=payer)]
     pub payer_token_account: InterfaceAccount<'info, TokenAccount>,
     pub payment_mint: InterfaceAccount<'info, Mint>,
@@ -836,7 +838,7 @@ pub struct CreateMetadata<'info> {
     #[account(mut, seeds=[b"metadata", metadata_program.key().as_ref(), mint.key().as_ref()], bump, seeds::program=metadata_program)]
     pub metadata: AccountInfo<'info>,
     #[account(seeds=[mint.key().as_ref()], bump=structured_product.bump)]
-    pub structured_product: Account<'info, StructuredProduct>,
+    pub structured_product: Account<'info, StructuredProductConfig>,
     pub metadata_program: Program<'info, Metadata>,
     pub token_program: Program<'info, Token2022>,
     pub system_program: Program<'info, System>,
@@ -852,7 +854,7 @@ pub struct Issue<'info> {
     #[account(mut, mint::authority=structured_product, mint::decimals=0)]
     pub mint: InterfaceAccount<'info, Mint>,
     #[account(mut, seeds=[mint.key().as_ref()], bump=structured_product.bump)]
-    pub structured_product: Account<'info, StructuredProduct>,
+    pub structured_product: Account<'info, StructuredProductConfig>,
     /// CHECK: account checked by snapshot hook program
     #[account(mut)]
     pub snapshot_config: AccountInfo<'info>,
@@ -883,7 +885,7 @@ pub struct WithdrawIssuanceProceeds<'info> {
     pub issuer: Signer<'info>,
     pub mint: InterfaceAccount<'info, Mint>,
     #[account(mut, seeds=[mint.key().as_ref()], bump=structured_product.bump)]
-    pub structured_product: Account<'info, StructuredProduct>,
+    pub structured_product: Account<'info, StructuredProductConfig>,
     #[account(mut, token::mint=payment_mint)]
     pub beneficiary_token_account: InterfaceAccount<'info, TokenAccount>,
     pub payment_mint: InterfaceAccount<'info, Mint>,
@@ -898,7 +900,7 @@ pub struct SetPaymentPrice<'info> {
     #[account(mut)]
     authority: Signer<'info>,
     #[account(mut)]
-    structured_product: Account<'info, StructuredProduct>,
+    structured_product: Account<'info, StructuredProductConfig>,
     #[account(mut, seeds=[structured_product.key().as_ref(), &[payment.principal.into()], &_payment_date_offset.to_le_bytes()], bump=payment.bump)]
     payment: Account<'info, Payment>,
 }
@@ -918,7 +920,7 @@ pub struct PullPayment<'info> {
     treasury_wallet_token_account: InterfaceAccount<'info, TokenAccount>,
     mint: InterfaceAccount<'info, Mint>,
     #[account(mut, seeds=[mint.key().as_ref()], bump=structured_product.bump)]
-    structured_product: Account<'info, StructuredProduct>,
+    structured_product: Account<'info, StructuredProductConfig>,
     payment_mint: InterfaceAccount<'info, Mint>,
     #[account(mut, seeds=[structured_product.key().as_ref(), &[payment.principal.into()], &_payment_date_offset.to_le_bytes()], bump=payment.bump)]
     payment: Account<'info, Payment>,
@@ -937,7 +939,7 @@ pub struct SettlePayment<'info> {
     payer: Signer<'info>,
     mint: InterfaceAccount<'info, Mint>,
     #[account(mut, seeds=[mint.key().as_ref()], bump=structured_product.bump)]
-    structured_product: Account<'info, StructuredProduct>,
+    structured_product: Account<'info, StructuredProductConfig>,
     #[account(seeds=[b"snapshots", mint.key().as_ref()], seeds::program=snapshot_transfer_hook_program, bump)]
     snapshot_config: Account<'info, SnapshotConfig>,
     payment_mint: InterfaceAccount<'info, Mint>,
@@ -961,7 +963,7 @@ pub struct SettlePayment<'info> {
 }
 
 #[account]
-pub struct StructuredProduct {
+pub struct StructuredProductConfig {
     authority: Pubkey,
     investor: Pubkey,
     issuer: Pubkey,
@@ -978,12 +980,12 @@ pub struct StructuredProduct {
 
 #[account]
 pub struct Payment {
-    payment_mint: Pubkey,
-    price_authority: Option<Pubkey>,
-    price_per_unit: Option<u64>,
-    principal: bool,
-    paid: bool,
-    bump: u8,
+    pub payment_mint: Pubkey,
+    pub price_authority: Option<Pubkey>,
+    pub price_per_unit: Option<u64>,
+    pub principal: bool,
+    pub paid: bool,
+    pub bump: u8,
 }
 
 #[account]

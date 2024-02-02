@@ -50,6 +50,8 @@ jobs:
         run: pnpm run --filter programs upgrade:transferhook
       - name: Upgrade dummy oracle program
         run: pnpm run --filter programs upgrade:dummy-oracle
+      - name: Upgrade brc program
+        run: pnpm run --filter programs upgrade:brc
 
   deploy-backend-to-cloud-run:
     runs-on: ubuntu-latest
@@ -85,8 +87,10 @@ jobs:
             --set-env-vars STRUCTURED_PRODUCT_PROGRAM_ID=${{secrets.STRUCTURED_PRODUCT_PROGRAM_ID}} \
             --set-env-vars TREASURY_WALLET_PROGRAM_ID=${{secrets.TREASURY_WALLET_PROGRAM_ID}} \
             --set-env-vars TRANSFER_HOOK_PROGRAM_ID=${{secrets.TRANSFER_HOOK_PROGRAM_ID}} \
+            --set-env-vars BRC_PRICE_AUTHORITY_PROGRAM_ID=${{secrets.BRC_PRICE_AUTHORITY_PROGRAM_ID}} \
             --set-env-vars PAYMENT_TOKEN_MINT_ADDRESS=${{secrets.PAYMENT_TOKEN_MINT_ADDRESS}} \
             --set-env-vars TREASURY_WALLET_PUBLIC_KEY=${{secrets.TREASURY_WALLET_PUBLIC_KEY}} \
+            --set-env-vars PROGRAM_LOOKUP_TABLE_ADDRESS=${{secrets.PROGRAM_LOOKUP_TABLE_ADDRESS}} \
             --set-env-vars DUMMY_ORACLE_PROGRAM_ID=${{secrets.DUMMY_ORACLE_PROGRAM_ID}} \
             --set-env-vars REDIS_HOST=${{secrets.GCP_REDIS_HOST}} \
             --update-secrets=BULL_BOARD_PASSWORD=BULL_BOARD_PASSWORD:latest \

@@ -29,6 +29,7 @@ import { getPdaWithSeeds } from "./utils";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import { DummyOracle, TransferSnapshotHook, TreasuryWallet } from "./types";
 import { MPL_TOKEN_METADATA_PROGRAM_ID } from "@metaplex-foundation/mpl-token-metadata";
+import { BrcPriceAuthority } from "./types/brc_price_authority";
 
 export type InitializeStructuredProductInstructionAccounts = {
   investor: PublicKey;
@@ -89,13 +90,15 @@ export type SignStructuredProductInitOfflineConfig = {
   issuerTreasuryWallet: PublicKey;
   payments: {
     amount?: BN;
-    priceAuthority?: PublicKey;
     paymentMint: PublicKey;
     principal: boolean;
     paymentDateOffsetSeconds: BN;
   }[];
+  dummyOracle: PublicKey;
+  underlyingSymbol: string;
   paymentMint: PublicKey;
-  issuancePricePerUnit: BN;
+  initialPrincipal: BN;
+  barrierInBasisPoints: BN;
   supply: BN;
 };
 
@@ -118,7 +121,8 @@ export class StructuredNotesSdk {
     readonly program: Program<StructuredProduct>,
     readonly treasuryWalletProgram: Program<TreasuryWallet>,
     readonly transferSnapshotHookProgram: Program<TransferSnapshotHook>,
-    readonly dummyOracleProgram: Program<DummyOracle>
+    readonly dummyOracleProgram: Program<DummyOracle>,
+    readonly brcProgram: Program<BrcPriceAuthority>
   ) {}
 
   async createV0Tx(
@@ -127,12 +131,6 @@ export class StructuredNotesSdk {
     recentBlockHash?: string,
     lookupTables?: AddressLookupTableAccount[]
   ) {
-    if (recentBlockHash) {
-      console.log(
-        "Received recentBlockHash presumably a durable nonce: ",
-        recentBlockHash
-      );
-    }
     const recentBlockhash =
       recentBlockHash ??
       (await this.provider.connection.getLatestBlockhash("finalized"))
@@ -310,6 +308,56 @@ export class StructuredNotesSdk {
       .initialize(maxSnapshots, issuancePricePerUnit, supply)
       .accounts(allAccounts)
       .signers([mint])
+      .instruction();
+  }
+
+  async createBrcPriceAuthorityInstruction(
+    accounts: { mint: PublicKey; dummyOracle: PublicKey },
+    underlyingSymbol: string,
+    principalPaymentDateOffset: BN,
+    initialPrincipal: BN,
+    barrierInBasisPoints: BN
+  ) {
+    const { mint, dummyOracle } = accounts;
+    const initialFixingPrice = (
+      await this.dummyOracleProgram.account.dummyOracleAccount.fetch(
+        dummyOracle
+      )
+    ).currentPrice;
+    const paymentPda = await this.getPaymentPda(
+      mint,
+      true,
+      principalPaymentDateOffset
+    );
+
+    const structuredProductPDA = getPdaWithSeeds(
+      [mint.toBuffer()],
+      this.program.programId
+    );
+
+    const brcPDA = getPdaWithSeeds(
+      [structuredProductPDA.publicKey.toBuffer()],
+      this.brcProgram.programId
+    );
+
+    return this.brcProgram.methods
+      .initialize(
+        underlyingSymbol,
+        principalPaymentDateOffset,
+        initialPrincipal,
+        initialFixingPrice,
+        barrierInBasisPoints
+      )
+      .accounts({
+        authority: this.provider.publicKey,
+        structuredProduct: structuredProductPDA.publicKey,
+        payment: paymentPda.publicKey,
+        brc: brcPDA.publicKey,
+        dummyOracle,
+        dummyOracleProgram: this.dummyOracleProgram.programId,
+        structuredProductProgram: this.program.programId,
+        systemProgram: SystemProgram.programId,
+      })
       .instruction();
   }
 
@@ -557,9 +605,9 @@ export class StructuredNotesSdk {
   }
 
   async createSetPaymentPriceInstruction(
+    underlyingSymbol: string,
     mint: PublicKey,
-    principal: boolean,
-    price: BN,
+    dummyOracle: PublicKey,
     paymentDateOffsetSeconds: BN
   ) {
     const structuredProductPDA = getPdaWithSeeds(
@@ -569,18 +617,26 @@ export class StructuredNotesSdk {
 
     const paymentPDA = await this.getPaymentPda(
       mint,
-      principal,
+      true,
       paymentDateOffsetSeconds
     );
-
     console.log("paymentPDA", paymentPDA.publicKey.toBase58());
 
-    return await this.program.methods
-      .setPaymentPrice(new BN(paymentDateOffsetSeconds), price)
+    const brcPDA = getPdaWithSeeds(
+      [structuredProductPDA.publicKey.toBuffer()],
+      this.brcProgram.programId
+    );
+
+    return await this.brcProgram.methods
+      .setFinalFixingPrice(underlyingSymbol, paymentDateOffsetSeconds)
       .accounts({
-        authority: this.provider.publicKey,
+        payer: this.provider.publicKey,
+        brc: brcPDA.publicKey,
         structuredProduct: structuredProductPDA.publicKey,
         payment: paymentPDA.publicKey,
+        dummyOracle: dummyOracle,
+        structuredProductProgram: this.program.programId,
+        dummyOracleProgram: this.dummyOracleProgram.programId,
       })
       .instruction();
   }
@@ -717,7 +773,7 @@ export class StructuredNotesSdk {
   async createInitDummyOracleInstruction(
     assetSymbol: string,
     price: BN,
-    decimals: number
+    quoteCurrencyMint: PublicKey // payment mint
   ) {
     const dummyOraclePda = getPdaWithSeeds(
       [this.provider.publicKey.toBuffer(), Buffer.from(assetSymbol)],
@@ -725,11 +781,12 @@ export class StructuredNotesSdk {
     );
 
     return await this.dummyOracleProgram.methods
-      .initialize(assetSymbol, price, decimals)
+      .initialize(assetSymbol, price)
       .accounts({
         dummyOracle: dummyOraclePda.publicKey,
         authority: this.provider.publicKey,
         systemProgram: SystemProgram.programId,
+        quoteCurrencyMint,
       })
       .instruction();
   }
@@ -758,7 +815,7 @@ export class StructuredNotesSdk {
       this.dummyOracleProgram.programId
     );
 
-    return await this.dummyOracleProgram.account.dummyOracle.fetch(
+    return await this.dummyOracleProgram.account.dummyOracleAccount.fetch(
       dummyOraclePda.publicKey
     );
   }
@@ -817,7 +874,8 @@ export class StructuredNotesSdk {
   async signStructuredProductInitOffline(
     config: SignStructuredProductInitOfflineConfig,
     mint: Keypair,
-    noncePubkey: PublicKey
+    noncePubkey: PublicKey,
+    lookupTableAccounts: AddressLookupTableAccount[]
   ) {
     const advanceIx = SystemProgram.nonceAdvance({
       noncePubkey,
@@ -861,8 +919,25 @@ export class StructuredNotesSdk {
       },
       mint,
       config.payments.length - 1, // principal uses same snapshot as last coupon,
-      config.issuancePricePerUnit, // this is the principal amount,
+      config.initialPrincipal, // this is the principal amount,
       config.supply
+    );
+
+    const addBrcPriceAuthorityIx =
+      await this.createBrcPriceAuthorityInstruction(
+        {
+          mint: mint.publicKey,
+          dummyOracle: config.dummyOracle,
+        },
+        config.underlyingSymbol,
+        config.payments[config.payments.length - 1].paymentDateOffsetSeconds,
+        config.initialPrincipal,
+        config.barrierInBasisPoints
+      );
+
+    const brcPDA = getPdaWithSeeds(
+      [structuredProductPDA.publicKey.toBuffer()],
+      this.brcProgram.programId
     );
 
     const paymentIxs = await Promise.all(
@@ -871,7 +946,7 @@ export class StructuredNotesSdk {
           {
             paymentMint: p.paymentMint,
             structuredProductMint: mint.publicKey,
-            priceAuthority: p.priceAuthority,
+            priceAuthority: p.principal ? brcPDA.publicKey : undefined,
           },
           p.paymentDateOffsetSeconds,
           p.principal,
@@ -879,7 +954,6 @@ export class StructuredNotesSdk {
         )
       )
     );
-
     const addAuthorizationIx = await this.treasuryWalletProgram.methods
       .addWithdrawAuthorization()
       .accounts({
@@ -892,22 +966,6 @@ export class StructuredNotesSdk {
       })
       .instruction();
 
-    // const lookupTableAddress = await this.createLookupTable([
-    //   this.program.programId,
-    //   this.transferSnapshotHookProgram.programId,
-    //   this.treasuryWalletProgram.programId,
-    //   mint.publicKey,
-    //   structuredProductPDA.publicKey,
-    //   snapshotConfigPDA.publicKey,
-    //   config.paymentMint,
-    //   config.priceAuthority,
-    //   config.investor,
-    //   config.issuer,
-    // ]);
-    //
-    // const lookupTableAccount =
-    //   await this.provider.connection.getAddressLookupTable(lookupTableAddress);
-
     const accountInfo = await this.provider.connection.getAccountInfo(
       noncePubkey
     );
@@ -919,12 +977,13 @@ export class StructuredNotesSdk {
         advanceIx,
         createMintAccountIx,
         initIx,
+        addBrcPriceAuthorityIx,
         ...paymentIxs,
         addAuthorizationIx,
       ],
       [mint],
       nonceAccount.nonce,
-      []
+      [...lookupTableAccounts]
     );
 
     return bs58.encode(signedInitTx.serialize());

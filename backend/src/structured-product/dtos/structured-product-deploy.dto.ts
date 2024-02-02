@@ -3,4 +3,5 @@ export class StructuredProductDeployDto {
   maturityDate: string;
   principal: number;
   totalIssuanceAmount: number;
+  barrierLevel: number;
 }

@@ -40,11 +40,15 @@ export class HandlePaymentProcessor {
 
     const ixs: TransactionInstruction[] = [];
 
+    const dummyOracleProgramId = new PublicKey(
+      this.configService.get('DUMMY_ORACLE_PROGRAM_ID'),
+    );
+
     if (job.data.principal) {
       const setPriceIx = await this.sdk.createSetPaymentPriceInstruction(
+        'CRZYBTC',
         mint,
-        true,
-        new BN(100000), // replace with actual price
+        dummyOracleProgramId,
         new BN(job.data.snapshotOffset),
       );
       ixs.push(setPriceIx);

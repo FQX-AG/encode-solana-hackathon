@@ -22,7 +22,7 @@ export async function getTokenInfo(provider: anchor.AnchorProvider, mint: web3.P
   // structuredProduct
   const { value: mintAccountInfo } = await sdk.provider.connection.getParsedAccountInfo(mint);
   const mintAuthority = new PublicKey((mintAccountInfo!.data as ParsedAccountData).parsed.info.mintAuthority);
-  const structuredProduct = await sdk.program.account.structuredProduct.fetch(mintAuthority);
+  const structuredProduct = await sdk.program.account.structuredProductConfig.fetch(mintAuthority);
 
   // payments
   const snapshotConfigPDA = await getPdaWithSeeds(

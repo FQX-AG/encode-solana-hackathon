@@ -75,10 +75,10 @@ type GenericValues<Type extends StructuredProductType, Params extends object> = 
 } & Params;
 
 export type Values =
+  | GenericValues<StructuredProductType.BRC, { brcDetails: { level: number; type: BRCType } }>
   | GenericValues<StructuredProductType.OC, {}>
   | GenericValues<StructuredProductType.CPN, { cpnDetails: { level: number } }>
-  | GenericValues<StructuredProductType.RC, { rcDetails: { strike: number } }>
-  | GenericValues<StructuredProductType.BRC, { brcDetails: { level: number; type: BRCType } }>;
+  | GenericValues<StructuredProductType.RC, { rcDetails: { strike: number } }>;
 
 export const validationSchema: Yup.Schema<Values> = Yup.object({
   type: Yup.string().label("Type").oneOf(Object.values(StructuredProductType)).required(),
@@ -100,6 +100,12 @@ export const validationSchema: Yup.Schema<Values> = Yup.object({
     .test("is-in-future", "Date must be in the future", (value) => value && isFuture(value))
     .required(),
   couponFrequency: Yup.string().label("Coupon frequency").oneOf(Object.values(CouponFrequency)).required(),
+  brcDetails: Yup.object({
+    level: Yup.number().label("Barrier level").min(0).lessThan(10000).required(),
+    type: Yup.string().label("Barrier type").oneOf(Object.values(BRCType)).required(),
+  })
+    .required()
+    .when("type", { is: StructuredProductType.BRC, otherwise: () => Yup.mixed().nullable().strip() }),
   cpnDetails: Yup.object({
     level: Yup.number().label("Capital protection level").min(0).lessThan(10000).required(),
   })
@@ -110,10 +116,4 @@ export const validationSchema: Yup.Schema<Values> = Yup.object({
   })
     .required()
     .when("type", { is: StructuredProductType.RC, otherwise: () => Yup.mixed().nullable().strip() }),
-  brcDetails: Yup.object({
-    level: Yup.number().label("Barrier level").min(0).lessThan(10000).required(),
-    type: Yup.string().label("Barrier type").oneOf(Object.values(BRCType)).required(),
-  })
-    .required()
-    .when("type", { is: StructuredProductType.BRC, otherwise: () => Yup.mixed().nullable().strip() }),
 }).required();

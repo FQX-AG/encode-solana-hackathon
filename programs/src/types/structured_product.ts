@@ -186,7 +186,10 @@ export type StructuredProduct = {
         {
           "name": "priceAuthority",
           "isMut": false,
-          "isSigner": false
+          "isSigner": false,
+          "docs": [
+            "TODO: this should be signed by price authority but omitted for time reasons"
+          ]
         },
         {
           "name": "snapshotTransferHookProgram",
@@ -647,7 +650,7 @@ export type StructuredProduct = {
   ],
   "accounts": [
     {
-      "name": "structuredProduct",
+      "name": "structuredProductConfig",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1005,7 +1008,10 @@ export const IDL: StructuredProduct = {
         {
           "name": "priceAuthority",
           "isMut": false,
-          "isSigner": false
+          "isSigner": false,
+          "docs": [
+            "TODO: this should be signed by price authority but omitted for time reasons"
+          ]
         },
         {
           "name": "snapshotTransferHookProgram",
@@ -1466,7 +1472,7 @@ export const IDL: StructuredProduct = {
   ],
   "accounts": [
     {
-      "name": "structuredProduct",
+      "name": "structuredProductConfig",
       "type": {
         "kind": "struct",
         "fields": [

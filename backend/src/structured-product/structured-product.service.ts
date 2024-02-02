@@ -11,7 +11,12 @@ import {
   getAssociatedTokenAddressSync,
   unpackAccount,
 } from '@solana/spl-token';
-import { Keypair, PublicKey, TransactionInstruction } from '@solana/web3.js';
+import {
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  TransactionInstruction,
+} from '@solana/web3.js';
 import * as BN from 'bn.js';
 import { Queue } from 'bull';
 import { randomInt } from 'crypto';
@@ -176,6 +181,23 @@ export class StructuredProductService {
 
     await this.issuerSdk.sendAndConfirmV0Tx(ixs, signers);
 
+    const dummyOraclePDA = getPdaWithSeeds(
+      [this.serverSdk.provider.publicKey.toBuffer(), Buffer.from('CRZYBTC')],
+      this.serverSdk.dummyOracleProgram.programId,
+    );
+
+    this.logger.log({ dummyORACLE: dummyOraclePDA.publicKey.toBase58() });
+
+    const programLookupTableAddress = new PublicKey(
+      this.configService.get<string>('PROGRAM_LOOKUP_TABLE_ADDRESS'),
+    );
+
+    const programLookupTable = (
+      await this.serverSdk.provider.connection.getAddressLookupTable(
+        programLookupTableAddress,
+      )
+    ).value;
+
     const issuanceDate = new Date();
     const coupon = new BN(
       randomInt(
@@ -195,11 +217,6 @@ export class StructuredProductService {
           investor: new PublicKey(structuredProductDeployDto.investorPublicKey),
           issuer: this.issuerSdk.provider.publicKey,
           issuerTreasuryWallet: treasuryWalletPublicKey,
-          paymentMint: paymentMint,
-          issuancePricePerUnit: new BN(structuredProductDeployDto.principal),
-          supply: new BN(structuredProductDeployDto.totalIssuanceAmount).divn(
-            structuredProductDeployDto.principal,
-          ),
           payments: [
             {
               principal: false,
@@ -217,12 +234,22 @@ export class StructuredProductService {
               principal: true,
               paymentDateOffsetSeconds: paymentDateOffsetSeconds.muln(2),
               paymentMint: paymentMint,
-              priceAuthority: this.serverSdk.provider.publicKey,
             },
           ],
+          dummyOracle: dummyOraclePDA.publicKey,
+          underlyingSymbol: 'CRZYBTC',
+          paymentMint: paymentMint,
+          initialPrincipal: new BN(structuredProductDeployDto.principal),
+          barrierInBasisPoints: new BN(
+            Math.round(structuredProductDeployDto.barrierLevel * 100), // convert to basis points
+          ),
+          supply: new BN(structuredProductDeployDto.totalIssuanceAmount).divn(
+            structuredProductDeployDto.principal,
+          ),
         },
         mint,
         nonce1.publicKey,
+        [programLookupTable],
       );
     const encodedIssueSPTx =
       await this.issuerSdk.signStructuredProductIssueOffline(
