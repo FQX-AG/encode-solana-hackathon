@@ -15,6 +15,7 @@ import { formatDateUTC, formatDecimal, formatPercentage } from "@/formatters";
 import { NoteQrCode } from "@/components/note/NoteQrCode";
 import { NoteAgreementLink } from "@/components/note/NoteAgreementLink";
 import { NoteBackground } from "@/components/note/NoteBackground";
+import { Decimal } from "decimal.js";
 
 const Root = styled("div")({
   overflow: "auto hidden",
@@ -53,7 +54,6 @@ type NoteProps = {
   address?: string;
   registrationAgreementUrl: string | undefined;
   couponPaymentFrequency?: string;
-  couponPaymentAmount?: number;
   structuredNote?: {
     type?: StructuredProductType | null;
     underlyingAsset?: StructuredProductUnderlyingAsset | null;
@@ -98,21 +98,19 @@ const Note = (props: NoteProps) => {
             value={props.couponPaymentFrequency}
           />
         )}
-        {props.couponPaymentAmount && (
-          <NoteValue
-            data-private
-            sx={{ gridArea: "b2" }}
-            label="Coupon payment amount"
-            value={`${props.currency} ${formatDecimal(props.couponPaymentAmount)}`}
-            valueSuffix={
-              props.couponPaymentFrequency ? (
-                <Text variant="400|14px|18px" color="oxfordBlue500" component="span">
-                  ({props.couponPaymentFrequency})
-                </Text>
-              ) : undefined
-            }
-          />
-        )}
+        <NoteValue
+          data-private
+          sx={{ gridArea: "b2" }}
+          label="Coupon payment amount"
+          value={`${props.currency} ${formatDecimal(new Decimal(props.coupon).div(2).toNumber())}`}
+          valueSuffix={
+            props.couponPaymentFrequency ? (
+              <Text variant="400|14px|18px" color="oxfordBlue500" component="span">
+                ({props.couponPaymentFrequency})
+              </Text>
+            ) : undefined
+          }
+        />
         {props.structuredNote?.type && (
           <NoteValue
             sx={{ gridArea: "b3" }}

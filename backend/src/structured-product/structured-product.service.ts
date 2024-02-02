@@ -71,7 +71,10 @@ export class StructuredProductService {
       this.configService.get<string>('PAYMENT_TOKEN_MINT_ADDRESS'),
     );
 
-    this.logger.log('Investor public key', structuredProductDeployDto.investorPublicKey);
+    this.logger.log(
+      'Investor public key',
+      structuredProductDeployDto.investorPublicKey,
+    );
 
     const investorATA = getAssociatedTokenAddressSync(
       paymentMint,
@@ -174,12 +177,12 @@ export class StructuredProductService {
     await this.issuerSdk.sendAndConfirmV0Tx(ixs, signers);
 
     const issuanceDate = new Date();
-    const yieldValue = new BN(randomInt(0.2 * 10000, 0.4 * 10000));
-    const couponPaymentAmount = new BN(structuredProductDeployDto.principal)
-      .mul(yieldValue)
-      .divn(10000)
-      .divn(2);
-    console.log({ yieldValue, couponPaymentAmount });
+    const coupon = new BN(
+      randomInt(
+        0.03 * structuredProductDeployDto.principal,
+        0.09 * structuredProductDeployDto.principal,
+      ),
+    );
     const paymentDateOffsetSeconds = new BN(
       differenceInSeconds(
         new Date(structuredProductDeployDto.maturityDate),
@@ -200,13 +203,13 @@ export class StructuredProductService {
           payments: [
             {
               principal: false,
-              amount: couponPaymentAmount,
+              amount: coupon.divn(2),
               paymentDateOffsetSeconds: paymentDateOffsetSeconds,
               paymentMint: paymentMint,
             },
             {
               principal: false,
-              amount: couponPaymentAmount,
+              amount: coupon.divn(2),
               paymentDateOffsetSeconds: paymentDateOffsetSeconds.muln(2),
               paymentMint: paymentMint,
             },
@@ -237,7 +240,7 @@ export class StructuredProductService {
     return {
       transactions: [encodedInitSPTx, encodedIssueSPTx],
       mint: mint.publicKey,
-      yieldValue: yieldValue.toNumber() / 10000,
+      coupon: coupon.toNumber(),
     };
   }
 

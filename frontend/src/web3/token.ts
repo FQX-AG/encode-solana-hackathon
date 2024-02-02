@@ -5,6 +5,7 @@ import { ParsedAccountData, PublicKey } from "@solana/web3.js";
 import { getPdaWithSeeds } from "@fqx/programs/tests/utils";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { Payment } from "@/types";
+import { BN } from "@coral-xyz/anchor";
 
 export type TokenInfo = {
   payments: Payment[];
@@ -12,7 +13,7 @@ export type TokenInfo = {
   supply: number;
   principal: number;
   issuanceDate: Date;
-  investorATA: PublicKey;
+  mint: PublicKey;
 };
 
 export async function getTokenInfo(provider: anchor.AnchorProvider, mint: web3.PublicKey): Promise<TokenInfo> {
@@ -57,21 +58,25 @@ export async function getTokenInfo(provider: anchor.AnchorProvider, mint: web3.P
   );
   const { activatedDate, snapshots } = snapshotConfig;
   let payments: Payment[] = [];
+  let lastKnownBalance = new BN(0);
   for (let i = 0; i < snapshots.length; i++) {
     const snapshot = snapshots[i];
     const scheduledAt = new Date(activatedDate!.add(snapshot).toNumber() * 1000);
-    const paymentPDA = await sdk.getPaymentPda(mint, false, activatedDate!.add(snapshot));
+    const paymentPDA = await sdk.getPaymentPda(mint, false, snapshot);
     const paymentPaidPDA = await getPdaWithSeeds(
       [paymentPDA.publicKey.toBuffer(), beneficiarySPATA.toBuffer()],
       sdk.program.programId
     );
     const { data } = await sdk.program.account.paymentPaid.fetchNullableAndContext(paymentPaidPDA.publicKey);
+    const { pricePerUnit } = await sdk.program.account.payment.fetch(paymentPDA.publicKey);
+
+    const balance = (lastKnownBalance = snapshotBalances[i] ?? lastKnownBalance);
 
     payments.push({
       type: "coupon",
       status: data ? "settled" : "scheduled",
       scheduledAt,
-      amount: snapshotBalances[0]!.toNumber(),
+      amount: balance.mul(pricePerUnit!).toNumber(),
       currency: "USDC",
     });
 
@@ -80,25 +85,20 @@ export async function getTokenInfo(provider: anchor.AnchorProvider, mint: web3.P
         type: "principal",
         status: data ? "settled" : "scheduled",
         scheduledAt,
-        amount: structuredProduct.issuancePaymentAmountPerUnit.muln(balance!).toNumber(),
+        amount: balance.mul(structuredProduct.issuancePaymentAmountPerUnit).toNumber(),
         currency: "USDC",
       });
     }
   }
-  console.log({
-    payments,
-    balance: balance!,
-    supply: structuredProduct.supply.toNumber(),
-    principal: structuredProduct.issuancePaymentAmountPerUnit.toNumber(),
-    issuanceDate: new Date(structuredProduct.issuanceDate!.toNumber() * 1000),
-    investorATA: investorATA,
-  });
+  const firstScheduledPayment = payments.find((payment) => payment.status === "scheduled");
+  if (firstScheduledPayment) firstScheduledPayment.status = "open";
+
   return {
     payments,
     balance: balance!,
     supply: structuredProduct.supply.toNumber(),
     principal: structuredProduct.issuancePaymentAmountPerUnit.toNumber(),
     issuanceDate: new Date(structuredProduct.issuanceDate!.toNumber() * 1000),
-    investorATA: investorATA,
+    mint: mint,
   };
 }

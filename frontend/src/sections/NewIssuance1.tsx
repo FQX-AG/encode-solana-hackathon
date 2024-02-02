@@ -43,7 +43,7 @@ const currencyOptions: [string, string, boolean][] = Object.entries(Currency).ma
 const principalOptions: [number, string, boolean][] = [1_000, 10_000, 100_000, 1_000_000].map((key) => [
   key,
   formatDecimal(key),
-  key === 1_000_000,
+  true,
 ]);
 
 const couponFrequencyOptions: [string, string, boolean][] = Object.entries(COUPON_FREQUENCY_NAMES).map(

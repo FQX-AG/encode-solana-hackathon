@@ -4,7 +4,7 @@ export type DeploymentInfo = {
   transactions: string[];
   mint: string;
   investorPublicKey: string;
-  yieldValue: number;
+  coupon: number;
 };
 
 export type ENoteInfo = {

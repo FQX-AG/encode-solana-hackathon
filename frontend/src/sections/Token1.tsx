@@ -45,7 +45,6 @@ export function Token1({ note, units, signer }: { note: ENoteInfo; units: number
         signature={signer ? { signer: signer.name, date: note.signatureDate } : undefined}
         registrationAgreementUrl={"about:blank"}
         couponPaymentFrequency={"Custom"}
-        couponPaymentAmount={new Decimal(note.coupon).div(2).toNumber()}
         structuredNote={note.structuredProductDetails}
       />
     </Section>
