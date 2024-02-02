@@ -1,9 +1,16 @@
 import * as anchor from "@coral-xyz/anchor";
-import { StructuredNotesSdk, StructuredProductIDL, TransferSnapshotHookIDL, TreasuryWalletIDL } from "@fqx/programs";
+import {
+  StructuredNotesSdk,
+  StructuredProductIDL,
+  TransferSnapshotHookIDL,
+  TreasuryWalletIDL,
+  DummyOracleIDL,
+} from "@fqx/programs";
 import {
   STRUCTURED_PRODUCT_PROGRAM_ID,
   TRANSFER_SNAPSHOT_HOOK_PROGRAM_ID,
   TREASURY_WALLET_PROGRAM_ID,
+  DUMMY_ORACLE_PROGRAM_ID,
 } from "@/constants";
 
 export function createSDK(provider: anchor.AnchorProvider) {
@@ -14,6 +21,13 @@ export function createSDK(provider: anchor.AnchorProvider) {
     TRANSFER_SNAPSHOT_HOOK_PROGRAM_ID,
     provider
   );
+  const dummyOracleProgram = new anchor.Program(DummyOracleIDL, DUMMY_ORACLE_PROGRAM_ID, provider);
 
-  return new StructuredNotesSdk(provider, program, treasuryWalletProgram, transferSnapshotHookProgram);
+  return new StructuredNotesSdk(
+    provider,
+    program,
+    treasuryWalletProgram,
+    transferSnapshotHookProgram,
+    dummyOracleProgram
+  );
 }
