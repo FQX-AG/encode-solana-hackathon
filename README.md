@@ -41,7 +41,7 @@ Opaqueness of the pricing of Structured Products might hurt market integrity and
 Pure blockchain/DeFi solutions don't provide the legal certainty that is required for structured products.
 Issuers and investors usually like to negotiate the terms of the product in private.
 Holding a Structured Product creates risk exposure of the investor to both the Underlying Asset and the Issuer.
-Hence pure DeFi solution with anonimous Issuers and therefore unknown credit risk shall be avoided by investors.
+Hence pure DeFi solution with anonymous Issuers and therefore unknown credit risk is generally avoided by investors.
 
 ## Challenges with SPL Token before Token 2022
 With the old Token program it was not easily possible to maintain snapshots of token account balances.
