@@ -5,37 +5,41 @@ The goal for this demo was to create a new way for issuers of structured product
 and manage their products on the Solana blockchain.
 The product chosen for this demo is a **Barrier Reverse Convertible**,
 a structured product that is popular in the traditional finance world.
-The product is a bond with a high coupon, but if the underlying asset falls
-below a certain barrier, the bond is converted into the underlying asset at a discount.
-This product is popular in the traditional finance world because it allows investors to
-earn a high coupon while taking on the risk of the underlying asset falling below a
-certain barrier.
+BRC is an investment product with a high guaranteed coupon, 
+and a variable repayment of the principal that depends on the performance of the underlying asset:
+* If the final price of the underlying is above the barrier level, 100% of the initial investment is repaid back; 
+* If it’s below, then repayment amount shall be recalculated as the performance of the underlying asset.
+
+It allows investors to give up the potential upside exposure to the underlying asset in exchange for an enhanced coupon. 
+The ideal market scenario for reverse convertibles is the expectation of a sideways trending market.
 
 See the attached graph for a visual representation of the product.
 
 ![graph.png](assets/graph.png)
 
-Usually the product is issued by a financial institution on the request of an investor.
-The investor initiates the process with a certain product and defined parameters in mind.
-They will ask potential issuers to compete for the yield that they can offer on the product.
+In most of the markets, the product is issued by a financial institution on the request of an investor. 
+The investor requests a product with certain parameters in mind. 
+And potential issuers compete on the yield they can offer on the product.
 Once the investor accepts an offer, the issuer will issue the product to the investor.
-
-Over the lifecycle of the product the issuer will pay the aggregate coupon to the investor.
-At the end of maturity the issuer will pay the final principal to the investor based
-on the final fixing price of the underlying asset.
-
 
 ## Challenges with current solutions
 Current solutions for issuing structured products are centralized and require a lot of 
 intermediaries. This makes the process of issuing and managing structured products slow and cumbersome.
 
-As an example the final fixing price and settlement of the product are done days apart from each other
-in current solutions. They also require a lot of manual intervention due to lack of automation
+As an example the final fixing date, maturity and settlement of the product are 3-7 days apart from each other.
+They also require a lot of manual intervention due to lack of automation
 of price fixing and payment settlement.
+
+Since Structured Products are considered to be securities in most jurisdictions, 
+they required to be properly registered and stored in segregated accounts.
+
+Opaqueness of the pricing of Structured Products might hurt market integrity and decreases overall investors' confidence.
 
 ## Challenges with pure blockchain solutions
 Pure blockchain/DeFi solutions don't provide the legal certainty that is required for structured products.
 Issuers and investors usually like to negotiate the terms of the product in private.
+Holding a Structured Product creates risk exposure of the investor to both the Underlying Asset and the Issuer.
+Hence pure DeFi solution with anonymous Issuers and therefore unknown credit risk is generally avoided by investors.
 
 ## Challenges with SPL Token before Token 2022
 With the old Token program it was not easily possible to maintain snapshots of token account balances.
@@ -47,7 +51,7 @@ functional structured products to be issued on Solana.
 
 ## Solution
 The solution we aim to demonstrate with this demo is a hybrid where the negotiation of the product
-is done on a platform and legal certainty is provided Obligate's legal framework.
+is done on a platform and legal certainty is provided Obligate's legal framework based the Swiss law for ledger-based securities.
 (The demo does not include the complete legal framework, but it is a part of the Obligate platform.)
 
 The issuer submits their offer which includes the **yield** and **initial fixing price**, 
