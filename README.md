@@ -33,7 +33,7 @@ They also require a lot of manual intervention due to lack of automation
 of price fixing and payment settlement.
 
 Since Structured Products are considered to be securities in most jurisdictions, 
-they required to be properly registerd and stored in segregated accounts.
+they required to be properly registered and stored in segregated accounts.
 
 Intransparency of the Structured Products pricing might hurt market integrity and decreases overall investors' confidence.
 
