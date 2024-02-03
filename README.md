@@ -35,7 +35,7 @@ of price fixing and payment settlement.
 Since Structured Products are considered to be securities in most jurisdictions, 
 they required to be properly registered and stored in segregated accounts.
 
-Intransparency of the Structured Products pricing might hurt market integrity and decreases overall investors' confidence.
+Opaqueness of the pricing of Structured Products might hurt market integrity and decreases overall investors' confidence.
 
 ## Challenges with pure blockchain solutions
 Pure blockchain/DeFi solutions don't provide the legal certainty that is required for structured products.
