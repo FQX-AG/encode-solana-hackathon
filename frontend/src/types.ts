@@ -5,6 +5,7 @@ export type DeploymentInfo = {
   mint: string;
   investorPublicKey: string;
   coupon: number;
+  initialFixingPrice: number;
 };
 
 export type ENoteInfo = {
@@ -34,16 +35,4 @@ export type Payment = {
   status: "scheduled" | "open" | "settled";
   currency: string;
   amount: number;
-};
-
-export type QuoteInfo = {
-  id: string;
-  issuerCountryCode: string;
-  issuerName: string;
-  initialFixingPrice: { currency: string; amount: number };
-  yield: number;
-  tags?: string[];
-  totalCouponPayment: number;
-  absoluteCouponRate: number;
-  totalRepayment: number;
 };

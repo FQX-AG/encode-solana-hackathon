@@ -62,7 +62,6 @@ type QuoteInternal = {
 
 type QuoteInternalEnhanced = QuoteInternal & {
   totalCouponPayment: number;
-  absoluteCouponRate: number;
   totalRepayment: number;
 };
 
@@ -117,57 +116,59 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
   const { connection }: { connection: Connection } = useConnection();
   const router = useRouter();
   const report = useReport();
-  const issuanceDate = useMemo(() => new Date(), []);
   const [confirmationPayload, setConfirmationPayload] = useState<QuoteInternalEnhanced>();
   const data = useMemo<QuoteInternal[]>(() => {
-    const yieldAbsolute = new Decimal(props.deploymentInfo.coupon).div(props.values.principal);
-    const yieldPerAnnum = yieldAbsolute.mul(12).div(2);
-    console.debug({ yieldAbsolute, yieldPerAnnum });
-    const rand = () => new Decimal(Math.random()).clamp(0.1, 0.9).toNumber();
+    const initialFixingPrice = new Decimal(props.deploymentInfo.initialFixingPrice);
+    const y = new Decimal(props.deploymentInfo.coupon).div(props.values.principal);
+    const rand = (min = 0.2, max = 0.9) =>
+      new Decimal(Math.random())
+        .mul(max - min)
+        .plus(min)
+        .toNumber();
 
     return [
       {
         id: "1",
         issuerCountryCode: "FR",
         issuerName: "France Company",
-        initialFixingPrice: { currency: "USDC", amount: 43000 },
-        yield: yieldPerAnnum.toNumber(),
+        initialFixingPrice: { currency: "USDC", amount: initialFixingPrice.toNumber() },
+        yield: y.toNumber(),
         tags: ["bestOffer"],
       },
       {
         id: "2",
         issuerCountryCode: "DE",
         issuerName: "Germany Company",
-        initialFixingPrice: { currency: "USDC", amount: 40987 },
-        yield: yieldPerAnnum.times(rand()).toNumber(),
+        initialFixingPrice: { currency: "USDC", amount: initialFixingPrice.times(rand(0.3)).toNumber() },
+        yield: y.times(rand()).toNumber(),
       },
       {
         id: "3",
         issuerCountryCode: "AT",
         issuerName: "Austria Company",
-        initialFixingPrice: { currency: "USDC", amount: 35321 },
-        yield: yieldPerAnnum.times(rand()).toNumber(),
+        initialFixingPrice: { currency: "USDC", amount: initialFixingPrice.times(rand(0.3)).toNumber() },
+        yield: y.times(rand()).toNumber(),
       },
       {
         id: "4",
         issuerCountryCode: "CH",
         issuerName: "Swiss Company",
-        initialFixingPrice: { currency: "USDC", amount: 33345 },
-        yield: yieldPerAnnum.times(rand()).toNumber(),
+        initialFixingPrice: { currency: "USDC", amount: initialFixingPrice.times(rand(0.3)).toNumber() },
+        yield: y.times(rand()).toNumber(),
       },
       {
         id: "5",
         issuerCountryCode: "PL",
         issuerName: "Web 3 Company",
-        initialFixingPrice: { currency: "USDC", amount: 20765 },
-        yield: yieldPerAnnum.times(rand()).toNumber(),
+        initialFixingPrice: { currency: "USDC", amount: initialFixingPrice.times(rand(0.3)).toNumber() },
+        yield: y.times(rand()).toNumber(),
       },
       {
         id: "6",
         issuerCountryCode: "JM",
         issuerName: "Waganda Company",
-        initialFixingPrice: { currency: "USDC", amount: 15456 },
-        yield: yieldPerAnnum.times(rand()).toNumber(),
+        initialFixingPrice: { currency: "USDC", amount: initialFixingPrice.times(rand(0.3)).toNumber() },
+        yield: y.times(rand()).toNumber(),
       },
     ].sort((a, b) => {
       if (a.yield === b.yield) return 0;
@@ -179,9 +180,8 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
     const quote = selection ? data.find((item) => item.id === selection) : undefined;
     if (quote) {
       const totalCouponPayment = new Decimal(props.values.totalIssuanceAmount).times(quote.yield).toNumber();
-      const absoluteCouponRate = new Decimal(quote.yield).times(2).div(12).toNumber();
       const totalRepayment = new Decimal(totalCouponPayment).plus(props.values.totalIssuanceAmount).toNumber();
-      return { ...quote, totalCouponPayment, absoluteCouponRate, totalRepayment };
+      return { ...quote, totalCouponPayment, totalRepayment };
     }
 
     return undefined;
@@ -315,9 +315,9 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
                 v={
                   <>
                     <Text variant="500|32px|35px">{formatPercentage(quote.yield)}</Text>{" "}
-                    <Text variant="400|12px|16px" color="oxfordBlue500">{`(${formatPercentage(
-                      quote.absoluteCouponRate
-                    )} absolute)`}</Text>
+                    <Text variant="400|12px|16px" color="oxfordBlue500">
+                      ({formatPercentage(quote.yield)} absolute)
+                    </Text>
                   </>
                 }
               />
@@ -347,7 +347,7 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
                 <BRC
                   type={props.values.brcDetails.type}
                   barrier={props.values.brcDetails.level}
-                  coupon={quote.absoluteCouponRate * 100}
+                  coupon={quote.yield * 100}
                   underlyingAsset={props.values.underlyingAsset}
                   currency={props.values.currency}
                   issuanceAmount={props.values.totalIssuanceAmount}

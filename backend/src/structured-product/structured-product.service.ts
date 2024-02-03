@@ -178,7 +178,13 @@ export class StructuredProductService {
         0.03 * structuredProductDeployDto.principal,
         0.09 * structuredProductDeployDto.principal,
       ),
-    );
+    )
+      .divn(2)
+      .muln(2);
+    const { currentPrice: initialFixingPrice } =
+      await this.serverSdk.dummyOracleProgram.account.dummyOracleAccount.fetch(
+        dummyOraclePDA.publicKey,
+      );
     const paymentDateOffsetSeconds = new BN(
       differenceInSeconds(
         new Date(structuredProductDeployDto.maturityDate),
@@ -242,6 +248,7 @@ export class StructuredProductService {
       transactions: [encodedInitSPTx, encodedIssueSPTx],
       mint: mint.publicKey,
       coupon: coupon.toNumber(),
+      initialFixingPrice: initialFixingPrice.toNumber(),
     };
   }
 

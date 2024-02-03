@@ -32,7 +32,7 @@ function PageInner(props: {
     maturityDate: maturityDate,
     currency: "USDC",
     principal: props.principal,
-    coupon: new Decimal(coupon).div(2).toNumber(),
+    coupon: new Decimal(coupon).div(props.balance).toNumber(),
     interestRate: interestRate,
     eNoteName: generateENoteName(
       "SWCI",
@@ -77,6 +77,8 @@ export default function Page(props: PageProps) {
   const [tokenInfo, setTokenInfo] = useState<TokenInfo>();
   const upcomingPayment = useMemo(() => tokenInfo?.payments.find((payment) => payment.status === "open"), [tokenInfo]);
   const [now, setNow] = useState<Date>();
+
+  console.log({ tokenInfo });
 
   useEffect(() => {
     const cb = () => setNow(new Date());
