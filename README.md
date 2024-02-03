@@ -1,4 +1,4 @@
-# Obligate Encode x Solana Hackathon Submission - **[Click for Demo](https://encode-solana-hackathon.obligate.com)**
+# Obligate Encode x Solana Hackathon Submission - **[Demo :rocket:](https://encode-solana-hackathon.obligate.com)**
 
 ## Background
 The goal for this demo was to create a new way for issuers of structured products to issue
