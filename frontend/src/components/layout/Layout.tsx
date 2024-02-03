@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Box, Container, Stack } from "@mui/material";
+import { Box, Stack } from "@mui/material";
 import { Navbar } from "@/components/layout/Navbar";
 
 type LayoutProps = {
@@ -20,9 +20,7 @@ export function Layout(props: LayoutProps) {
           flexDirection: "column",
         }}
       >
-        <Container maxWidth="xl" sx={{ flex: "1 1 auto", display: "flex", flexDirection: "column" }}>
-          {props.children}
-        </Container>
+        {props.children}
       </Box>
     </Stack>
   );

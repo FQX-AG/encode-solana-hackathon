@@ -1,5 +1,5 @@
 import { GetServerSideProps } from "next";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import * as anchor from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
@@ -7,13 +7,14 @@ import { BRCAccount, TokenInfo, getTokenInfo, watchBRC, watchCurrentPrice } from
 import { ENoteInfo, Payment } from "@/types";
 import { StructuredProductType, StructuredProductUnderlyingAsset } from "@/constants";
 import { Decimal } from "decimal.js";
-import { Stack } from "@mui/material";
+import { Container, Stack } from "@mui/material";
 import { Token1 } from "@/sections/Token1";
 import { Token2 } from "@/sections/Token2";
 import { generateENoteName } from "@/utils";
 import { useTicker } from "@/hooks/useTicker";
 import { useWatch } from "@/hooks/useWatch";
 import { addSeconds, isSameSecond } from "date-fns";
+import { useReport } from "@/hooks/useReport";
 
 function PageInner(props: {
   currentUnderlyingPrice: number;
@@ -36,7 +37,7 @@ function PageInner(props: {
     coupon: new Decimal(coupon).div(props.balance).toNumber(),
     interestRate: interestRate,
     eNoteName: generateENoteName(
-      "SWCI",
+      "DEMO",
       StructuredProductType.BRC,
       StructuredProductUnderlyingAsset.BTC,
       "USDC",
@@ -55,7 +56,6 @@ function PageInner(props: {
 
   return (
     <Stack spacing={6}>
-      <Token1 note={note} units={props.balance} signer={signer} />
       <Token2
         note={note}
         payments={props.payments}
@@ -64,6 +64,7 @@ function PageInner(props: {
         currentUnderlyingPrice={props.currentUnderlyingPrice}
         brcAccount={props.brcAccount}
       />
+      <Token1 note={note} units={props.balance} signer={signer} />
     </Stack>
   );
 }
@@ -73,6 +74,7 @@ type PageProps = {
 };
 
 export default function Page(props: PageProps) {
+  const report = useReport();
   const { connection } = useConnection();
   const anchorWallet = useAnchorWallet();
   const provider = useMemo(
@@ -80,12 +82,18 @@ export default function Page(props: PageProps) {
     [connection, anchorWallet]
   );
   const [tokenInfo, setTokenInfo] = useState<TokenInfo>();
+  const tokenInfoRef = useRef(tokenInfo);
+  tokenInfoRef.current = tokenInfo;
   const currentUnderlyingPrice = useWatch(watchCurrentPrice, provider, tokenInfo?.oraclePublicKey);
   const brcAccount = useWatch(watchBRC, provider, tokenInfo?.brcPublicKey);
   const now = useTicker(1000);
 
   const loadTokenInfo = useCallback(async () => {
-    if (provider) setTokenInfo(await getTokenInfo(provider, props.mint));
+    if (provider) {
+      const value = await getTokenInfo(provider, props.mint);
+      setTokenInfo(value);
+      return value;
+    }
   }, [provider, props.mint]);
 
   useEffect(() => {
@@ -103,22 +111,40 @@ export default function Page(props: PageProps) {
     ];
     const shouldUpdate = checkpoints.some((checkpoint) => isSameSecond(now, checkpoint));
 
-    if (shouldUpdate) void loadTokenInfo();
+    if (shouldUpdate) {
+      const before = tokenInfoRef.current?.payments.map((payment) => payment.status);
+      void loadTokenInfo().then((tokenInfo) => {
+        const after = tokenInfo?.payments.map((payment) => payment.status);
+        if (before && after) {
+          for (let i = 0; i < after.length; i++) {
+            if (before[i] !== "settled" && after[i] === "settled") {
+              report.success(
+                tokenInfoRef.current?.payments[i].type === "coupon"
+                  ? `You have received coupon payment (${i + 1}/2).`
+                  : "You have received principal payment."
+              );
+            }
+          }
+        }
+      });
+    }
   }, [now, upcomingPayment]);
 
   if (!now || !tokenInfo || currentUnderlyingPrice === undefined || brcAccount === undefined) return null;
 
   return (
-    <PageInner
-      currentUnderlyingPrice={currentUnderlyingPrice}
-      issuanceDate={tokenInfo.issuanceDate}
-      principal={tokenInfo.principal}
-      balance={tokenInfo.balance}
-      payments={tokenInfo.payments}
-      mint={tokenInfo.mint}
-      brcAccount={brcAccount}
-      now={now}
-    />
+    <Container maxWidth="lg" sx={{ flex: "1 1 auto", display: "flex", flexDirection: "column" }}>
+      <PageInner
+        currentUnderlyingPrice={currentUnderlyingPrice}
+        issuanceDate={tokenInfo.issuanceDate}
+        principal={tokenInfo.principal}
+        balance={tokenInfo.balance}
+        payments={tokenInfo.payments}
+        mint={tokenInfo.mint}
+        brcAccount={brcAccount}
+        now={now}
+      />
+    </Container>
   );
 }
 

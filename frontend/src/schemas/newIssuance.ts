@@ -47,9 +47,9 @@ export type FormValues = {
 export const getInitialValues = (): FormValues => ({
   type: StructuredProductType.BRC,
   underlyingAsset: StructuredProductUnderlyingAsset.BTC,
-  totalIssuanceAmount: (8_000_000).toString(),
+  totalIssuanceAmount: (100_000).toString(),
   currency: Currency.USDC,
-  principal: (1_000_000).toString(),
+  principal: (1_000).toString(),
   maturityDate: addMinutes(new Date(), 5),
   couponFrequency: CouponFrequency.DemoMode,
   cpnDetails: {
@@ -101,18 +101,18 @@ export const validationSchema: Yup.Schema<Values> = Yup.object({
     .required(),
   couponFrequency: Yup.string().label("Coupon frequency").oneOf(Object.values(CouponFrequency)).required(),
   brcDetails: Yup.object({
-    level: Yup.number().label("Barrier level").min(0).lessThan(10000).required(),
+    level: Yup.number().label("Barrier level").min(0).lessThan(100).required(),
     type: Yup.string().label("Barrier type").oneOf(Object.values(BRCType)).required(),
   })
     .required()
     .when("type", { is: StructuredProductType.BRC, otherwise: () => Yup.mixed().nullable().strip() }),
   cpnDetails: Yup.object({
-    level: Yup.number().label("Capital protection level").min(0).lessThan(10000).required(),
+    level: Yup.number().label("Capital protection level").min(0).lessThan(100).required(),
   })
     .required()
     .when("type", { is: StructuredProductType.CPN, otherwise: () => Yup.mixed().nullable().strip() }),
   rcDetails: Yup.object({
-    strike: Yup.number().label("Strike").min(0).lessThan(10000).required(),
+    strike: Yup.number().label("Strike").min(0).lessThan(100).required(),
   })
     .required()
     .when("type", { is: StructuredProductType.RC, otherwise: () => Yup.mixed().nullable().strip() }),

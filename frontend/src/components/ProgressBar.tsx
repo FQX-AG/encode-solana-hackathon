@@ -12,7 +12,7 @@ import { Popper, PopperProps } from "@mui/material";
 export type Dot = {
   id: number;
   position: number;
-  variant: "small" | "big";
+  variant: "small" | "big" | "done";
   highlighted: boolean;
   popper?: ReactNode;
 };
@@ -191,6 +191,7 @@ const DotComponent = (
       strokeWidth = 3;
       break;
     case "big":
+    case "done":
       size = 24;
       strokeWidth = 4;
       break;
@@ -228,26 +229,53 @@ const DotComponent = (
           />
         </svg>
       )}
-      <svg
-        ref={setAnchorEl}
-        style={{ position: "absolute", top: -size / 2, left: -size / 2 }}
-        xmlns="http://www.w3.org/2000/svg"
-        width={size}
-        height={size}
-        viewBox={`0 0 ${size} ${size}`}
-        fill="none"
-        onMouseEnter={props.onMouseEnter}
-        onMouseLeave={props.onMouseLeave}
-      >
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={size / 2 - strokeWidth}
-          fill={props.highlighted ? "#00B2FF" : "#3F3F76"}
-          stroke="white"
-          strokeWidth={strokeWidth}
-        />
-      </svg>
+      {props.variant === "done" ? (
+        <svg
+          ref={setAnchorEl}
+          style={{ position: "absolute", top: -size / 2, left: -size / 2 }}
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          onMouseEnter={props.onMouseEnter}
+          onMouseLeave={props.onMouseLeave}
+        >
+          <g clipPath="url(#clip0_5628_1254)">
+            <circle cx="12" cy="12" r="12" fill="#0085FF" />
+            <path
+              d="M9.32916 15.2292L5.85416 11.7542L4.67083 12.9292L9.32916 17.5875L19.3292 7.58751L18.1542 6.41251L9.32916 15.2292Z"
+              fill="white"
+            />
+          </g>
+          <defs>
+            <clipPath id="clip0_5628_1254">
+              <rect width="24" height="24" fill="white" />
+            </clipPath>
+          </defs>
+        </svg>
+      ) : (
+        <svg
+          ref={setAnchorEl}
+          style={{ position: "absolute", top: -size / 2, left: -size / 2 }}
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          onMouseEnter={props.onMouseEnter}
+          onMouseLeave={props.onMouseLeave}
+        >
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={size / 2 - strokeWidth}
+            fill={props.highlighted ? "#00B2FF" : "#3F3F76"}
+            stroke="white"
+            strokeWidth={strokeWidth}
+          />
+        </svg>
+      )}
       {props.popper && anchorEl && (
         <Popper open={props.highlighted} anchorEl={anchorEl} disablePortal {...popperProps}>
           {props.popper}

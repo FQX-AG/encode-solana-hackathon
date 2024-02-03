@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { partition } from "lodash-es";
 import { ProgressBar, Bar, Ticker, Dot } from "@/components/ProgressBar";
 import { Text } from "@/components/Text";
@@ -12,6 +12,7 @@ import React from "react";
 type Payment = {
   type: "coupon" | "principal";
   scheduledAt: Date;
+  status: "scheduled" | "open" | "settled";
   currency?: string;
   amount?: number;
 };
@@ -128,10 +129,8 @@ export function PaymentScheduleTimeline(props: PaymentScheduleTimelineProps) {
     props.now && values.nowPosition
       ? {
           position: (100 * values.nowPosition) / values.range,
-          label: "Today",
-          value: <Text variant="400|16px|21px">{formatDate(props.now, false)}</Text>,
           color: "#00B2FF80",
-          isAtBottom: true,
+          tooltip: `Today, ${formatDate(props.now, false)}`,
         }
       : undefined,
   ];
@@ -146,14 +145,14 @@ export function PaymentScheduleTimeline(props: PaymentScheduleTimelineProps) {
       return {
         id: groupIndex,
         position: (100 * Number(position)) / values.range,
-        variant: "big",
+        variant: payments.every((payment) => payment.status === "settled") ? "done" : "big",
         highlighted:
           dotHoverTarget === groupIndex ||
           payments.some((p) => values.payments.indexOf(p) === props.highlightedPaymentIndex),
         popper: (
           <Stack spacing={2} sx={{ background: "#15163A", borderRadius: "10px", padding: "16px", mt: 4 }}>
             <Text variant="400|16px|21px">{formatDate(payments[0].scheduledAt, false)}</Text>
-            <Divider />
+            <Divider sx={{ borderColor: (theme) => theme.customColors.oxfordBlue800 }} />
             <Stack spacing={1}>
               {payments.map((p, paymentIndex) => {
                 if (p.type === "coupon") {

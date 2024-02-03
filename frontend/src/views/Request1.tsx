@@ -1,18 +1,21 @@
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useReport } from "@/hooks/useReport";
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { FormValues, getInitialValues, validationSchema, Values } from "@/schemas/newIssuance";
 import { useFormikWithLazyValidation } from "@/hooks/useFormikWithLazyValidation";
 import { ensure } from "@/utils";
 import { API_URL, StructuredProductType } from "@/constants";
 import { DeploymentInfo } from "@/types";
 import { Form, FormikProvider } from "formik";
-import { Stack } from "@mui/material";
+import { Button, Container, Stack } from "@mui/material";
 import { NewIssuance1 } from "@/sections/NewIssuance1";
 import { NewIssuance2 } from "@/sections/NewIssuance2";
 import { ArrowForward } from "@mui/icons-material";
 import LoadingButton from "@mui/lab/LoadingButton";
 import axios from "axios";
+import Alert from "@mui/material/Alert";
+import { WalletMultiButton } from "@/components/layout/WalletMultiButton";
+import { ExternalLink } from "@/components/ExternalLink";
 
 export default function Request1(props: {
   onNext: (payload: { values: Values; deploymentInfo: DeploymentInfo }) => void;
@@ -49,22 +52,47 @@ export default function Request1(props: {
 
   return (
     <FormikProvider value={formik}>
-      <Stack component={Form} spacing={6}>
-        <NewIssuance1 />
-        <NewIssuance2 />
-        <Stack direction="row" justifyContent="end">
-          <LoadingButton
-            size="medium"
-            color="primary"
-            variant="contained"
-            type="submit"
-            loading={formik.isSubmitting}
-            endIcon={<ArrowForward />}
-          >
-            Request for quote
-          </LoadingButton>
+      <Container maxWidth="md" sx={{ flex: "1 1 auto", display: "flex", flexDirection: "column" }}>
+        <Stack component={Form} spacing={6}>
+          <NewIssuance1 />
+          <NewIssuance2 />
+          <Stack direction="row" justifyContent="end">
+            <Stack direction="row" spacing={3} alignItems="center">
+              {wallet.publicKey && (
+                <Alert severity="info">
+                  If you don’t have any SOL. Use the{" "}
+                  <ExternalLink href="https://faucet.solana.com/" color="inherit">
+                    faucet
+                  </ExternalLink>
+                  .
+                </Alert>
+              )}
+              {wallet.publicKey && (
+                <LoadingButton
+                  size="medium"
+                  color="primary"
+                  variant="contained"
+                  type="submit"
+                  loading={formik.isSubmitting}
+                  endIcon={<ArrowForward />}
+                >
+                  Request for quote
+                </LoadingButton>
+              )}
+              {!wallet.publicKey && <Alert severity="info">Make sure to connect your wallet to Devnet.</Alert>}
+              {!wallet.publicKey && (
+                <Button
+                  type="button"
+                  onClick={() => document.getElementById("wallet-connect")?.click()}
+                  endIcon={<ArrowForward />}
+                >
+                  Connect wallet
+                </Button>
+              )}
+            </Stack>
+          </Stack>
         </Stack>
-      </Stack>
+      </Container>
     </FormikProvider>
   );
 }

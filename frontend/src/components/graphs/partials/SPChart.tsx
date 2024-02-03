@@ -8,7 +8,7 @@ import { LINE_COLOR_B, LINE_COLOR_C } from "../constants";
 
 const CHART_HEIGHT = 250;
 const SPACING = 8;
-const PADDING = [15 + SPACING, 100 + SPACING, 70 + SPACING, 15];
+const PADDING = [15 + SPACING, 70 + SPACING, 70 + SPACING, 15];
 
 export type SPChartOptions = Omit<ChartOptions<"scatter">, "responsive" | "maintainAspectRatio">;
 
@@ -81,7 +81,7 @@ function SPChart(props: SPChartProps) {
             style={{
               position: "absolute",
               textAlign: "start",
-              maxWidth: 100,
+              maxWidth: 70,
               transform: "translate(0, -50%)",
               top: PADDING[0] + chartArea.top + chartArea.height,
               right: 0,

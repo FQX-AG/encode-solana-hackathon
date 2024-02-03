@@ -51,6 +51,7 @@ function WalletMultiButtonInner() {
   return (
     <>
       <Button
+        id="wallet-connect"
         type="button"
         sx={{ padding: "4px 16px" }}
         onClick={(event) => {

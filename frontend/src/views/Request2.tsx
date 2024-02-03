@@ -23,7 +23,7 @@ import {
   TRANSFER_SNAPSHOT_HOOK_PROGRAM_ID,
   TREASURY_WALLET_PROGRAM_ID,
 } from "@/constants";
-import { Box, Button, Divider, Stack, Theme } from "@mui/material";
+import { Box, Button, Container, Divider, Stack, Theme } from "@mui/material";
 import { Section } from "@/components/Section";
 import { Property } from "@/components/Property";
 import { formatDate, formatDateUTC, formatDecimal, formatPercentage } from "@/formatters";
@@ -248,8 +248,8 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
   };
 
   const content = (
-    <Box display="grid" flex="1 1 auto" gridTemplateColumns="repeat(12, 1fr)" gap={6}>
-      <Stack spacing={6} gridColumn={{ xs: "span 12", xl: "span 8" }}>
+    <Box display="grid" flex="1 1 auto" gridTemplateColumns="1fr 430px" gap={6}>
+      <Stack spacing={6} gridColumn={{ xs: "span 2", lg: "1" }}>
         <Section title="Your request" sx={{ flex: "0 0 auto" }}>
           <Stack
             sx={{
@@ -305,7 +305,7 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
           </Box>
         </Section>
       </Stack>
-      <Box gridColumn={{ xs: "span 12", xl: "span 4" }}>
+      <Box marginInline="auto" maxWidth="430px" gridColumn={{ xs: "span 2", lg: "2" }}>
         {quote && (
           <GlowingPanel spacing={3} sx={{ position: "sticky", top: 0 }}>
             <Stack spacing={2}>
@@ -365,7 +365,7 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
   );
 
   return (
-    <>
+    <Container maxWidth="lg" sx={{ flex: "1 1 auto", display: "flex", flexDirection: "column" }}>
       {content}
       {confirmationPayload && (
         <SignDialog
@@ -413,6 +413,6 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
           </Panel>
         </SignDialog>
       )}
-    </>
+    </Container>
   );
 }

@@ -168,8 +168,8 @@ const Note = (props: NoteProps) => {
   );
 
   const right = (
-    <Stack useFlexGap flex="0 0 auto" spacing={4} alignItems="flex-end" justifyContent="flex-end" textAlign="end">
-      <Box flex="0 0 auto" mb="auto">
+    <Stack useFlexGap flex="0 0 auto" alignItems="flex-end" justifyContent="flex-start" textAlign="end">
+      <Box flex="0 0 auto" minHeight="60px" mb={6}>
         <Box
           component="span"
           sx={{
@@ -190,7 +190,7 @@ const Note = (props: NoteProps) => {
         />
       </Box>
       {props.address && <NoteQrCode address={props.address} />}
-      <Stack flex="0 0 auto" useFlexGap spacing={1} alignItems="flex-end">
+      <Stack flex="0 0 auto" useFlexGap spacing={1} mt={4} alignItems="flex-end">
         {props.registrationAgreementUrl !== undefined && (
           <NoteAgreementLink href={props.registrationAgreementUrl} label="Registration agreement" />
         )}

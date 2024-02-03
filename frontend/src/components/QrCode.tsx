@@ -19,7 +19,7 @@ export function QrCode(props: QrCodeProps) {
         </defs>
         <rect fill="url(#0)" height="100%" width="100%" />
       </svg>
-      <QRCodeSVG includeMargin fgColor="url(#fqx-qr-code-gradient)" bgColor="transparent" {...props} />
+      <QRCodeSVG fgColor="url(#fqx-qr-code-gradient)" bgColor="transparent" {...props} />
     </>
   );
 }

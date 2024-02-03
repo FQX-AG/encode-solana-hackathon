@@ -23,8 +23,8 @@ export function Token2(props: {
 }) {
   return (
     <Section title="Payment schedule">
-      <Box display="grid" flex="1 1 auto" gridTemplateColumns="repeat(12, 1fr)" gap={6}>
-        <Box gridColumn={{ xs: "span 12", xl: "span 8" }}>
+      <Box display="grid" flex="1 1 auto" gridTemplateColumns="1fr 430px" gap={6}>
+        <Box gridColumn={{ xs: "span 2", lg: "1" }}>
           <Panel spacing={5}>
             <PaymentSchedule
               issuanceDate={props.note.issuanceDate}
@@ -35,7 +35,7 @@ export function Token2(props: {
             <div />
           </Panel>
         </Box>
-        <Box gridColumn={{ xs: "span 12", xl: "span 4" }}>
+        <Box marginInline="auto" maxWidth="430px" gridColumn={{ xs: "span 2", lg: "2" }}>
           <Panel spacing={3}>
             <Stack spacing={2}>
               <Property
@@ -63,13 +63,13 @@ export function Token2(props: {
               {props.brcAccount.finalPrincipal !== undefined ? (
                 <Property
                   horizontal
-                  k="Final principal"
+                  k="Final Principal after fixing"
                   v={`${props.note.currency} ${formatDecimal(props.brcAccount.finalPrincipal * props.balance)}`}
                 />
               ) : (
                 <Property
                   horizontal
-                  k="Updated principal"
+                  k="Initial Principal before fixing"
                   v={`${props.note.currency} ${formatDecimal(props.brcAccount.initialPrincipal * props.balance)}`}
                 />
               )}

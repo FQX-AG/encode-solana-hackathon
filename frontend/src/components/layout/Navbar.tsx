@@ -1,9 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Container, Stack, styled } from "@mui/material";
+import { Box, Container, Stack, styled } from "@mui/material";
 import React from "react";
 
 import { WalletMultiButton } from "./WalletMultiButton";
+import { useWallet } from "@solana/wallet-adapter-react";
+import Alert from "@mui/material/Alert";
 
 const Root = styled("div")(({ theme }) => ({
   flex: "0 0 auto",
@@ -13,6 +15,8 @@ const Root = styled("div")(({ theme }) => ({
 }));
 
 export const Navbar = () => {
+  const wallet = useWallet();
+
   return (
     <Root>
       <Container maxWidth="xl">
@@ -27,7 +31,10 @@ export const Navbar = () => {
               style={{ display: "block" }}
             />
           </Link>
-          <WalletMultiButton />
+          <Stack direction="row" spacing={2} alignItems="center">
+            {!wallet.publicKey && <Alert severity="info">Make sure to connect your wallet to Devnet.</Alert>}
+            <WalletMultiButton />
+          </Stack>
         </Stack>
       </Container>
     </Root>

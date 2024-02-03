@@ -19,6 +19,8 @@ import { DateTimeField } from "@/components/form/DateTimeField";
 import { formatDecimal } from "@/formatters";
 import { useFormikContext } from "formik";
 import { FormValues } from "@/schemas/newIssuance";
+import { ExternalLink } from "@/components/ExternalLink";
+import React from "react";
 
 const typeOptions: [string, string, boolean][] = Object.entries(STRUCTURED_PRODUCT_TYPE_NAMES).map(([key, value]) => [
   key,
@@ -134,7 +136,13 @@ export function NewIssuance1() {
               background: (theme) => theme.palette.background.paper,
             }}
           >
-            For demonstration purposes, the coupon frequency is set to 2 payments in this issuance.
+            For demonstration purposes, we assume each product has a one-year lifecycle, but we accelerate it to five
+            minutes with two equal coupons generated: one in the middle of the lifecycle and one at maturity. Don’t
+            worry, we will send you test-USDC to cover your investment, but make sure you have SOL first. Use the{" "}
+            <ExternalLink href="https://faucet.solana.com/" color="inherit">
+              faucet
+            </ExternalLink>
+            .
           </Box>
         </WithSideContent>
       </Panel>
