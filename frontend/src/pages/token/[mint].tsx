@@ -2,9 +2,8 @@ import { GetServerSideProps } from "next";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import * as anchor from "@coral-xyz/anchor";
-import * as web3 from "@solana/web3.js";
 import { PublicKey } from "@solana/web3.js";
-import { BRCAccount, getTokenInfo, TokenInfo } from "@/web3/token";
+import { BRCAccount, TokenInfo, getTokenInfo, watchBRC, watchCurrentPrice } from "@/web3/token";
 import { ENoteInfo, Payment } from "@/types";
 import { StructuredProductType, StructuredProductUnderlyingAsset } from "@/constants";
 import { Decimal } from "decimal.js";
@@ -12,7 +11,9 @@ import { Stack } from "@mui/material";
 import { Token1 } from "@/sections/Token1";
 import { Token2 } from "@/sections/Token2";
 import { generateENoteName } from "@/utils";
-import { addSeconds, isSameSecond, isWithinInterval } from "date-fns";
+import { useTicker } from "@/hooks/useTicker";
+import { useWatch } from "@/hooks/useWatch";
+import { addSeconds, isSameSecond } from "date-fns";
 
 function PageInner(props: {
   currentUnderlyingPrice: number;
@@ -74,33 +75,24 @@ type PageProps = {
 export default function Page(props: PageProps) {
   const { connection } = useConnection();
   const anchorWallet = useAnchorWallet();
+  const provider = useMemo(
+    () => anchorWallet && new anchor.AnchorProvider(connection, anchorWallet, { commitment: "confirmed" }),
+    [connection, anchorWallet]
+  );
   const [tokenInfo, setTokenInfo] = useState<TokenInfo>();
-  const upcomingPayment = useMemo(() => tokenInfo?.payments.find((payment) => payment.status === "open"), [tokenInfo]);
-  const [now, setNow] = useState<Date>();
-
-  console.log({ tokenInfo });
-
-  useEffect(() => {
-    const cb = () => setNow(new Date());
-    cb();
-    const intervalId = window.setInterval(cb, 1000);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
+  const currentUnderlyingPrice = useWatch(watchCurrentPrice, provider, tokenInfo?.oraclePublicKey);
+  const brcAccount = useWatch(watchBRC, provider, tokenInfo?.brcPublicKey);
+  const now = useTicker(1000);
 
   const loadTokenInfo = useCallback(async () => {
-    if (!anchorWallet) return;
-
-    console.debug(`[${new Date().toISOString()}] loading token info`);
-    const provider = new anchor.AnchorProvider(connection, anchorWallet, { commitment: "confirmed" });
-    const mint = new web3.PublicKey(props.mint);
-    setTokenInfo(await getTokenInfo(provider, mint));
-  }, [anchorWallet]);
+    if (provider) setTokenInfo(await getTokenInfo(provider, props.mint));
+  }, [provider, props.mint]);
 
   useEffect(() => {
     void loadTokenInfo();
   }, [anchorWallet]);
 
+  const upcomingPayment = useMemo(() => tokenInfo?.payments.find((payment) => payment.status === "open"), [tokenInfo]);
   useEffect(() => {
     if (!now || !upcomingPayment) return;
 
@@ -114,17 +106,17 @@ export default function Page(props: PageProps) {
     if (shouldUpdate) void loadTokenInfo();
   }, [now, upcomingPayment]);
 
-  if (!now || !tokenInfo) return null;
+  if (!now || !tokenInfo || currentUnderlyingPrice === undefined || brcAccount === undefined) return null;
 
   return (
     <PageInner
-      currentUnderlyingPrice={tokenInfo.currentUnderlyingPrice}
+      currentUnderlyingPrice={currentUnderlyingPrice}
       issuanceDate={tokenInfo.issuanceDate}
       principal={tokenInfo.principal}
       balance={tokenInfo.balance}
       payments={tokenInfo.payments}
       mint={tokenInfo.mint}
-      brcAccount={tokenInfo.brcAccount}
+      brcAccount={brcAccount}
       now={now}
     />
   );

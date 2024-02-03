@@ -1,11 +1,13 @@
 import * as anchor from "@coral-xyz/anchor";
 import { createSDK } from "@/web3/sdk";
 import * as web3 from "@solana/web3.js";
-import { ParsedAccountData, PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import { getPdaWithSeeds } from "@fqx/programs/tests/utils";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { Payment } from "@/types";
 import { BN } from "@coral-xyz/anchor";
+import { BrcPriceAuthorityIDL, StructuredNotesSdk } from "@fqx/programs";
+import { IdlAccounts } from "@coral-xyz/anchor";
 
 export type BRCAccount = {
   initialPrincipal: number;
@@ -24,17 +26,68 @@ export type TokenInfo = {
   issuanceDate: Date;
   mint: PublicKey;
   currentUnderlyingPrice: number;
-  brcAccount: BRCAccount;
+  oraclePublicKey: string;
+  brcPublicKey: string;
 };
 
-export async function getTokenInfo(provider: anchor.AnchorProvider, mint: web3.PublicKey): Promise<TokenInfo> {
+function getTransformedBrcAccount(brcAccount: IdlAccounts<typeof BrcPriceAuthorityIDL>["barrierReverseConvertible"]) {
+  return {
+    initialPrincipal: brcAccount.initialPrincipal.toNumber(),
+    initialFixingPrice: brcAccount.initialFixingPrice.toNumber(),
+    barrier: brcAccount.barrier.toNumber(),
+    finalFixingDate: brcAccount.finalFixingDate ? new Date(brcAccount.finalFixingDate.toNumber() * 1000) : undefined,
+    finalFixingPrice: brcAccount.finalUnderlyingFixingPrice
+      ? brcAccount.finalUnderlyingFixingPrice.toNumber()
+      : undefined,
+    finalPrincipal: brcAccount.finalPrincipal ? brcAccount.finalPrincipal.toNumber() : undefined,
+  };
+}
+
+export function watchBRC(provider: anchor.AnchorProvider, publicKeyBase58: string, fn: (account: BRCAccount) => void) {
+  console.debug(`[${new Date().toISOString()}] BRC watch start`);
+  const publicKey = new PublicKey(publicKeyBase58);
+  const sdk = createSDK(provider);
+  const callback = (account: any) => fn(getTransformedBrcAccount(account));
+  const accountClient = sdk.brcProgram.account.barrierReverseConvertible;
+  const emitter = accountClient.subscribe(publicKey).addListener("change", callback);
+  accountClient.fetch(publicKey).then(callback);
+
+  return async () => {
+    console.debug(`[${new Date().toISOString()}] BRC watch stop`);
+    emitter.removeAllListeners("change");
+    sdk.brcProgram.account.barrierReverseConvertible.unsubscribe(publicKey);
+  };
+}
+
+export function watchCurrentPrice(
+  provider: anchor.AnchorProvider,
+  publicKeyBase58: string,
+  fn: (currentPrice: number) => void
+) {
+  console.debug(`[${new Date().toISOString()}] oracle watch start`);
+  const publicKey = new PublicKey(publicKeyBase58);
+  const sdk = createSDK(provider);
+  const callback = (account: any) => fn(account.currentPrice.toNumber());
+  const accountClient = sdk.dummyOracleProgram.account.dummyOracleAccount;
+  const emitter = accountClient.subscribe(publicKey).addListener("change", callback);
+  accountClient.fetch(publicKey).then(callback);
+
+  return () => {
+    console.debug(`[${new Date().toISOString()}] oracle watch stop`);
+    emitter.removeAllListeners("change");
+    sdk.dummyOracleProgram.account.dummyOracleAccount.unsubscribe(publicKey);
+  };
+}
+
+export async function getTokenInfo(provider: anchor.AnchorProvider, mintBase58: string): Promise<TokenInfo> {
+  console.debug(`[${new Date().toISOString()}] loading token info`);
+  const mint = new web3.PublicKey(mintBase58);
   const sdk = createSDK(provider);
 
   // structuredProduct
   const structuredProductPda = await getPdaWithSeeds([mint.toBuffer()], sdk.program.programId);
   const structuredProductPubKey = structuredProductPda.publicKey;
   const structuredProduct = await sdk.program.account.structuredProductConfig.fetch(structuredProductPubKey);
-  console.log("STRUCTURED PRODUCT", structuredProduct);
 
   // payments
   const snapshotConfigPDA = await getPdaWithSeeds(
@@ -105,13 +158,12 @@ export async function getTokenInfo(provider: anchor.AnchorProvider, mint: web3.P
   const firstScheduledPayment = payments.find((payment) => payment.status === "scheduled");
   if (firstScheduledPayment) firstScheduledPayment.status = "open";
 
-  const { currentPrice } = await sdk.getCurrentPriceFromDummyOracle(
-    "CRZYBTC",
-    new PublicKey("HTDGotJ2EukPM8HsTgRroFXPStkUgszDB8MJf5Paf4c8")
+  const dummyOraclePda = await getPdaWithSeeds(
+    [new PublicKey("HTDGotJ2EukPM8HsTgRroFXPStkUgszDB8MJf5Paf4c8").toBuffer(), Buffer.from("CRZYBTC")],
+    sdk.dummyOracleProgram.programId
   );
+  const { currentPrice } = await sdk.dummyOracleProgram.account.dummyOracleAccount.fetch(dummyOraclePda.publicKey);
   const brcPDA = await getPdaWithSeeds([structuredProductPubKey.toBuffer()], sdk.brcProgram.programId);
-  const brcAccount = await sdk.brcProgram.account.barrierReverseConvertible.fetch(brcPDA.publicKey);
-  console.log(brcAccount);
 
   return {
     payments,
@@ -121,15 +173,7 @@ export async function getTokenInfo(provider: anchor.AnchorProvider, mint: web3.P
     issuanceDate: new Date(structuredProduct.issuanceDate!.toNumber() * 1000),
     mint: mint,
     currentUnderlyingPrice: currentPrice.toNumber(),
-    brcAccount: {
-      initialPrincipal: brcAccount.initialPrincipal.toNumber(),
-      initialFixingPrice: brcAccount.initialFixingPrice.toNumber(),
-      barrier: brcAccount.barrier.toNumber(),
-      finalFixingDate: brcAccount.finalFixingDate ? new Date(brcAccount.finalFixingDate.toNumber() * 1000) : undefined,
-      finalFixingPrice: brcAccount.finalUnderlyingFixingPrice
-        ? brcAccount.finalUnderlyingFixingPrice.toNumber()
-        : undefined,
-      finalPrincipal: brcAccount.finalPrincipal ? brcAccount.finalPrincipal.toNumber() : undefined,
-    },
+    oraclePublicKey: dummyOraclePda.publicKey.toBase58(),
+    brcPublicKey: brcPDA.publicKey.toBase58(),
   };
 }

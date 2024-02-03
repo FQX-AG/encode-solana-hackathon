@@ -21,9 +21,6 @@ export function Token2(props: {
   currentUnderlyingPrice: number;
   brcAccount: BRCAccount;
 }) {
-  const initialFixingPrice = 43_000;
-  const barrierLevel = 80;
-
   return (
     <Section title="Payment schedule">
       <Box display="grid" flex="1 1 auto" gridTemplateColumns="repeat(12, 1fr)" gap={6}>
@@ -47,9 +44,9 @@ export function Token2(props: {
                   <Stack direction="row" spacing={1} alignItems="center">
                     {`${props.note.structuredProductDetails.underlyingAsset} / ${props.note.currency}`}
                     {props.brcAccount.finalFixingDate ? (
-                      <Chip sx={{ color: (theme) => theme.palette.primary.main }}>Final</Chip>
+                      <Chip sx={{ color: (theme) => theme.palette.info.main }}>Final</Chip>
                     ) : (
-                      <Chip sx={{ color: (theme) => theme.palette.info.main }}>Live</Chip>
+                      <Chip sx={{ color: (theme) => theme.palette.warning.main }}>Live</Chip>
                     )}
                   </Stack>
                 }
@@ -63,13 +60,19 @@ export function Token2(props: {
                   </Text>
                 }
               />
-              <Property
-                horizontal
-                k="Updated principal"
-                v={`${props.note.currency} ${formatDecimal(
-                  (props.brcAccount.finalPrincipal || props.brcAccount.initialPrincipal) * props.balance
-                )}`}
-              />
+              {props.brcAccount.finalPrincipal !== undefined ? (
+                <Property
+                  horizontal
+                  k="Final principal"
+                  v={`${props.note.currency} ${formatDecimal(props.brcAccount.finalPrincipal * props.balance)}`}
+                />
+              ) : (
+                <Property
+                  horizontal
+                  k="Updated principal"
+                  v={`${props.note.currency} ${formatDecimal(props.brcAccount.initialPrincipal * props.balance)}`}
+                />
+              )}
               <Property
                 horizontal
                 k="Total coupon payment"
@@ -86,12 +89,12 @@ export function Token2(props: {
             <Divider />
             <BRC
               type={BRCType.European}
-              barrier={barrierLevel}
+              barrier={new Decimal(props.brcAccount.barrier).div(props.brcAccount.initialFixingPrice).toNumber() * 100}
               coupon={props.note.interestRate * 100}
               underlyingAsset={props.note.structuredProductDetails.underlyingAsset}
               currency={props.note.currency}
               issuanceAmount={new Decimal(props.note.principal).times(props.balance).toNumber()}
-              initialFixingPrice={initialFixingPrice}
+              initialFixingPrice={props.brcAccount.initialFixingPrice}
             />
           </Panel>
         </Box>
