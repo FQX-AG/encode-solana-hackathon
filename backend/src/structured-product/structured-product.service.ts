@@ -175,8 +175,8 @@ export class StructuredProductService {
     const issuanceDate = new Date();
     const coupon = new BN(
       randomInt(
-        0.03 * structuredProductDeployDto.principal,
-        0.09 * structuredProductDeployDto.principal,
+        0.2 * structuredProductDeployDto.principal,
+        0.25 * structuredProductDeployDto.principal,
       ),
     )
       .divn(2)
