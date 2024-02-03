@@ -120,7 +120,7 @@ export default function Request2(props: { values: Values; deploymentInfo: Deploy
   const data = useMemo<QuoteInternal[]>(() => {
     const initialFixingPrice = new Decimal(props.deploymentInfo.initialFixingPrice);
     const y = new Decimal(props.deploymentInfo.coupon).div(props.values.principal);
-    const rand = (min = 0.2, max = 0.9) =>
+    const rand = (min = 0.75, max = 0.9) =>
       new Decimal(Math.random())
         .mul(max - min)
         .plus(min)
