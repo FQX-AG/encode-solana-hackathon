@@ -6,7 +6,7 @@ import { Keypair, PublicKey, TransactionInstruction } from '@solana/web3.js';
 import { SOLANA_PROVIDER } from 'src/solana-client/contants';
 import { SdkFactory } from 'src/solana-client/sdk-factory';
 import { Job } from 'bull';
-import { StructuredNotesSdk } from '@fqx/programs';
+import { getPdaWithSeeds, StructuredNotesSdk } from '@fqx/programs';
 
 export type HandlePaymentJob = {
   mint: string;
@@ -40,15 +40,16 @@ export class HandlePaymentProcessor {
 
     const ixs: TransactionInstruction[] = [];
 
-    const dummyOracleProgramId = new PublicKey(
-      this.configService.get('DUMMY_ORACLE_PROGRAM_ID'),
+    const dummyOraclePDA = getPdaWithSeeds(
+      [this.provider.publicKey.toBuffer(), Buffer.from('CRZYBTC')],
+      this.sdk.dummyOracleProgram.programId,
     );
 
     if (job.data.principal) {
       const setPriceIx = await this.sdk.createSetPaymentPriceInstruction(
         'CRZYBTC',
         mint,
-        dummyOracleProgramId,
+        dummyOraclePDA.publicKey,
         new BN(job.data.snapshotOffset),
       );
       ixs.push(setPriceIx);
@@ -93,12 +94,13 @@ export class HandlePaymentProcessor {
 
     const settlePaymentX = await this.sdk.createAndSignV0Tx(ixs);
 
-    this.logger.log(
-      'Simulation: ',
-      await this.sdk.provider.connection.simulateTransaction(settlePaymentX, {
-        sigVerify: true,
-      }),
-    );
+    this.logger.log({
+      simulationLogs: (
+        await this.sdk.provider.connection.simulateTransaction(settlePaymentX, {
+          sigVerify: true,
+        })
+      ).value.logs,
+    });
 
     return await this.sdk.sendAndConfirmV0Tx(ixs);
   }
