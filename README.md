@@ -140,3 +140,7 @@ This program is used to simulate an oracle for the BRC price authority to get th
 It's a simple program that can be initialized with a price and then continuously update the price by the update authority.
 
 
+# Disclaimer
+This is a demo, not a complete solution and most likely not secure. 
+It's not audited and should not be used in production.
+Currently, it shouldn't be used at all, as there's no license, but we'll add an appropriate license later.
