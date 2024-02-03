@@ -10,7 +10,7 @@ transferhook = "6sGAcb6vw8bhcVNPv5pMEhr3dXyeYoX2X89S3NkEaaJP"
 treasury-wallet = "3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3"
 
 [programs.localnet]
-brc-price-authority = "DqW32SwCjeSRiWn3TvASej9Y5MTwcFHKkrrk1pmxpKPR"
+brc-price-authority = "brcsirKCcw5WUZQatGvwwZ2w2ikZegCXooGHpaQZWGm"
 dummy-oracle = "BZuknSg2JQVQFt4d6a5eHsoeivEMVp4tvSnkas8yoxgY"
 structured-product = "GYFmKqbpYHUrML3BstU9VUnVdEE6ho9tzVJzs1DAR5iz"
 transferhook = "6sGAcb6vw8bhcVNPv5pMEhr3dXyeYoX2X89S3NkEaaJP"

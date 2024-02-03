@@ -122,7 +122,7 @@ export type BrcPriceAuthority = {
   ],
   "accounts": [
     {
-      "name": "brcInfo",
+      "name": "barrierReverseConvertible",
       "type": {
         "kind": "struct",
         "fields": [
@@ -313,7 +313,7 @@ export const IDL: BrcPriceAuthority = {
   ],
   "accounts": [
     {
-      "name": "brcInfo",
+      "name": "barrierReverseConvertible",
       "type": {
         "kind": "struct",
         "fields": [

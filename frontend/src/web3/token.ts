@@ -110,11 +110,7 @@ export async function getTokenInfo(provider: anchor.AnchorProvider, mint: web3.P
     new PublicKey("HTDGotJ2EukPM8HsTgRroFXPStkUgszDB8MJf5Paf4c8")
   );
   const brcPDA = await getPdaWithSeeds([structuredProductPubKey.toBuffer()], sdk.brcProgram.programId);
-  console.log("BRCPDA", brcPDA.publicKey.toBase58());
-  const brcAccountInfo = await sdk.provider.connection.getAccountInfo(brcPDA.publicKey);
-  console.log("BRC ACCOUNT INFO", brcAccountInfo);
-  // TODO: I DON'T KNOW WHY THIS ACCOUNT DISCRIMINATOR IS WRONG!! ????
-  const brcAccount = await sdk.brcProgram.account.brcInfo.fetch(brcPDA.publicKey);
+  const brcAccount = await sdk.brcProgram.account.barrierReverseConvertible.fetch(brcPDA.publicKey);
   console.log(brcAccount);
 
   return {

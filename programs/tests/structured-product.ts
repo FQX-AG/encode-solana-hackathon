@@ -373,9 +373,10 @@ describe("structured-product", () => {
       brcProgram.programId
     );
     console.log("BRC PDA: ", brcPDA.publicKey.toBase58());
-    const brcAccount = await sdk.brcProgram.account.brcInfo.fetch(
-      brcPDA.publicKey
-    );
+    const brcAccount =
+      await sdk.brcProgram.account.barrierReverseConvertible.fetch(
+        brcPDA.publicKey
+      );
 
     console.log("BRC Account: ", brcAccount);
 

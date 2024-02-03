@@ -4,7 +4,7 @@ use dummy_oracle::DummyOracleAccount;
 use structured_product::program::StructuredProduct;
 use structured_product::{Payment, StructuredProductConfig};
 
-declare_id!("DqW32SwCjeSRiWn3TvASej9Y5MTwcFHKkrrk1pmxpKPR");
+declare_id!("brcsirKCcw5WUZQatGvwwZ2w2ikZegCXooGHpaQZWGm");
 
 pub fn calc_final_principal(
     initial_principal: u64,
@@ -87,7 +87,7 @@ pub mod brc_price_authority {
         );
 
         msg!("Finalizing brc at {}", ctx.accounts.brc.key());
-        msg!("Initial principal: {}, initial_fixing_price: {}, barrier: {}, final_fixing_price: {}, Final principal: {}", 
+        msg!("Initial principal: {}, initial_fixing_price: {}, barrier: {}, final_fixing_price: {}, Final principal: {}",
             initial_principal, initial_fixing_price, barrier, final_underlying_fixing_price, final_principal);
 
         let cpi_program = ctx.accounts.structured_product_program.to_account_info();
@@ -131,7 +131,7 @@ pub struct Initialize<'info> {
     pub payment: AccountInfo<'info>,
     // TODO: space calc
     #[account(init, seeds=[structured_product.key().as_ref()], bump, payer=authority, space=500)]
-    pub brc: Account<'info, BRCInfo>,
+    pub brc: Account<'info, BarrierReverseConvertible>,
     #[account(seeds=[authority.key().as_ref(), underlying_symbol.as_bytes()], bump=dummy_oracle.bump, seeds::program=dummy_oracle_program)]
     pub dummy_oracle: Account<'info, DummyOracleAccount>,
     pub dummy_oracle_program: Program<'info, DummyOracle>,
@@ -143,7 +143,7 @@ pub struct Initialize<'info> {
 pub struct SetFinalFixingPrice<'info> {
     pub payer: Signer<'info>,
     #[account(mut, seeds=[structured_product.key().as_ref()], bump=brc.bump)]
-    pub brc: Account<'info, BRCInfo>,
+    pub brc: Account<'info, BarrierReverseConvertible>,
     pub structured_product: Account<'info, StructuredProductConfig>,
     pub payment: Account<'info, Payment>,
     pub dummy_oracle: Account<'info, DummyOracleAccount>,
@@ -153,7 +153,7 @@ pub struct SetFinalFixingPrice<'info> {
 
 #[account]
 #[derive(Debug)]
-pub struct BRCInfo {
+pub struct BarrierReverseConvertible {
     pub authority: Pubkey,
     pub underlying_symbol: String,
     pub initial_principal: u64,

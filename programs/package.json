@@ -22,7 +22,7 @@
     "upgrade:transferhook": "solana program deploy --program-id=6sGAcb6vw8bhcVNPv5pMEhr3dXyeYoX2X89S3NkEaaJP ./target/deploy/transfer_snapshot_hook.so",
     "upgrade:treasury-wallet": "solana program deploy --program-id=3DUqJ4S1dUoKzC77NmJXq2wiDqwR3NoNkEwtkFU4SaY3 ./target/deploy/treasury_wallet.so",
     "upgrade:dummy-oracle": "solana program deploy --program-id=BZuknSg2JQVQFt4d6a5eHsoeivEMVp4tvSnkas8yoxgY ./target/deploy/dummy_oracle.so",
-    "upgrade:brc": "solana program deploy --program-id=DqW32SwCjeSRiWn3TvASej9Y5MTwcFHKkrrk1pmxpKPR ./target/deploy/brc_price_authority.so"
+    "upgrade:brc": "solana program deploy --program-id=brcsirKCcw5WUZQatGvwwZ2w2ikZegCXooGHpaQZWGm ./target/deploy/brc_price_authority.so"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.29.0",

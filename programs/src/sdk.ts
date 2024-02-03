@@ -111,10 +111,6 @@ export type SignStructuredProductIssueOffline = {
   issuanceProceedsBeneficiary: PublicKey;
 };
 
-export type LookupTableMap = {
-  [key: string]: PublicKey;
-};
-
 export class StructuredNotesSdk {
   constructor(
     readonly provider: AnchorProvider,
@@ -123,7 +119,9 @@ export class StructuredNotesSdk {
     readonly transferSnapshotHookProgram: Program<TransferSnapshotHook>,
     readonly dummyOracleProgram: Program<DummyOracle>,
     readonly brcProgram: Program<BrcPriceAuthority>
-  ) {}
+  ) {
+    console.log("BRC PROGRAM", brcProgram.programId.toBase58());
+  }
 
   async createV0Tx(
     ixs: TransactionInstruction[],
