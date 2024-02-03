@@ -102,6 +102,8 @@ export class HandlePaymentProcessor {
       ).value.logs,
     });
 
-    return await this.sdk.sendAndConfirmV0Tx(ixs);
+    const txId = await this.sdk.sendAndConfirmV0Tx(ixs);
+
+    this.logger.log({ payment: job.data, txId });
   }
 }
