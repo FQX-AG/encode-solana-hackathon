@@ -119,9 +119,7 @@ export class StructuredNotesSdk {
     readonly transferSnapshotHookProgram: Program<TransferSnapshotHook>,
     readonly dummyOracleProgram: Program<DummyOracle>,
     readonly brcProgram: Program<BrcPriceAuthority>
-  ) {
-    console.log("BRC PROGRAM", brcProgram.programId.toBase58());
-  }
+  ) {}
 
   async createV0Tx(
     ixs: TransactionInstruction[],
@@ -266,16 +264,6 @@ export class StructuredNotesSdk {
       this.program.programId
     );
 
-    console.log(
-      "ISSUER BALANCE:",
-      await this.provider.connection.getBalance(accounts.issuer)
-    );
-
-    console.log(
-      "INVESTOR BALANCE:",
-      await this.provider.connection.getBalance(accounts.investor)
-    );
-
     const extraAccountPDA = getPdaWithSeeds(
       [Buffer.from("extra-account-metas"), mint.publicKey.toBuffer()],
       this.transferSnapshotHookProgram.programId
@@ -301,7 +289,6 @@ export class StructuredNotesSdk {
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       systemProgram: anchor.web3.SystemProgram.programId,
     };
-    console.log({ allAccounts });
     return await this.program.methods
       .initialize(maxSnapshots, issuancePricePerUnit, supply)
       .accounts(allAccounts)
@@ -337,8 +324,6 @@ export class StructuredNotesSdk {
       [structuredProductPDA.publicKey.toBuffer()],
       this.brcProgram.programId
     );
-
-    console.log("brcPDA", brcPDA.publicKey.toBase58());
 
     return this.brcProgram.methods
       .initialize(
@@ -618,14 +603,11 @@ export class StructuredNotesSdk {
       true,
       paymentDateOffsetSeconds
     );
-    console.log("paymentPDA", paymentPDA.publicKey.toBase58());
 
     const brcPDA = getPdaWithSeeds(
       [structuredProductPDA.publicKey.toBuffer()],
       this.brcProgram.programId
     );
-
-    console.log("brcPDA", brcPDA.publicKey.toBase58());
 
     return await this.brcProgram.methods
       .setFinalFixingPrice(underlyingSymbol, paymentDateOffsetSeconds)
@@ -820,22 +802,15 @@ export class StructuredNotesSdk {
     );
   }
   async waitForNewBlock(targetHeight: number) {
-    console.log(`Waiting for new block with target height ${targetHeight}`);
-
     // eslint-disable-next-line no-async-promise-executor
     return new Promise<void>(async (resolve) => {
       const { lastValidBlockHeight } =
         await this.provider.connection.getLatestBlockhash("finalized");
 
-      console.log("Current block height: ", lastValidBlockHeight);
-      console.log("Target block height: ", lastValidBlockHeight + targetHeight);
-
       // Check if at least targetHeight amount of new blocks are generated every 1 second
       const intervalId = setInterval(async () => {
         const { lastValidBlockHeight: newValidBlockHeight } =
           await this.provider.connection.getLatestBlockhash();
-
-        console.log("New block height: ", newValidBlockHeight);
 
         if (newValidBlockHeight > lastValidBlockHeight + targetHeight) {
           clearInterval(intervalId);
@@ -861,10 +836,7 @@ export class StructuredNotesSdk {
     });
     await this.sendAndConfirmV0Tx([createLookupTableIx, extendLookupTableIx]);
 
-    console.log("Created lookup table at: ", lookupTableAddress.toBase58());
-
     if (waitForActivation) {
-      console.log("Waiting for lookup table to be activated...");
       await this.waitForNewBlock(1);
     }
 
@@ -881,9 +853,6 @@ export class StructuredNotesSdk {
       noncePubkey,
       authorizedPubkey: this.provider.publicKey,
     });
-
-    console.log("Mint: ", mint.publicKey.toBase58());
-
     const structuredProductPDA = getPdaWithSeeds(
       [mint.publicKey.toBuffer()],
       this.program.programId
@@ -1092,8 +1061,6 @@ export class StructuredNotesSdk {
 
     const paymentTokenAccountInfo =
       await this.provider.connection.getAccountInfo(paymentTokenAccountAddress);
-
-    console.log("paymentTokenAccountInfo", paymentTokenAccountInfo);
 
     return unpackAccount(
       paymentTokenAccountAddress,

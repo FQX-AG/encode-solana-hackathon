@@ -32,7 +32,7 @@ export class OracleService {
       'CRZYBTC',
       this.serverSdk.provider.publicKey,
     );
-    const onePercentValue = oldPrice.currentPrice.divn(100).toNumber();
+    const onePercentValue = oldPrice.currentPrice.divn(20).toNumber();
     const newPriceDelta = new BN(
       this.randomNegativeOrPositiveInRange(onePercentValue),
     );
@@ -42,11 +42,18 @@ export class OracleService {
         'CRZYBTC',
         newPrice,
       );
-    this.logger.log(`Setting new price: ${newPrice.toString()}`);
+    this.logger.log({
+      msg: 'Setting new Price',
+      newPrice: newPrice.toString(),
+    });
     const updatePriceTxId = await this.serverSdk.sendAndConfirmV0Tx([
       setPriceIx,
     ]);
-    this.logger.log(`Price updated: ${updatePriceTxId}`);
+    this.logger.log({
+      msg: 'Price updated',
+      newPrice: newPrice.toString(),
+      txId: updatePriceTxId,
+    });
   }
 
   randomNegativeOrPositiveInRange(range: number) {
