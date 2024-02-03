@@ -32,7 +32,7 @@ export class OracleService {
       'CRZYBTC',
       this.serverSdk.provider.publicKey,
     );
-    const onePercentValue = oldPrice.currentPrice.divn(100).toNumber();
+    const onePercentValue = oldPrice.currentPrice.divn(20).toNumber();
     const newPriceDelta = new BN(
       this.randomNegativeOrPositiveInRange(onePercentValue),
     );
