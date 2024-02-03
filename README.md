@@ -123,4 +123,20 @@ pub fn balance_at_snapshot(&self, snapshot_index: usize) -> u64 {
 This program is given an oracle (in our case our dummy oracle) and an initial fixing price during initialization. It also expects a **Payment account**
 which should be updated at the maturity date. 
 
+We can then "crank" the BRC price authority to set the final fixing price and final principal of the structured product,
+at the payment given during initialization.
+
+We are able to do this in the same transaction as pulling the issuer's repayment from the treasury wallet,
+and distribute the final principal to the investor.
+
+## Treasury Wallet
+This program is used to deposit funds into a treasury wallet, which exposes a "Withdraw" instruction,
+that can be called by addresses that have previously been authorized to do so.
+We authorize the **structured product pda** to do withdrawals from the treasury wallet in the same transaction
+where we initialize the structured product. 
+
+## Dummy Oracle
+This program is used to simulate an oracle for the BRC price authority to get the price from.
+It's a simple program that can be initialized with a price and then continuously update the price by the update authority.
+
 
