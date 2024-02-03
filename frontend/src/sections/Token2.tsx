@@ -66,7 +66,9 @@ export function Token2(props: {
               <Property
                 horizontal
                 k="Updated principal"
-                v={`${props.note.currency} ${formatDecimal(props.note.principal * props.balance)}`}
+                v={`${props.note.currency} ${formatDecimal(
+                  (props.brcAccount.finalPrincipal || props.brcAccount.initialPrincipal) * props.balance
+                )}`}
               />
               <Property
                 horizontal
