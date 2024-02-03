@@ -424,3 +424,55 @@ impl SnapshotTokenAccountBalances {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! balance_at_snapshot_tests {
+        ($($name:ident: $expected:expr,)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    let (snapshot_balances, snapshot_index, expected) = $expected;
+                    let result = snapshot_balances.balance_at_snapshot(snapshot_index);
+                    assert_eq!(result, expected);
+                }
+            )*
+        };
+    }
+
+    #[cfg(test)]
+    balance_at_snapshot_tests! {
+        balance_at_snapshot_test_1: (SnapshotTokenAccountBalances {
+            snapshot_balances: vec![Some(100), Some(200), Some(300)]
+        }, 0, 100,),
+        balance_at_snapshot_test_2: (SnapshotTokenAccountBalances {
+            snapshot_balances: vec![Some(100), Some(200), Some(300)]
+        }, 1, 200,),
+        balance_at_snapshot_test_3: (SnapshotTokenAccountBalances {
+            snapshot_balances: vec![Some(100), None, None]
+        }, 2, 100,),
+        balance_at_snapshot_test_4: (SnapshotTokenAccountBalances {
+            snapshot_balances: vec![None, Some(200), None]
+        }, 2, 200,),
+        balance_at_snapshot_test_5: (SnapshotTokenAccountBalances {
+            snapshot_balances: vec![None, None, Some(300)]
+        }, 0, 0,),
+        balance_at_snapshot_test_6: (SnapshotTokenAccountBalances {
+            snapshot_balances: vec![None, None, None]
+        }, 0, 0,),
+        balance_at_snapshot_test_7: (SnapshotTokenAccountBalances {
+            snapshot_balances: vec![Some(100), None, Some(300)]
+        }, 1, 100,),
+        balance_at_snapshot_test_8: (SnapshotTokenAccountBalances {
+            snapshot_balances: vec![Some(100), None, Some(300)]
+        }, 2, 300,),
+        balance_at_snapshot_test_9: (SnapshotTokenAccountBalances {
+            snapshot_balances: vec![None, Some(100),None]
+        }, 0, 0,),
+          balance_at_snapshot_test_10: (SnapshotTokenAccountBalances {
+            snapshot_balances: vec![None, Some(100),None]
+        }, 2, 100,),
+    }
+}
