@@ -36,6 +36,7 @@ export class HandlePaymentProcessor {
   }
   @Process()
   async process(job: Job<HandlePaymentJob>) {
+    this.logger.log({ msg: 'processing payment', paymentInfo: job.data });
     const mint = new PublicKey(job.data.mint);
 
     const ixs: TransactionInstruction[] = [];
@@ -95,6 +96,7 @@ export class HandlePaymentProcessor {
     const settlePaymentX = await this.sdk.createAndSignV0Tx(ixs);
 
     this.logger.log({
+      paymentInfo: job.data,
       simulationLogs: (
         await this.sdk.provider.connection.simulateTransaction(settlePaymentX, {
           sigVerify: true,
@@ -104,6 +106,10 @@ export class HandlePaymentProcessor {
 
     const txId = await this.sdk.sendAndConfirmV0Tx(ixs);
 
-    this.logger.log({ payment: job.data, txId });
+    this.logger.log({
+      msg: 'Completed payment processing',
+      payment: job.data,
+      txId,
+    });
   }
 }
