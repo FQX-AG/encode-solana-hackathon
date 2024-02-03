@@ -76,3 +76,47 @@ There are five Solana programs in this repository that are used to issue and man
 
 
 ## Structured Product Program
+This is the main entry point to be able to issue the product. It's a wrapper around creating metadata, the payment accounts and corresponding snapshots.
+To be able to issue it's the mint authority to the mint and sets up the transfer hook for the mint.
+It's modular in the sense that any address can be a price authority for a payment => Easy extension to other structured products.
+
+Throughout the lifecycle it's currently able to pull payments from a **treasury wallet** that authorized the **structured product pda** to do withdrawals.
+
+Each payment carries its own token account from which it can distribute/settle the payment for every investor that was holding the token at the corresponding snapshot.
+
+## Transfer snapshot hook
+This program can be used for any Token 2022 mint and stores a certan number of snapshots which define a timestamp offset relative to the snapshot config's activation date.
+On a token transfer the invokation of the hook will update the upcoming snapshot if it exists.
+
+The snapshot balance is then calculated with the following algorithm:
+```rust
+// If snapshot_balance at given index is `Some` we just return the balance => ez!
+// If balance is `None`, that means in the period between the given snapshot and the earlier snapshot, no transfer occurred.
+// There could still be a balance at the earlier snapshot, so we need to check that.
+// If there is a balance at the earlier snapshot, we return that balance.
+// If there is no balance at any earlier snapshot, we return 0.
+pub fn balance_at_snapshot(&self, snapshot_index: usize) -> u64 {
+    let snapshot_balance = self.snapshot_balances[snapshot_index];
+    match snapshot_balance {
+        Some(balance) => balance,
+        None => {
+            let mut i = snapshot_index;
+            while i > 0 {
+                i -= 1;
+                let snapshot_balance = self.snapshot_balances[i];
+                match snapshot_balance {
+                    Some(balance) => return balance,
+                    None => continue,
+                }
+            }
+            0
+        }
+    }
+}
+```
+
+## BRC Price authority
+This program is given an oracle (in our case our dummy oracle) and an initial fixing price during initialization. It also expects a **Payment account**
+which should be updated at the maturity date. 
+
+
