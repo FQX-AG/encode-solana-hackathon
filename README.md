@@ -119,6 +119,12 @@ pub fn balance_at_snapshot(&self, snapshot_index: usize) -> u64 {
 }
 ```
 
+This is useful for any token with scheduled payments or other events that depend on the token balance at a certain point in time
+and can be used completely independently of the structured product program.
+
+It could also be used within another transfer-hook that combines multiple hooks together, e.g. a check for whitelist,
+for compliance reasons.
+
 ## BRC Price authority
 This program is given an oracle (in our case our dummy oracle) and an initial fixing price during initialization. It also expects a **Payment account**
 which should be updated at the maturity date. 
