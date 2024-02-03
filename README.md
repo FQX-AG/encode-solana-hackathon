@@ -12,7 +12,7 @@ certain barrier.
 
 See the attached graph for a visual representation of the product.
 
-![graph.png](assets/graph.png)]
+![graph.png](assets/graph.png)
 
 Usually the product is issued by a financial institution on the request of an investor.
 The investor initiates the process with a certain product and defined parameters in mind.
