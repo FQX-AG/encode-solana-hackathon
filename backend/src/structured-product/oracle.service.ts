@@ -51,7 +51,7 @@ export class OracleService {
     ]);
     this.logger.log({
       msg: 'Price updated',
-      newPrice: newPrice,
+      newPrice: newPrice.toString(),
       txId: updatePriceTxId,
     });
   }
