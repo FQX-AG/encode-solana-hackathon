@@ -36,6 +36,14 @@ of price fixing and payment settlement.
 Pure blockchain/DeFi solutions don't provide the legal certainty that is required for structured products.
 Issuers and investors usually like to negotiate the terms of the product in private.
 
+## Challenges with SPL Token before Token 2022
+With the old Token program it was not easily possible to maintain snapshots of token account balances.
+It was also not directly possible to have rules on token transfers, that depending on the issuer may require
+tokens to stay within a whitelisted ecosystem.
+
+Specifically the transfer hook in token 2022 is what was missing in the old token program to allow fully 
+functional structured products to be issued on Solana.
+
 ## Solution
 The solution we aim to demonstrate with this demo is a hybrid where the negotiation of the product
 is done on a platform and legal certainty is provided Obligate's legal framework.
@@ -54,3 +62,16 @@ The investor will pay for and receive the product issued by the issuer in an ato
 By automating all parts of the product lifecycle we are able to payout coupons, set the final fixing price 
 and final principal and payout the principal to the investor without any manual intervention, as long as the
 investor carries enough funds on a **Treasury wallet** on Solana.
+
+# Technical implementation
+
+There are five Solana programs in this repository that are used to issue and manage the structured product.
+
+1. **Structured Product Program** - This program is used to initialize other programs, configure and manage payments and issue the structured product as an SPL token.
+2. **Transfer Snapshot Hook** - This program is used to maintain snapshots of token account balances at payment dates.
+3. **BRC Price Authority** - This program is used to set the final fixing price and final principal of the structured product. It is set as the price authority on the principal payment.
+4. **Treasury Wallet** - This program allows the issuer to deposit funds into a treasury wallet which can automatically pay out coupons and principal to the investor given a signed authorization to the structured product program.
+5. **Dummy Oracle** - This program is used to simulate an oracle that sets initial and final fixing price of the underlying asset.
+
+
+## Structured Product Program
