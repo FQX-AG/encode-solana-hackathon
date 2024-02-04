@@ -90,7 +90,7 @@ Each payment carries its own token account from which it can distribute/settle t
 
 ## Transfer snapshot hook
 This program can be used for any Token 2022 mint and stores a certan number of snapshots which define a timestamp offset relative to the snapshot config's activation date.
-On a token transfer the invokation of the hook will update the upcoming snapshot if it exists.
+On a token transfer the invokation of the hook will update the snapshot_token_account_balances account's balance at the current_snapshot_index for source and destination token accounts.
 
 The snapshot balance is then calculated with the following algorithm:
 ```rust
