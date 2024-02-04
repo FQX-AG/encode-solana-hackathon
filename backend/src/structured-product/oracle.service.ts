@@ -60,7 +60,7 @@ export class OracleService {
     const setPriceIx =
       await this.serverSdk.createSetPriceDummyOracleInstruction(
         'CRZYBTC',
-        new BN(42000000000000),
+        newPrice,
       );
 
     this.logger.log({
