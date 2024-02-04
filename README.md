@@ -10,27 +10,26 @@ a structured product that is popular in the traditional finance world.
 BRC is an investment product with a high guaranteed coupon, 
 and a variable repayment of the principal that depends on the performance of the underlying asset:
 * If the final price of the underlying is above the barrier level, 100% of the initial investment is repaid back; 
-* If it’s below, then repayment amount shall be recalculated as the performance of the underlying asset.
+* If it’s below, then the repayment amount shall be recalculated as the performance of the underlying asset.
 
-It allows investors to give up the potential upside exposure to the underlying asset in exchange for an enhanced coupon. 
+It allows investors to give up potential upside exposure to the underlying asset in exchange for an enhanced coupon. 
 The ideal market scenario for reverse convertibles is the expectation of a sideways trending market.
 
 See the attached graph for a visual representation of the product.
 
 ![graph.png](assets/graph.png)
 
-In most of the markets, the product is issued by a financial institution on the request of an investor. 
+In most markets, the product is issued by a financial institution on the request of an investor. 
 The investor requests a product with certain parameters in mind. 
-And potential issuers compete on the yield they can offer on the product.
+Potential issuers then compete on the yield they can offer on the product.
 Once the investor accepts an offer, the issuer will issue the product to the investor.
 
 ## Challenges with current solutions
 Current solutions for issuing structured products are centralized and require a lot of 
 intermediaries. This makes the process of issuing and managing structured products slow and cumbersome.
 
-As an example the final fixing date, maturity and settlement of the product are 3-7 days apart from each other.
-They also require a lot of manual intervention due to lack of automation
-of price fixing and payment settlement.
+As an example: the final fixing date, maturity and settlement of the product can be up to 3-7 days apart from each other.
+Price fixing and payment settlement are high manual intervention due to lack of automation.
 
 Since Structured Products are considered to be securities in most jurisdictions, 
 they required to be properly registered and stored in segregated accounts.
@@ -40,8 +39,8 @@ Opaqueness of the pricing of Structured Products might hurt market integrity and
 ## Challenges with pure blockchain solutions
 Pure blockchain/DeFi solutions don't provide the legal certainty that is required for structured products.
 Issuers and investors usually like to negotiate the terms of the product in private.
-Holding a Structured Product creates risk exposure of the investor to both the Underlying Asset and the Issuer.
-Hence pure DeFi solution with anonymous Issuers and therefore unknown credit risk is generally avoided by investors.
+Holding a Structured Product has the investor take on risk exposure to both the underlying asset and the issuer.
+Hence pure DeFi solutions with anonymous issuers and therefore unknown credit risk is generally avoided by investors.
 
 ## Challenges with SPL Token before Token 2022
 With the old Token program it was not easily possible to maintain snapshots of token account balances.
@@ -52,8 +51,8 @@ Specifically the transfer hook in token 2022 is what was missing in the old toke
 functional structured products to be issued on Solana.
 
 ## Solution
-The solution we aim to demonstrate with this demo is a hybrid where the negotiation of the product
-is done on a platform and legal certainty is provided Obligate's legal framework based the Swiss law for ledger-based securities.
+The solution we aim to demonstrate in this demo is a hybrid where the negotiation of the product
+is done on a platform, and legal certainty is provided Obligate's legal framework based the Swiss law for ledger-based securities.
 (The demo does not include the complete legal framework, but it is a part of the Obligate platform.)
 
 The issuer submits their offer which includes the **yield** and **initial fixing price**, 
@@ -68,7 +67,7 @@ The investor will pay for and receive the product issued by the issuer in an ato
 
 By automating all parts of the product lifecycle we are able to payout coupons, set the final fixing price 
 and final principal and payout the principal to the investor without any manual intervention, as long as the
-investor carries enough funds on a **Treasury wallet** on Solana.
+investor carries enough funds on their **Treasury wallet** on Solana.
 
 # Technical implementation
 
