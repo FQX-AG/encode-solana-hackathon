@@ -9,7 +9,7 @@ const Root = styled(Text)`
   justify-content: center;
   align-items: flex-start;
   margin-block: -1px;
-  padding: 2px 8px;
+  padding: 0 8px 1px;
   border: 1px solid currentColor;
   border-radius: 4px;
   color: #a2a2dc;

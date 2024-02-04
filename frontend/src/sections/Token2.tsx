@@ -12,6 +12,7 @@ import { BRCType } from "@/constants";
 import { BRC } from "@/components/graphs/BRC";
 import { Decimal } from "decimal.js";
 import { BRCAccount } from "@/web3/token";
+import Image from "next/image";
 
 export function Token2(props: {
   note: ENoteInfo;
@@ -46,7 +47,14 @@ export function Token2(props: {
                     {props.brcAccount.finalFixingDate ? (
                       <Chip sx={{ color: (theme) => theme.palette.info.main }}>Final</Chip>
                     ) : (
-                      <Chip sx={{ color: (theme) => theme.palette.warning.main }}>Live</Chip>
+                      <Image
+                        src="/live-chip.gif"
+                        alt="Live"
+                        width={49}
+                        height={27}
+                        style={{ position: "relative", top: -2 }}
+                      />
+                      // <Chip sx={{ color: (theme) => theme.palette.warning.main }}>Live</Chip>
                     )}
                   </Stack>
                 }
