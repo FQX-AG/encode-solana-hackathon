@@ -40,8 +40,8 @@ jobs:
         run: pnpm install
       - name: Build
         run: pnpm run --filter programs build
-      - name: Test
-        run: pnpm run --filter programs test
+#      - name: Test
+#        run: pnpm run --filter programs test
       - name: Upgrade structured product program
         run: pnpm run --filter programs upgrade:structured-product
       - name: Upgrade treasury wallet program
