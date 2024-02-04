@@ -4,8 +4,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
 import { Keypair, PublicKey } from '@solana/web3.js';
-import { randomInt } from 'crypto';
 import { SdkFactory } from 'src/solana-client/sdk-factory';
+
+function toUiAmount(amount: BN, decimals: number) {
+  return amount.div(new BN(10).pow(new BN(decimals)));
+}
 
 @Injectable()
 export class OracleService {
@@ -27,18 +30,18 @@ export class OracleService {
     );
   }
 
+  // Utility function to generate Gaussian random numbers
+  private gaussianRandom(mean, sigma) {
+    let u = 0,
+      v = 0;
+    while (u === 0) u = Math.random(); // Converting [0,1) to (0,1)
+    while (v === 0) v = Math.random();
+    const num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    return num * sigma + mean;
+  }
+
   @Interval(5000)
   async updatePricing() {
-    // Utility function to generate Gaussian random numbers
-    function gaussianRandom(mean, sigma) {
-      let u = 0,
-        v = 0;
-      while (u === 0) u = Math.random(); // Converting [0,1) to (0,1)
-      while (v === 0) v = Math.random();
-      const num = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
-      return num * sigma + mean;
-    }
-
     const oldPrice = await this.serverSdk.getCurrentPriceFromDummyOracle(
       'CRZYBTC',
       this.serverSdk.provider.publicKey,
@@ -49,20 +52,21 @@ export class OracleService {
       .toNumber();
 
     // Generate a Gaussian random number
-    const randomChange = gaussianRandom(0, 1) * absoluteChangeRangeLimit;
+    const randomChange =
+      this.gaussianRandom(0.05, 0.3) * absoluteChangeRangeLimit;
 
     const newPriceDelta = new BN(randomChange);
     const newPrice = oldPrice.currentPrice.add(newPriceDelta);
     const setPriceIx =
       await this.serverSdk.createSetPriceDummyOracleInstruction(
         'CRZYBTC',
-        newPrice,
+        new BN(42000000000000),
       );
 
     this.logger.log({
       msg: 'Setting new Price',
-      newPrice: newPrice.toString(),
-      newPriceDelta: newPriceDelta.toString(),
+      newPrice: toUiAmount(newPrice, 9).toString(),
+      newPriceDelta: toUiAmount(newPriceDelta, 9).toString(),
     });
 
     const updatePriceTxId = await this.serverSdk.sendAndConfirmV0Tx([
@@ -71,7 +75,7 @@ export class OracleService {
 
     this.logger.log({
       msg: 'Price updated',
-      newPrice: newPrice.toString(),
+      newPrice: toUiAmount(newPrice, 9).toString(),
       txId: updatePriceTxId,
     });
   }
