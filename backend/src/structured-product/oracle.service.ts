@@ -52,8 +52,7 @@ export class OracleService {
       .toNumber();
 
     // Generate a Gaussian random number
-    const randomChange =
-      this.gaussianRandom(0.05, 0.3) * absoluteChangeRangeLimit;
+    const randomChange = this.gaussianRandom(0, 0.3) * absoluteChangeRangeLimit;
 
     const newPriceDelta = new BN(randomChange);
     const newPrice = oldPrice.currentPrice.add(newPriceDelta);
