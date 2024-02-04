@@ -20,7 +20,7 @@ jobs:
         run: pnpm run --filter programs build:ts
       - name: Build backend
         run: pnpm run --filter backend build
-  build-anchor:
+  deploy-solana-programs:
     runs-on: ubuntu-latest
     container: backpackapp/build:v0.29.0
     steps:
@@ -40,8 +40,8 @@ jobs:
         run: pnpm install
       - name: Build
         run: pnpm run --filter programs build
-      # - name: Test
-      #   run: pnpm run --filter programs test
+      - name: Test
+        run: pnpm run --filter programs test
       - name: Upgrade structured product program
         run: pnpm run --filter programs upgrade:structured-product
       - name: Upgrade treasury wallet program

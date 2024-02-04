@@ -250,6 +250,7 @@ describe("structured-product", () => {
       dummyOracle: dummyOraclePDA.publicKey,
       underlyingSymbol: "BTC",
       barrierInBasisPoints,
+      initialFixingPrice,
       payments: [
         {
           principal: false,
