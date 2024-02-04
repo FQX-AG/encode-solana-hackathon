@@ -10,13 +10,10 @@ import {
   createMintToCheckedInstruction,
   getAssociatedTokenAddressSync,
   unpackAccount,
+  uiAmountToAmount,
+  amountToUiAmount,
 } from '@solana/spl-token';
-import {
-  Keypair,
-  PublicKey,
-  SystemProgram,
-  TransactionInstruction,
-} from '@solana/web3.js';
+import { Keypair, PublicKey, TransactionInstruction } from '@solana/web3.js';
 import * as BN from 'bn.js';
 import { Queue } from 'bull';
 import { randomInt } from 'crypto';
@@ -173,18 +170,61 @@ export class StructuredProductService {
     ).value;
 
     const issuanceDate = new Date();
-    const coupon = new BN(
-      randomInt(
-        0.2 * structuredProductDeployDto.principal,
-        0.25 * structuredProductDeployDto.principal,
-      ),
-    )
-      .divn(2)
-      .muln(2);
-    const { currentPrice: initialFixingPrice } =
+    const serverSecretKey = Uint8Array.from(
+      JSON.parse(this.configService.get<string>('SERVER_SECRET_KEY')),
+    );
+    const mintAuthority = Keypair.fromSecretKey(serverSecretKey);
+    const oracleAccount =
       await this.serverSdk.dummyOracleProgram.account.dummyOracleAccount.fetch(
         dummyOraclePDA.publicKey,
       );
+    const uiPrincipal = structuredProductDeployDto.principal;
+    const principal = await uiAmountToAmount(
+      this.serverSdk.provider.connection,
+      mintAuthority,
+      paymentMint,
+      uiPrincipal,
+      TOKEN_2022_PROGRAM_ID,
+    );
+    const uiCoupon = new BN(
+      randomInt(0.2 * Number(uiPrincipal), 0.25 * Number(uiPrincipal)),
+    )
+      .divn(2)
+      .muln(2)
+      .toString();
+    const coupon = await uiAmountToAmount(
+      this.serverSdk.provider.connection,
+      mintAuthority,
+      paymentMint,
+      uiCoupon,
+      TOKEN_2022_PROGRAM_ID,
+    );
+    const uiTotalIssuanceAmount =
+      structuredProductDeployDto.totalIssuanceAmount;
+    const totalIssuanceAmount = await uiAmountToAmount(
+      this.serverSdk.provider.connection,
+      mintAuthority,
+      paymentMint,
+      uiTotalIssuanceAmount,
+      TOKEN_2022_PROGRAM_ID,
+    );
+    const initialFixingPrice = await amountToUiAmount(
+      this.serverSdk.provider.connection,
+      mintAuthority,
+      paymentMint,
+      BigInt(oracleAccount.currentPrice.toString()),
+      TOKEN_2022_PROGRAM_ID,
+    );
+    if (
+      typeof principal !== 'bigint' ||
+      typeof coupon !== 'bigint' ||
+      typeof totalIssuanceAmount !== 'bigint' ||
+      typeof initialFixingPrice !== 'string'
+    ) {
+      throw new Error('Failed to convert decimals.');
+    }
+    const supply = (totalIssuanceAmount / principal).toString();
+
     const paymentDateOffsetSeconds = new BN(
       differenceInSeconds(
         new Date(structuredProductDeployDto.maturityDate),
@@ -200,13 +240,13 @@ export class StructuredProductService {
           payments: [
             {
               principal: false,
-              amount: coupon.divn(2),
+              amount: new BN((coupon / 2n).toString()),
               paymentDateOffsetSeconds: paymentDateOffsetSeconds,
               paymentMint: paymentMint,
             },
             {
               principal: false,
-              amount: coupon.divn(2),
+              amount: new BN((coupon / 2n).toString()),
               paymentDateOffsetSeconds: paymentDateOffsetSeconds.muln(2),
               paymentMint: paymentMint,
             },
@@ -219,13 +259,11 @@ export class StructuredProductService {
           dummyOracle: dummyOraclePDA.publicKey,
           underlyingSymbol: 'CRZYBTC',
           paymentMint: paymentMint,
-          initialPrincipal: new BN(structuredProductDeployDto.principal),
+          initialPrincipal: new BN(principal.toString()),
           barrierInBasisPoints: new BN(
             Math.round(structuredProductDeployDto.barrierLevel * 100), // convert to basis points
           ),
-          supply: new BN(structuredProductDeployDto.totalIssuanceAmount).divn(
-            structuredProductDeployDto.principal,
-          ),
+          supply: new BN(supply),
         },
         mint,
         nonce1.publicKey,
@@ -247,8 +285,11 @@ export class StructuredProductService {
     return {
       transactions: [encodedInitSPTx, encodedIssueSPTx],
       mint: mint.publicKey,
-      coupon: coupon.toNumber(),
-      initialFixingPrice: initialFixingPrice.toNumber(),
+      principal: uiPrincipal,
+      coupon: uiCoupon,
+      totalIssuanceAmount: uiTotalIssuanceAmount,
+      supply: supply,
+      initialFixingPrice: initialFixingPrice,
     };
   }
 

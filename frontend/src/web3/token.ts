@@ -3,11 +3,17 @@ import { createSDK } from "@/web3/sdk";
 import * as web3 from "@solana/web3.js";
 import { PublicKey } from "@solana/web3.js";
 import { getPdaWithSeeds } from "@fqx/programs/tests/utils";
-import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddressSync,
+  getMint,
+  TOKEN_2022_PROGRAM_ID,
+} from "@solana/spl-token";
 import { Payment } from "@/types";
 import { BN } from "@coral-xyz/anchor";
 import { BrcPriceAuthorityIDL } from "@fqx/programs";
 import { IdlAccounts } from "@coral-xyz/anchor";
+import { Decimal } from "decimal.js";
 
 export type BRCAccount = {
   initialPrincipal: number;
@@ -25,29 +31,55 @@ export type TokenInfo = {
   principal: number;
   issuanceDate: Date;
   mint: PublicKey;
+  paymentMint: PublicKey;
   currentUnderlyingPrice: number;
   oraclePublicKey: string;
   brcPublicKey: string;
 };
 
-function getTransformedBrcAccount(brcAccount: IdlAccounts<typeof BrcPriceAuthorityIDL>["barrierReverseConvertible"]) {
+async function getTransformedBrcAccount(
+  provider: anchor.AnchorProvider,
+  brcAccount: IdlAccounts<typeof BrcPriceAuthorityIDL>["barrierReverseConvertible"],
+  mintBase58: string
+) {
   return {
-    initialPrincipal: brcAccount.initialPrincipal.toNumber(),
-    initialFixingPrice: brcAccount.initialFixingPrice.toNumber(),
-    barrier: brcAccount.barrier.toNumber(),
+    initialPrincipal: await amountToUiAmount(provider, mintBase58, brcAccount.initialPrincipal),
+    initialFixingPrice: await amountToUiAmount(provider, mintBase58, brcAccount.initialFixingPrice),
+    barrier: await amountToUiAmount(provider, mintBase58, brcAccount.barrier),
     finalFixingDate: brcAccount.finalFixingDate ? new Date(brcAccount.finalFixingDate.toNumber() * 1000) : undefined,
     finalFixingPrice: brcAccount.finalUnderlyingFixingPrice
-      ? brcAccount.finalUnderlyingFixingPrice.toNumber()
+      ? await amountToUiAmount(provider, mintBase58, brcAccount.finalUnderlyingFixingPrice)
       : undefined,
-    finalPrincipal: brcAccount.finalPrincipal ? brcAccount.finalPrincipal.toNumber() : undefined,
+    finalPrincipal: brcAccount.finalPrincipal
+      ? await amountToUiAmount(provider, mintBase58, brcAccount.finalPrincipal)
+      : undefined,
   };
 }
 
-export function watchBRC(provider: anchor.AnchorProvider, publicKeyBase58: string, fn: (account: BRCAccount) => void) {
+async function amountToUiAmount(
+  provider: anchor.AnchorProvider,
+  mint: PublicKey | string,
+  amount: number | string | BN
+) {
+  const { decimals } = await getMint(
+    provider.connection,
+    typeof mint === "string" ? new PublicKey(mint) : mint,
+    undefined,
+    TOKEN_2022_PROGRAM_ID
+  );
+  return new Decimal(amount instanceof BN ? amount.toString() : amount).div(10 ** decimals).toNumber();
+}
+
+export function watchBRC(
+  provider: anchor.AnchorProvider,
+  publicKeyBase58: string,
+  mintBase58: string,
+  fn: (account: BRCAccount) => void
+) {
   console.debug(`[${new Date().toISOString()}] BRC watch start`);
   const publicKey = new PublicKey(publicKeyBase58);
   const sdk = createSDK(provider);
-  const callback = (account: any) => fn(getTransformedBrcAccount(account));
+  const callback = async (account: any) => fn(await getTransformedBrcAccount(provider, account, mintBase58));
   const accountClient = sdk.brcProgram.account.barrierReverseConvertible;
   const emitter = accountClient.subscribe(publicKey).addListener("change", callback);
   accountClient.fetch(publicKey).then(callback);
@@ -62,12 +94,16 @@ export function watchBRC(provider: anchor.AnchorProvider, publicKeyBase58: strin
 export function watchCurrentPrice(
   provider: anchor.AnchorProvider,
   publicKeyBase58: string,
+  mintBase58: string,
   fn: (currentPrice: number) => void
 ) {
   console.debug(`[${new Date().toISOString()}] oracle watch start`);
   const publicKey = new PublicKey(publicKeyBase58);
   const sdk = createSDK(provider);
-  const callback = (account: any) => fn(account.currentPrice.toNumber());
+  const callback = async (account: any) => {
+    const uiCurrentPrice = await amountToUiAmount(provider, mintBase58, account.currentPrice);
+    if (uiCurrentPrice !== null) fn(uiCurrentPrice);
+  };
   const accountClient = sdk.dummyOracleProgram.account.dummyOracleAccount;
   const emitter = accountClient.subscribe(publicKey).addListener("change", callback);
   accountClient.fetch(publicKey).then(callback);
@@ -87,7 +123,8 @@ export async function getTokenInfo(provider: anchor.AnchorProvider, mintBase58: 
   // structuredProduct
   const structuredProductPda = await getPdaWithSeeds([mint.toBuffer()], sdk.program.programId);
   const structuredProductPubKey = structuredProductPda.publicKey;
-  const structuredProduct = await sdk.program.account.structuredProductConfig.fetch(structuredProductPubKey);
+  const { supply, issuancePaymentMint, issuancePaymentAmountPerUnit, issuanceDate } =
+    await sdk.program.account.structuredProductConfig.fetch(structuredProductPubKey);
 
   // payments
   const snapshotConfigPDA = await getPdaWithSeeds(
@@ -135,13 +172,13 @@ export async function getTokenInfo(provider: anchor.AnchorProvider, mintBase58: 
     const { data } = await sdk.program.account.paymentPaid.fetchNullableAndContext(paymentPaidPDA.publicKey);
     const { pricePerUnit } = await sdk.program.account.payment.fetch(paymentPDA.publicKey);
 
-    const balance = (lastKnownBalance = snapshotBalances[i] ?? lastKnownBalance);
+    const balance = (lastKnownBalance = snapshotBalances[i] ?? lastKnownBalance).toNumber();
 
     payments.push({
       type: "coupon",
       status: data ? "settled" : "scheduled",
       scheduledAt,
-      amount: balance.mul(pricePerUnit!).toNumber(),
+      amount: balance * (await amountToUiAmount(provider, issuancePaymentMint, pricePerUnit!)),
       currency: "USDC",
     });
 
@@ -150,7 +187,7 @@ export async function getTokenInfo(provider: anchor.AnchorProvider, mintBase58: 
         type: "principal",
         status: data ? "settled" : "scheduled",
         scheduledAt,
-        amount: balance.mul(structuredProduct.issuancePaymentAmountPerUnit).toNumber(),
+        amount: balance * (await amountToUiAmount(provider, issuancePaymentMint, issuancePaymentAmountPerUnit)),
         currency: "USDC",
       });
     }
@@ -168,10 +205,11 @@ export async function getTokenInfo(provider: anchor.AnchorProvider, mintBase58: 
   return {
     payments,
     balance: balance!,
-    supply: structuredProduct.supply.toNumber(),
-    principal: structuredProduct.issuancePaymentAmountPerUnit.toNumber(),
-    issuanceDate: new Date(structuredProduct.issuanceDate!.toNumber() * 1000),
+    supply: supply.toNumber(),
+    principal: await amountToUiAmount(provider, issuancePaymentMint, issuancePaymentAmountPerUnit),
+    issuanceDate: new Date(issuanceDate!.toNumber() * 1000),
     mint: mint,
+    paymentMint: issuancePaymentMint,
     currentUnderlyingPrice: currentPrice.toNumber(),
     oraclePublicKey: dummyOraclePda.publicKey.toBase58(),
     brcPublicKey: brcPDA.publicKey.toBase58(),

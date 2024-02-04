@@ -15,6 +15,7 @@ import LoadingButton from "@mui/lab/LoadingButton";
 import axios from "axios";
 import Alert from "@mui/material/Alert";
 import { ExternalLink } from "@/components/ExternalLink";
+import { Decimal } from "decimal.js";
 
 export default function IssuanceForm(props: {
   onNext: (payload: { values: Values; deploymentInfo: DeploymentInfo }) => void;
@@ -34,8 +35,8 @@ export default function IssuanceForm(props: {
           const { data: deploymentInfo } = await axios.post<DeploymentInfo>(`${API_URL}/mock-issuer`, {
             investorPublicKey: walletPublicKey,
             maturityDate: values.maturityDate,
-            principal: values.principal,
-            totalIssuanceAmount: values.totalIssuanceAmount,
+            principal: new Decimal(values.principal).toString(),
+            totalIssuanceAmount: new Decimal(values.totalIssuanceAmount).toString(),
             barrierLevel: values.brcDetails.level,
           });
           props.onNext({ values, deploymentInfo });

@@ -1,7 +1,7 @@
 export class StructuredProductDeployDto {
   investorPublicKey: string;
   maturityDate: string;
-  principal: number;
-  totalIssuanceAmount: number;
+  principal: string;
+  totalIssuanceAmount: string;
   barrierLevel: number;
 }

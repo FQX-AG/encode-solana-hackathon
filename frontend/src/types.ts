@@ -4,8 +4,11 @@ export type DeploymentInfo = {
   transactions: string[];
   mint: string;
   investorPublicKey: string;
-  coupon: number;
-  initialFixingPrice: number;
+  principal: string;
+  coupon: string;
+  supply: string;
+  totalIssuanceAmount: string;
+  initialFixingPrice: string;
 };
 
 export type ENoteInfo = {

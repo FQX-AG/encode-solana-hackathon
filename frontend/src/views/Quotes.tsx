@@ -119,7 +119,7 @@ export default function Quotes(props: { values: Values; deploymentInfo: Deployme
   const [confirmationPayload, setConfirmationPayload] = useState<QuoteInternalEnhanced>();
   const data = useMemo<QuoteInternal[]>(() => {
     const initialFixingPrice = new Decimal(props.deploymentInfo.initialFixingPrice);
-    const y = new Decimal(props.deploymentInfo.coupon).div(props.values.principal);
+    const y = new Decimal(props.deploymentInfo.coupon).div(props.deploymentInfo.principal);
     const rand = (min = 0.75, max = 0.9) =>
       new Decimal(Math.random())
         .mul(max - min)
@@ -174,18 +174,19 @@ export default function Quotes(props: { values: Values; deploymentInfo: Deployme
       if (a.yield === b.yield) return 0;
       return a.yield > b.yield ? -1 : 1;
     });
-  }, [props.values, props.deploymentInfo]);
+  }, [props.deploymentInfo]);
   const [selection, setSelection] = useState<string>(data[0].id);
   const quote = useMemo<QuoteInternalEnhanced | undefined>(() => {
     const quote = selection ? data.find((item) => item.id === selection) : undefined;
     if (quote) {
-      const totalCouponPayment = new Decimal(props.values.totalIssuanceAmount).times(quote.yield).toNumber();
-      const totalRepayment = new Decimal(totalCouponPayment).plus(props.values.totalIssuanceAmount).toNumber();
+      const totalIssuanceAmount = new Decimal(props.deploymentInfo.totalIssuanceAmount);
+      const totalCouponPayment = totalIssuanceAmount.times(quote.yield).toNumber();
+      const totalRepayment = totalIssuanceAmount.plus(totalCouponPayment).toNumber();
       return { ...quote, totalCouponPayment, totalRepayment };
     }
 
     return undefined;
-  }, [props.values, data, selection]);
+  }, [props.deploymentInfo, data, selection]);
 
   const handleClose = () => setConfirmationPayload(undefined);
 
@@ -270,7 +271,9 @@ export default function Quotes(props: { values: Values; deploymentInfo: Deployme
             )}
             <Property
               k="Issuance amount"
-              v={`${props.values.currency} ${formatDecimal(props.values.totalIssuanceAmount)}`}
+              v={`${props.values.currency} ${formatDecimal(
+                new Decimal(props.deploymentInfo.totalIssuanceAmount).toNumber()
+              )}`}
             />
             <Property
               k="Maturity date"
@@ -350,7 +353,7 @@ export default function Quotes(props: { values: Values; deploymentInfo: Deployme
                   coupon={quote.yield * 100}
                   underlyingAsset={props.values.underlyingAsset}
                   currency={props.values.currency}
-                  issuanceAmount={props.values.totalIssuanceAmount}
+                  issuanceAmount={new Decimal(props.deploymentInfo.totalIssuanceAmount).toNumber()}
                   initialFixingPrice={quote.initialFixingPrice.amount}
                 />
               </>
@@ -385,7 +388,7 @@ export default function Quotes(props: { values: Values; deploymentInfo: Deployme
                 <>
                   {props.values.currency}{" "}
                   <Text component="span" variant="500|18px|23px">
-                    {formatDecimal(props.values.totalIssuanceAmount)}
+                    {formatDecimal(new Decimal(props.deploymentInfo.totalIssuanceAmount).toNumber())}
                   </Text>
                 </>
               }

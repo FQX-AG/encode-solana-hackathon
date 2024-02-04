@@ -24,8 +24,13 @@ export default function Page(props: PageProps) {
   const [tokenInfo, setTokenInfo] = useState<TokenInfo>();
   const tokenInfoRef = useRef(tokenInfo);
   tokenInfoRef.current = tokenInfo;
-  const currentUnderlyingPrice = useWatch(watchCurrentPrice, provider, tokenInfo?.oraclePublicKey);
-  const brcAccount = useWatch(watchBRC, provider, tokenInfo?.brcPublicKey);
+  const currentUnderlyingPrice = useWatch(
+    watchCurrentPrice,
+    tokenInfo?.paymentMint.toBase58(),
+    provider,
+    tokenInfo?.oraclePublicKey
+  );
+  const brcAccount = useWatch(watchBRC, tokenInfo?.paymentMint.toBase58(), provider, tokenInfo?.brcPublicKey);
   const now = useTicker(1000);
 
   const loadTokenInfo = useCallback(async () => {
