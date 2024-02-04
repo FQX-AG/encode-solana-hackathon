@@ -77,18 +77,18 @@ pub mod brc_price_authority {
         let initial_principal = brc.initial_principal;
         let initial_fixing_price = brc.initial_fixing_price;
         let barrier = brc.barrier;
-        let final_underlying_fixing_price = ctx.accounts.dummy_oracle.current_price;
+        let final_fixing_price = ctx.accounts.dummy_oracle.current_price;
 
         let final_principal = calc_final_principal(
             initial_principal,
             initial_fixing_price,
             barrier,
-            final_underlying_fixing_price,
+            final_fixing_price,
         );
 
         msg!("Finalizing brc at {}", ctx.accounts.brc.key());
         msg!("Initial principal: {}, initial_fixing_price: {}, barrier: {}, final_fixing_price: {}, Final principal: {}",
-            initial_principal, initial_fixing_price, barrier, final_underlying_fixing_price, final_principal);
+            initial_principal, initial_fixing_price, barrier, final_fixing_price, final_principal);
 
         let cpi_program = ctx.accounts.structured_product_program.to_account_info();
 
@@ -110,7 +110,7 @@ pub mod brc_price_authority {
 
         let brc = &mut ctx.accounts.brc;
 
-        brc.final_underlying_fixing_price = Some(final_underlying_fixing_price);
+        brc.final_underlying_fixing_price = Some(final_fixing_price);
         brc.final_principal = Some(final_principal);
         brc.final_fixing_date = Some(Clock::get()?.unix_timestamp);
         Ok(())
@@ -176,12 +176,12 @@ mod tests {
             $(
                 #[test]
                 fn $name() {
-                    let (initial_principal, initial_fixing_price, barrier, final_underlying_fixing_price, expected) = $expected;
+                    let (initial_principal, initial_fixing_price, barrier, final_fixing_price, expected) = $expected;
                     let result = calc_final_principal(
                         initial_principal,
                         initial_fixing_price,
                         barrier,
-                        final_underlying_fixing_price,
+                        final_fixing_price,
                     );
                     assert_eq!(result, expected);
                 }

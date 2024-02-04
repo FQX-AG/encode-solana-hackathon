@@ -139,9 +139,9 @@ pub fn calc_final_principal(
     initial_principal: u64,
     initial_fixing_price: u64,
     barrier: u64,
-    final_underlying_fixing_price: u64,
+    final_fixing_price: u64,
 ) -> u64 {
-    match final_underlying_fixing_price {
+    match final_fixing_price {
         final_fixing_price if final_fixing_price <= barrier => {
             ((initial_principal as u128 * final_fixing_price as u128)
                 / initial_fixing_price as u128) as u64
