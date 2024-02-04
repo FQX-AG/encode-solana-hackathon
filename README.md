@@ -1,5 +1,7 @@
 # Obligate Encode x Solana Hackathon - **[Demo :rocket:](https://encode-solana-hackathon.obligate.com)**
 
+Check out our [demo :rocket:](https://encode-solana-hackathon.obligate.com)!
+
 ## Background
 The goal for this demo was to create a new way for issuers of structured products to issue
 and manage their products on the Solana blockchain.
