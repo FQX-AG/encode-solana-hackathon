@@ -1,7 +1,7 @@
 import { AnchorProvider } from '@coral-xyz/anchor';
 import { getPdaWithSeeds, StructuredNotesSdk } from '@fqx/programs';
 import { InjectQueue } from '@nestjs/bull';
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -13,7 +13,12 @@ import {
   uiAmountToAmount,
   amountToUiAmount,
 } from '@solana/spl-token';
-import { Keypair, PublicKey, TransactionInstruction } from '@solana/web3.js';
+import {
+  AddressLookupTableAccount,
+  Keypair,
+  PublicKey,
+  TransactionInstruction,
+} from '@solana/web3.js';
 import * as BN from 'bn.js';
 import { Queue } from 'bull';
 import { randomInt } from 'crypto';
@@ -41,10 +46,17 @@ export const getOneShotTaskConfigForDate = (
 };
 
 @Injectable()
-export class StructuredProductService {
+export class StructuredProductService implements OnModuleInit {
+  private readonly logger = new Logger(StructuredProductService.name);
+
   private issuerSdk: StructuredNotesSdk;
   private serverSdk: StructuredNotesSdk;
-  private readonly logger = new Logger(StructuredProductService.name);
+  private readonly serverKeypair: Keypair;
+  private readonly paymentMint: PublicKey;
+  private readonly treasuryWalletPublicKey: PublicKey;
+  private readonly programLookupTableAddress: PublicKey;
+
+  private programLookupTable: AddressLookupTableAccount;
 
   constructor(
     @Inject(SOLANA_PROVIDER)
@@ -62,19 +74,34 @@ export class StructuredProductService {
     const serverSecretKey = Uint8Array.from(
       JSON.parse(this.configService.get<string>('SERVER_SECRET_KEY')),
     );
-    const serverKeypair = Keypair.fromSecretKey(serverSecretKey);
+    this.serverKeypair = Keypair.fromSecretKey(serverSecretKey);
 
     this.issuerSdk = this.sdkFactory.getSdkForSigner(issuer);
-    this.serverSdk = this.sdkFactory.getSdkForSigner(serverKeypair);
+    this.serverSdk = this.sdkFactory.getSdkForSigner(this.serverKeypair);
+
+    this.paymentMint = new PublicKey(
+      this.configService.get<string>('PAYMENT_TOKEN_MINT_ADDRESS'),
+    );
+    this.treasuryWalletPublicKey = new PublicKey(
+      this.configService.get<string>('TREASURY_WALLET_PUBLIC_KEY'),
+    );
+
+    this.programLookupTableAddress = new PublicKey(
+      this.configService.get<string>('PROGRAM_LOOKUP_TABLE_ADDRESS'),
+    );
+  }
+
+  async onModuleInit() {
+    this.programLookupTable = (
+      await this.serverSdk.provider.connection.getAddressLookupTable(
+        this.programLookupTableAddress,
+      )
+    ).value;
   }
 
   async deploy(structuredProductDeployDto: StructuredProductDeployDto) {
-    const paymentMint = new PublicKey(
-      this.configService.get<string>('PAYMENT_TOKEN_MINT_ADDRESS'),
-    );
-
     const investorATA = getAssociatedTokenAddressSync(
-      paymentMint,
+      this.paymentMint,
       new PublicKey(structuredProductDeployDto.investorPublicKey),
       false,
       TOKEN_2022_PROGRAM_ID,
@@ -105,32 +132,24 @@ export class StructuredProductService {
           this.issuerSdk.provider.publicKey,
           investorATA,
           new PublicKey(structuredProductDeployDto.investorPublicKey),
-          paymentMint,
+          this.paymentMint,
           TOKEN_2022_PROGRAM_ID,
           ASSOCIATED_TOKEN_PROGRAM_ID,
         );
         ixs.push(createInvestorATAIx);
       }
       ixs.push(this.createMintPaymentTokenIx(investorATA, 1000000000000000n));
-      const serverSecretKey = Uint8Array.from(
-        JSON.parse(this.configService.get<string>('SERVER_SECRET_KEY')),
-      );
 
-      const mintAuthority = Keypair.fromSecretKey(serverSecretKey);
-      signers.push(mintAuthority);
+      signers.push(this.serverKeypair);
     }
 
-    const treasuryWalletPublicKey = new PublicKey(
-      this.configService.get<string>('TREASURY_WALLET_PUBLIC_KEY'),
-    );
-
     const treasuryWalletAuthorityPDA = getPdaWithSeeds(
-      [treasuryWalletPublicKey.toBuffer()],
+      [this.treasuryWalletPublicKey.toBuffer()],
       this.issuerSdk.treasuryWalletProgram.programId,
     );
 
     const treasuryWalletATA = getAssociatedTokenAddressSync(
-      paymentMint,
+      this.paymentMint,
       treasuryWalletAuthorityPDA.publicKey,
       true,
       TOKEN_2022_PROGRAM_ID,
@@ -157,18 +176,6 @@ export class StructuredProductService {
       this.serverSdk.dummyOracleProgram.programId,
     );
 
-    this.logger.log({ dummyORACLE: dummyOraclePDA.publicKey.toBase58() });
-
-    const programLookupTableAddress = new PublicKey(
-      this.configService.get<string>('PROGRAM_LOOKUP_TABLE_ADDRESS'),
-    );
-
-    const programLookupTable = (
-      await this.serverSdk.provider.connection.getAddressLookupTable(
-        programLookupTableAddress,
-      )
-    ).value;
-
     const issuanceDate = new Date();
     const serverSecretKey = Uint8Array.from(
       JSON.parse(this.configService.get<string>('SERVER_SECRET_KEY')),
@@ -182,7 +189,7 @@ export class StructuredProductService {
     const principal = await uiAmountToAmount(
       this.serverSdk.provider.connection,
       mintAuthority,
-      paymentMint,
+      this.paymentMint,
       uiPrincipal,
       TOKEN_2022_PROGRAM_ID,
     );
@@ -195,7 +202,7 @@ export class StructuredProductService {
     const coupon = await uiAmountToAmount(
       this.serverSdk.provider.connection,
       mintAuthority,
-      paymentMint,
+      this.paymentMint,
       uiCoupon,
       TOKEN_2022_PROGRAM_ID,
     );
@@ -204,7 +211,7 @@ export class StructuredProductService {
     const totalIssuanceAmount = await uiAmountToAmount(
       this.serverSdk.provider.connection,
       mintAuthority,
-      paymentMint,
+      this.paymentMint,
       uiTotalIssuanceAmount,
       TOKEN_2022_PROGRAM_ID,
     );
@@ -212,7 +219,7 @@ export class StructuredProductService {
     const uiInitialFixingPrice = await amountToUiAmount(
       this.serverSdk.provider.connection,
       mintAuthority,
-      paymentMint,
+      this.paymentMint,
       BigInt(initialFixingPrice.toString()),
       TOKEN_2022_PROGRAM_ID,
     );
@@ -237,29 +244,29 @@ export class StructuredProductService {
         {
           investor: new PublicKey(structuredProductDeployDto.investorPublicKey),
           issuer: this.issuerSdk.provider.publicKey,
-          issuerTreasuryWallet: treasuryWalletPublicKey,
+          issuerTreasuryWallet: this.treasuryWalletPublicKey,
           payments: [
             {
               principal: false,
               amount: new BN((coupon / 2n).toString()),
               paymentDateOffsetSeconds: paymentDateOffsetSeconds,
-              paymentMint: paymentMint,
+              paymentMint: this.paymentMint,
             },
             {
               principal: false,
               amount: new BN((coupon / 2n).toString()),
               paymentDateOffsetSeconds: paymentDateOffsetSeconds.muln(2),
-              paymentMint: paymentMint,
+              paymentMint: this.paymentMint,
             },
             {
               principal: true,
               paymentDateOffsetSeconds: paymentDateOffsetSeconds.muln(2),
-              paymentMint: paymentMint,
+              paymentMint: this.paymentMint,
             },
           ],
           dummyOracle: dummyOraclePDA.publicKey,
           underlyingSymbol: 'CRZYBTC',
-          paymentMint: paymentMint,
+          paymentMint: this.paymentMint,
           initialPrincipal: new BN(principal.toString()),
           initialFixingPrice,
           barrierInBasisPoints: new BN(
@@ -269,16 +276,16 @@ export class StructuredProductService {
         },
         mint,
         nonce1.publicKey,
-        [programLookupTable],
+        [this.programLookupTable],
       );
     const encodedIssueSPTx =
       await this.issuerSdk.signStructuredProductIssueOffline(
         {
           investor: new PublicKey(structuredProductDeployDto.investorPublicKey),
           issuer: this.issuerSdk.provider.publicKey,
-          issuerTreasuryWallet: treasuryWalletPublicKey,
+          issuerTreasuryWallet: this.treasuryWalletPublicKey,
           mint: mint.publicKey,
-          paymentMint: paymentMint,
+          paymentMint: this.paymentMint,
           issuanceProceedsBeneficiary: treasuryWalletATA,
         },
         nonce2.publicKey,
