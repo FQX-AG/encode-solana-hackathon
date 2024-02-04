@@ -98,6 +98,7 @@ export type SignStructuredProductInitOfflineConfig = {
   underlyingSymbol: string;
   paymentMint: PublicKey;
   initialPrincipal: BN;
+  initialFixingPrice: BN;
   barrierInBasisPoints: BN;
   supply: BN;
 };
@@ -301,14 +302,10 @@ export class StructuredNotesSdk {
     underlyingSymbol: string,
     principalPaymentDateOffset: BN,
     initialPrincipal: BN,
+    initialFixingPrice: BN,
     barrierInBasisPoints: BN
   ) {
     const { mint, dummyOracle } = accounts;
-    const initialFixingPrice = (
-      await this.dummyOracleProgram.account.dummyOracleAccount.fetch(
-        dummyOracle
-      )
-    ).currentPrice;
     const paymentPda = await this.getPaymentPda(
       mint,
       true,
@@ -901,6 +898,7 @@ export class StructuredNotesSdk {
         config.underlyingSymbol,
         config.payments[config.payments.length - 1].paymentDateOffsetSeconds,
         config.initialPrincipal,
+        config.initialFixingPrice,
         config.barrierInBasisPoints
       );
 

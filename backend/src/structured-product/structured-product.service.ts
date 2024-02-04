@@ -208,18 +208,19 @@ export class StructuredProductService {
       uiTotalIssuanceAmount,
       TOKEN_2022_PROGRAM_ID,
     );
-    const initialFixingPrice = await amountToUiAmount(
+    const initialFixingPrice = oracleAccount.currentPrice;
+    const uiInitialFixingPrice = await amountToUiAmount(
       this.serverSdk.provider.connection,
       mintAuthority,
       paymentMint,
-      BigInt(oracleAccount.currentPrice.toString()),
+      BigInt(initialFixingPrice.toString()),
       TOKEN_2022_PROGRAM_ID,
     );
     if (
       typeof principal !== 'bigint' ||
       typeof coupon !== 'bigint' ||
       typeof totalIssuanceAmount !== 'bigint' ||
-      typeof initialFixingPrice !== 'string'
+      typeof uiInitialFixingPrice !== 'string'
     ) {
       throw new Error('Failed to convert decimals.');
     }
@@ -260,6 +261,7 @@ export class StructuredProductService {
           underlyingSymbol: 'CRZYBTC',
           paymentMint: paymentMint,
           initialPrincipal: new BN(principal.toString()),
+          initialFixingPrice,
           barrierInBasisPoints: new BN(
             Math.round(structuredProductDeployDto.barrierLevel * 100), // convert to basis points
           ),
@@ -289,7 +291,7 @@ export class StructuredProductService {
       coupon: uiCoupon,
       totalIssuanceAmount: uiTotalIssuanceAmount,
       supply: supply,
-      initialFixingPrice: initialFixingPrice,
+      initialFixingPrice: uiInitialFixingPrice,
     };
   }
 
