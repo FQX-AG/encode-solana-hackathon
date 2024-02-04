@@ -129,8 +129,28 @@ for compliance reasons.
 This program is given an oracle (in our case our dummy oracle) and an initial fixing price during initialization. It also expects a **Payment account**
 which should be updated at the maturity date. 
 
-We can then "crank" the BRC price authority to set the final fixing price and final principal of the structured product,
+We can then "crank" the BRC price authority to set the final fixing price and final principal of the structured product
 at the payment given during initialization.
+
+The calculation for the final principal is implemented in the following function:
+
+```rust
+pub fn calc_final_principal(
+    initial_principal: u64,
+    initial_fixing_price: u64,
+    barrier: u64,
+    final_underlying_fixing_price: u64,
+) -> u64 {
+    match final_underlying_fixing_price {
+        final_fixing_price if final_fixing_price <= barrier => {
+            ((initial_principal as u128 * final_fixing_price as u128)
+                / initial_fixing_price as u128) as u64
+        }
+        _ => initial_principal,
+    }
+}
+```
+
 
 We are able to do this in the same transaction as pulling the issuer's repayment from the treasury wallet,
 and distribute the final principal to the investor.
