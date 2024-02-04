@@ -6,7 +6,7 @@ import { getPdaWithSeeds } from "@fqx/programs/tests/utils";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { Payment } from "@/types";
 import { BN } from "@coral-xyz/anchor";
-import { BrcPriceAuthorityIDL, StructuredNotesSdk } from "@fqx/programs";
+import { BrcPriceAuthorityIDL } from "@fqx/programs";
 import { IdlAccounts } from "@coral-xyz/anchor";
 
 export type BRCAccount = {

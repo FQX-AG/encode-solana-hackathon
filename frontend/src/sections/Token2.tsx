@@ -82,7 +82,8 @@ export function Token2(props: {
                 horizontal
                 k="Total repayment"
                 v={`${props.note.currency} ${formatDecimal(
-                  (props.note.principal + props.note.coupon) * props.balance
+                  ((props.brcAccount.finalPrincipal ?? props.brcAccount.initialPrincipal) + props.note.coupon) *
+                    props.balance
                 )}`}
               />
             </Stack>

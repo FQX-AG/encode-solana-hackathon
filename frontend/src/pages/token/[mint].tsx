@@ -26,9 +26,14 @@ function PageInner(props: {
   mint: PublicKey;
   now: Date;
 }) {
-  const coupon = props.payments.reduce((acc, payment) => acc + (payment.type === "coupon" ? payment.amount : 0), 0);
+  const payments = props.payments.map((payment) =>
+    payment.type === "principal"
+      ? { ...payment, amount: (props.brcAccount.finalPrincipal ?? props.brcAccount.initialPrincipal) * props.balance }
+      : payment
+  );
+  const coupon = payments.reduce((acc, payment) => acc + (payment.type === "coupon" ? payment.amount : 0), 0);
   const interestRate = new Decimal(coupon).div(props.principal * props.balance).toNumber();
-  const maturityDate = props.payments.at(-1)!.scheduledAt;
+  const maturityDate = payments.at(-1)!.scheduledAt;
   const note: ENoteInfo = {
     issuerName: "France Company",
     maturityDate: maturityDate,
@@ -58,7 +63,7 @@ function PageInner(props: {
     <Stack spacing={6}>
       <Token2
         note={note}
-        payments={props.payments}
+        payments={payments}
         now={props.now}
         balance={props.balance}
         currentUnderlyingPrice={props.currentUnderlyingPrice}

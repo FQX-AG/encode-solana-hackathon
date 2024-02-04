@@ -101,18 +101,18 @@ export const validationSchema: Yup.Schema<Values> = Yup.object({
     .required(),
   couponFrequency: Yup.string().label("Coupon frequency").oneOf(Object.values(CouponFrequency)).required(),
   brcDetails: Yup.object({
-    level: Yup.number().label("Barrier level").min(0).lessThan(100).required(),
+    level: Yup.number().label("Barrier level").min(0).max(100).required(),
     type: Yup.string().label("Barrier type").oneOf(Object.values(BRCType)).required(),
   })
     .required()
     .when("type", { is: StructuredProductType.BRC, otherwise: () => Yup.mixed().nullable().strip() }),
   cpnDetails: Yup.object({
-    level: Yup.number().label("Capital protection level").min(0).lessThan(100).required(),
+    level: Yup.number().label("Capital protection level").min(0).max(100).required(),
   })
     .required()
     .when("type", { is: StructuredProductType.CPN, otherwise: () => Yup.mixed().nullable().strip() }),
   rcDetails: Yup.object({
-    strike: Yup.number().label("Strike").min(0).lessThan(100).required(),
+    strike: Yup.number().label("Strike").min(0).max(100).required(),
   })
     .required()
     .when("type", { is: StructuredProductType.RC, otherwise: () => Yup.mixed().nullable().strip() }),
