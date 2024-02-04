@@ -249,18 +249,18 @@ export class StructuredProductService implements OnModuleInit {
             {
               principal: false,
               amount: new BN((coupon / 2n).toString()),
-              paymentDateOffsetSeconds: paymentDateOffsetSeconds.divn(2),
+              paymentDateOffsetSeconds: paymentDateOffsetSeconds,
               paymentMint: this.paymentMint,
             },
             {
               principal: false,
               amount: new BN((coupon / 2n).toString()),
-              paymentDateOffsetSeconds: paymentDateOffsetSeconds,
+              paymentDateOffsetSeconds: paymentDateOffsetSeconds.muln(2),
               paymentMint: this.paymentMint,
             },
             {
               principal: true,
-              paymentDateOffsetSeconds: paymentDateOffsetSeconds,
+              paymentDateOffsetSeconds: paymentDateOffsetSeconds.muln(2),
               paymentMint: this.paymentMint,
             },
           ],

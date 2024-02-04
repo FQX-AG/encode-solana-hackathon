@@ -50,7 +50,7 @@ export const getInitialValues = (): FormValues => ({
   totalIssuanceAmount: (100_000).toString(),
   currency: Currency.USDC,
   principal: (1_000).toString(),
-  maturityDate: addMinutes(new Date(), 5),
+  maturityDate: addMinutes(new Date(), 3),
   couponFrequency: CouponFrequency.DemoMode,
   cpnDetails: {
     level: "100",
