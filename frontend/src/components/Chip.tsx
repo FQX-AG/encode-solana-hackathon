@@ -10,11 +10,10 @@ const Root = styled(Text)`
   align-items: flex-start;
   margin-block: -1px;
   padding: 2px 8px;
-  border: 1px solid #7c7cba;
+  border: 1px solid currentColor;
   border-radius: 4px;
   color: #a2a2dc;
   white-space: nowrap;
-  border-color: currentColor;
 `;
 
 export function Chip(props: { children: ReactNode; sx?: SxProps<Theme> }) {

@@ -18,7 +18,7 @@ import { NumericField } from "@/components/form/NumericField";
 import { DateTimeField } from "@/components/form/DateTimeField";
 import { formatDecimal } from "@/formatters";
 import { useFormikContext } from "formik";
-import { FormValues } from "@/schemas/newIssuance";
+import { FormValues } from "@/schemas/issuanceForm";
 import { ExternalLink } from "@/components/ExternalLink";
 import React from "react";
 
@@ -52,7 +52,7 @@ const couponFrequencyOptions: [string, string, boolean][] = Object.entries(COUPO
   ([key, value]) => [key, value, key === CouponFrequency.DemoMode]
 );
 
-export function NewIssuance1() {
+export function IssuanceForm1() {
   const formik = useFormikContext<FormValues>();
 
   return (

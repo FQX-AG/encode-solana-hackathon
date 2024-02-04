@@ -20,7 +20,7 @@ function LegendRow(props: LegendRowProps) {
       <div style={{ width: "24px", borderTop: props.line }} />
       <div
         style={{
-          color: "var(--FQX-white, #FFF)",
+          color: "#FFF",
           textAlign: "center",
           fontFeatureSettings: "'clig' off, 'liga' off",
           fontFamily: "Matter SQ",
@@ -53,7 +53,7 @@ const Legend = forwardRef<HTMLDivElement, LegendProps>((props, ref) => {
         alignItems: "flex-start",
         gap: "8px",
         borderRadius: "8px",
-        border: "1px solid var(--FQX-oxford-blue-700, #5B5B98)",
+        border: "1px solid #5B5B98",
         ...props.style,
       }}
     >

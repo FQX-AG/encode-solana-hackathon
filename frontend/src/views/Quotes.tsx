@@ -35,7 +35,7 @@ import { Text } from "@/components/Text";
 import { ArrowForward, ChevronRight } from "@mui/icons-material";
 import { SignDialog } from "@/components/SignDialog";
 import { Panel } from "@/components/Panel";
-import { Values } from "@/schemas/newIssuance";
+import { Values } from "@/schemas/issuanceForm";
 import { DeploymentInfo } from "@/types";
 import { SxProps } from "@mui/material/styles";
 import { Flag } from "@/components/Flag";
@@ -111,7 +111,7 @@ const columns: Column<QuoteInternal>[] = [
 
 const itemKey = (item: QuoteInternal) => item.id;
 
-export default function Request2(props: { values: Values; deploymentInfo: DeploymentInfo }) {
+export default function Quotes(props: { values: Values; deploymentInfo: DeploymentInfo }) {
   const anchorWallet = useAnchorWallet();
   const { connection }: { connection: Connection } = useConnection();
   const router = useRouter();

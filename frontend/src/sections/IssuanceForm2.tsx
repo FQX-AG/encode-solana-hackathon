@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { Divider } from "@mui/material";
 import { Text } from "@/components/Text";
 import { useFormikContext } from "formik";
-import { FormValues, validationSchema } from "@/schemas/newIssuance";
+import { FormValues, validationSchema } from "@/schemas/issuanceForm";
 import { PaymentSchedule } from "@/components/paymentSchedule/PaymentSchedule";
 
 type Item = {
@@ -14,12 +14,12 @@ type Item = {
   status: "scheduled" | "open" | "settled";
 };
 
-type NewIssuance2InnerProps = {
+type IssuanceForm2InnerProps = {
   couponsCount: number;
   maturityDate: Date;
 };
 
-function NewIssuance2Inner(props: NewIssuance2InnerProps) {
+function IssuanceForm2Inner(props: IssuanceForm2InnerProps) {
   const issuanceDate = useMemo(() => new Date(), []);
   const paymentsPreview = useMemo<Item[]>(() => {
     const timeSpanInMilliseconds = differenceInMilliseconds(props.maturityDate, issuanceDate);
@@ -46,7 +46,7 @@ function NewIssuance2Inner(props: NewIssuance2InnerProps) {
   );
 }
 
-export function NewIssuance2() {
+export function IssuanceForm2() {
   const formik = useFormikContext<FormValues>();
   let maturityDate;
   try {
@@ -57,7 +57,7 @@ export function NewIssuance2() {
     <Section title="Payment schedule" description="Preview your issuance program payment schedule.">
       <Panel spacing={3} divider={<Divider />}>
         {maturityDate ? (
-          <NewIssuance2Inner couponsCount={2} maturityDate={maturityDate} />
+          <IssuanceForm2Inner couponsCount={2} maturityDate={maturityDate} />
         ) : (
           <Text variant="400|16px|21px" color="oxfordBlue600">
             To view the payment schedule, correct the input errors.

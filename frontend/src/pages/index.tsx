@@ -1,16 +1,16 @@
 import { useState } from "react";
-import { Values } from "@/schemas/newIssuance";
+import { Values } from "@/schemas/issuanceForm";
 import { DeploymentInfo } from "@/types";
 import dynamic from "next/dynamic";
 
 type State = { step: 1 } | { step: 2; values: Values; deploymentInfo: DeploymentInfo };
 
-const DynamicRequest1 = dynamic(() => import("@/views/Request1"), {
+const IssuanceForm = dynamic(() => import("@/views/IssuanceForm"), {
   loading: () => null,
   ssr: false,
 });
 
-const DynamicRequest2 = dynamic(() => import("@/views/Request2"), {
+const Quotes = dynamic(() => import("@/views/Quotes"), {
   loading: () => null,
   ssr: false,
 });
@@ -20,9 +20,9 @@ export default function Page() {
 
   switch (state.step) {
     case 1:
-      return <DynamicRequest1 onNext={({ values, deploymentInfo }) => setState({ step: 2, values, deploymentInfo })} />;
+      return <IssuanceForm onNext={({ values, deploymentInfo }) => setState({ step: 2, values, deploymentInfo })} />;
     case 2:
-      return <DynamicRequest2 values={state.values} deploymentInfo={state.deploymentInfo} />;
+      return <Quotes values={state.values} deploymentInfo={state.deploymentInfo} />;
     default:
       throw new Error("Invalid application state");
   }
