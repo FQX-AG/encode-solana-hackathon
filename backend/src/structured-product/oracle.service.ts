@@ -60,10 +60,12 @@ export class OracleService {
 
     const targetMeanPrice = 42000000000000;
 
-    const mean =
-      (1 - oldPrice.currentPrice.toNumber() / targetMeanPrice) * 0.1 * sigma;
+    const correctiveMean =
+      (1 - oldPrice.currentPrice.toNumber() / targetMeanPrice) *
+      0.01 *
+      targetMeanPrice;
 
-    const newPriceDeltaRaw = this.gaussianRandom(mean, sigma);
+    const newPriceDeltaRaw = this.gaussianRandom(correctiveMean, sigma);
     // Adjust the delta for the asymmetric nature of percentage changes
     const newPriceDeltaAdjusted = this.adjustForAsymmetry(
       newPriceDeltaRaw,
@@ -81,11 +83,11 @@ export class OracleService {
     this.logger.log(
       {
         oldPrice: toUiAmount(oldPrice.currentPrice, 9).toString(),
-        mean: toUiAmount(new BN(mean), 9).toString(),
+        mean: toUiAmount(new BN(correctiveMean), 9).toString(),
         newPriceDelta: toUiAmount(newPriceDelta, 9).toString(),
         newPrice: toUiAmount(newPrice, 9).toString(),
       },
-      { msg: 'Updating price' },
+      'Updating price',
     );
 
     const updatePriceTxId = await this.serverSdk.sendAndConfirmV0Tx(
@@ -101,7 +103,7 @@ export class OracleService {
         newPrice: toUiAmount(newPrice, 9).toString(),
         txId: updatePriceTxId,
       },
-      { msg: 'Price updated' },
+      'Price updated',
     );
   }
 }
