@@ -46,34 +46,41 @@ export class OracleService {
       'CRZYBTC',
       this.serverSdk.provider.publicKey,
     );
-    const relativeChangeRangeLimit = 0.1;
-    const absoluteChangeRangeLimit = oldPrice.currentPrice
-      .muln(relativeChangeRangeLimit)
+    const relativeChangeScaler = 0.1;
+    const absoluteChangeScaler = oldPrice.currentPrice
+      .muln(relativeChangeScaler)
       .toNumber();
 
-    // Generate a Gaussian random number
-    const randomChange = this.gaussianRandom(0, 0.3) * absoluteChangeRangeLimit;
+    const targetMeanPrice = 42000000000000;
 
-    const newPriceDelta = new BN(randomChange);
+    const mean =
+      (1 - oldPrice.currentPrice.toNumber() / targetMeanPrice) * 0.01;
+
+    const newPriceDelta = new BN(
+      this.gaussianRandom(mean, 0.5) * absoluteChangeScaler,
+    );
     const newPrice = oldPrice.currentPrice.add(newPriceDelta);
     const setPriceIx =
       await this.serverSdk.createSetPriceDummyOracleInstruction(
         'CRZYBTC',
-        BN.max(
-          BN.min(newPrice, new BN('120000000000000')),
-          new BN('2000000000000'),
-        ),
+        newPrice,
       );
 
     this.logger.log({
       msg: 'Setting new Price',
-      newPrice: toUiAmount(newPrice, 9).toString(),
+      oldPrice: toUiAmount(oldPrice.currentPrice, 9).toString(),
+      mean,
       newPriceDelta: toUiAmount(newPriceDelta, 9).toString(),
+      newPrice: toUiAmount(newPrice, 9).toString(),
     });
 
-    const updatePriceTxId = await this.serverSdk.sendAndConfirmV0Tx([
-      setPriceIx,
-    ]);
+    const updatePriceTxId = await this.serverSdk.sendAndConfirmV0Tx(
+      [setPriceIx],
+      [],
+      undefined,
+      [],
+      'processed',
+    );
 
     this.logger.log({
       msg: 'Price updated',

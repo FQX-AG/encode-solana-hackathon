@@ -3,6 +3,7 @@ import { AnchorProvider, Program } from "@coral-xyz/anchor";
 import {
   AddressLookupTableAccount,
   AddressLookupTableProgram,
+  Commitment,
   Keypair,
   LAMPORTS_PER_SOL,
   NONCE_ACCOUNT_LENGTH,
@@ -183,10 +184,11 @@ export class StructuredNotesSdk {
     ixs: TransactionInstruction[],
     signers?: Signer[],
     recentBlockHash?: string,
-    lookupTables?: AddressLookupTableAccount[]
+    lookupTables?: AddressLookupTableAccount[],
+    commitment: Commitment = "confirmed"
   ) {
     const latestBlockHash = await this.provider.connection.getLatestBlockhash(
-      "finalized"
+      "confirmed"
     );
 
     const tx = await this.createAndSignV0Tx(
@@ -197,11 +199,14 @@ export class StructuredNotesSdk {
     );
 
     const txId = await this.provider.connection.sendTransaction(tx);
-    const confirmation = await this.provider.connection.confirmTransaction({
-      signature: txId,
-      blockhash: recentBlockHash ?? latestBlockHash.blockhash,
-      lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
-    });
+    const confirmation = await this.provider.connection.confirmTransaction(
+      {
+        signature: txId,
+        blockhash: recentBlockHash ?? latestBlockHash.blockhash,
+        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+      },
+      commitment
+    );
     if (confirmation.value.err) {
       throw new Error(
         `Failed to confirm: ${confirmation.value.err.toString()}`
@@ -795,14 +800,15 @@ export class StructuredNotesSdk {
     );
 
     return await this.dummyOracleProgram.account.dummyOracleAccount.fetch(
-      dummyOraclePda.publicKey
+      dummyOraclePda.publicKey,
+      "processed"
     );
   }
   async waitForNewBlock(targetHeight: number) {
     // eslint-disable-next-line no-async-promise-executor
     return new Promise<void>(async (resolve) => {
       const { lastValidBlockHeight } =
-        await this.provider.connection.getLatestBlockhash("finalized");
+        await this.provider.connection.getLatestBlockhash("confirmed");
 
       // Check if at least targetHeight amount of new blocks are generated every 1 second
       const intervalId = setInterval(async () => {
