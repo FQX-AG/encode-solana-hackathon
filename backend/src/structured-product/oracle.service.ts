@@ -78,13 +78,15 @@ export class OracleService {
         newPrice,
       );
 
-    this.logger.log({
-      msg: 'Setting new Price',
-      oldPrice: toUiAmount(oldPrice.currentPrice, 9).toString(),
-      mean: toUiAmount(new BN(mean), 9).toString(),
-      newPriceDelta: toUiAmount(newPriceDelta, 9).toString(),
-      newPrice: toUiAmount(newPrice, 9).toString(),
-    });
+    this.logger.log(
+      {
+        oldPrice: toUiAmount(oldPrice.currentPrice, 9).toString(),
+        mean: toUiAmount(new BN(mean), 9).toString(),
+        newPriceDelta: toUiAmount(newPriceDelta, 9).toString(),
+        newPrice: toUiAmount(newPrice, 9).toString(),
+      },
+      { msg: 'Updating price' },
+    );
 
     const updatePriceTxId = await this.serverSdk.sendAndConfirmV0Tx(
       [setPriceIx],
@@ -94,10 +96,12 @@ export class OracleService {
       'processed',
     );
 
-    this.logger.log({
-      msg: 'Price updated',
-      newPrice: toUiAmount(newPrice, 9).toString(),
-      txId: updatePriceTxId,
-    });
+    this.logger.log(
+      {
+        newPrice: toUiAmount(newPrice, 9).toString(),
+        txId: updatePriceTxId,
+      },
+      { msg: 'Price updated' },
+    );
   }
 }
