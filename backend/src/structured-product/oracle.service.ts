@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { Interval } from '@nestjs/schedule';
 import { Keypair, PublicKey } from '@solana/web3.js';
 import { SdkFactory } from 'src/solana-client/sdk-factory';
+import { uiAmountToAmount } from '@solana/spl-token';
 
 function toUiAmount(amount: BN, decimals: number) {
   return amount.div(new BN(10).pow(new BN(decimals)));
@@ -40,25 +41,36 @@ export class OracleService {
     return num * sigma + mean;
   }
 
+  private adjustForAsymmetry(delta: number, sigma: number) {
+    if (delta < 0) {
+      // Adjust for the asymmetry in percentage change
+      return delta / (1 - sigma);
+    }
+    return delta;
+  }
+
   @Interval(5000)
   async updatePricing() {
     const oldPrice = await this.serverSdk.getCurrentPriceFromDummyOracle(
       'CRZYBTC',
       this.serverSdk.provider.publicKey,
     );
-    const relativeChangeScaler = 0.1;
-    const absoluteChangeScaler = oldPrice.currentPrice
-      .muln(relativeChangeScaler)
-      .toNumber();
+    const sigmaToPriceRatio = 0.05;
+    const sigma = oldPrice.currentPrice.muln(sigmaToPriceRatio).toNumber();
 
     const targetMeanPrice = 42000000000000;
 
     const mean =
-      (1 - oldPrice.currentPrice.toNumber() / targetMeanPrice) * 0.01;
+      (1 - oldPrice.currentPrice.toNumber() / targetMeanPrice) * 0.1 * sigma;
 
-    const newPriceDelta = new BN(
-      this.gaussianRandom(mean, 0.5) * absoluteChangeScaler,
+    const newPriceDeltaRaw = this.gaussianRandom(mean, sigma);
+    // Adjust the delta for the asymmetric nature of percentage changes
+    const newPriceDeltaAdjusted = this.adjustForAsymmetry(
+      newPriceDeltaRaw,
+      sigmaToPriceRatio,
     );
+
+    const newPriceDelta = new BN(newPriceDeltaAdjusted);
     const newPrice = oldPrice.currentPrice.add(newPriceDelta);
     const setPriceIx =
       await this.serverSdk.createSetPriceDummyOracleInstruction(
@@ -69,7 +81,7 @@ export class OracleService {
     this.logger.log({
       msg: 'Setting new Price',
       oldPrice: toUiAmount(oldPrice.currentPrice, 9).toString(),
-      mean,
+      mean: toUiAmount(new BN(mean), 9).toString(),
       newPriceDelta: toUiAmount(newPriceDelta, 9).toString(),
       newPrice: toUiAmount(newPrice, 9).toString(),
     });
